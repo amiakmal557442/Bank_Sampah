@@ -12,16 +12,37 @@ class PickupScheduleScreen extends StatefulWidget {
 }
 
 class _PickupScheduleScreenState extends State<PickupScheduleScreen> {
+  // Index 1 = besok (default terpilih)
   int selectedDateIndex = 1;
   int selectedTimeIndex = 1;
   int selectedLocationIndex = 0;
 
-  final List<Map<String, String>> _dates = [
-    {'day': 'SEL', 'date': '28', 'label': ''},
-    {'day': 'RAB', 'date': '29', 'label': 'Besok'},
-    {'day': 'KAM', 'date': '30', 'label': ''},
-    {'day': 'JUM', 'date': '31', 'label': ''},
+  // Nama hari dalam bahasa Indonesia
+  static const List<String> _dayNames = [
+    'MIN',
+    'SEN',
+    'SEL',
+    'RAB',
+    'KAM',
+    'JUM',
+    'SAB',
   ];
+
+  // Generate tanggal dinamis: hari ini + 3 hari ke depan (total 4 hari)
+  List<Map<String, String>> get _dates {
+    final today = DateTime.now();
+    return List.generate(4, (i) {
+      final day = today.add(Duration(days: i));
+      String label = '';
+      if (i == 0) label = 'Hari ini';
+      if (i == 1) label = 'Besok';
+      return {
+        'day': _dayNames[day.weekday % 7],
+        'date': day.day.toString(),
+        'label': label,
+      };
+    });
+  }
 
   final List<String> _times = [
     '08.00 - 10.00',
