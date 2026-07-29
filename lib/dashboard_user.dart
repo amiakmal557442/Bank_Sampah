@@ -3,6 +3,7 @@ import 'login_page.dart';
 import 'drop_in_mandiri_page.dart';
 import 'transaction_service.dart';
 import 'jemput_sampah_page.dart';
+import 'map_location_screen.dart';
 
 void main() {
   runApp(const BankSampahApp());
@@ -43,7 +44,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
   final List<Widget> _pages = const [
     BerandaPage(),
-    Center(child: Text('Halaman Peta')),
+    MapLocationScreen(),
     Center(child: Text('Halaman Setor')),
     RiwayatPage(),
     ProfilPage(),
