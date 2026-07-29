@@ -618,7 +618,14 @@ class _BerandaPageState extends State<BerandaPage> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SemuaTransaksiPage(),
+                            ),
+                          );
+                        },
                         child: Text(
                           'Lihat semua',
                           style: TextStyle(
@@ -927,6 +934,190 @@ class _BerandaPageState extends State<BerandaPage> {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ============================================================================
+// HALAMAN: SEMUA TRANSAKSI
+// ============================================================================
+class SemuaTransaksiPage extends StatefulWidget {
+  const SemuaTransaksiPage({super.key});
+
+  @override
+  State<SemuaTransaksiPage> createState() => _SemuaTransaksiPageState();
+}
+
+class _SemuaTransaksiPageState extends State<SemuaTransaksiPage> {
+  static const Color primaryGreen = Color(0xFF268B07);
+
+  // Gabungkan semua sumber transaksi menjadi satu list
+  List<TransactionModel> get _semuaTransaksi {
+    final all = <TransactionModel>[];
+    all.addAll(TransactionService.riwayatHariIni);
+    // Tambahkan transaksi dari beranda yang belum ada di riwayatHariIni
+    for (final tx in TransactionService.transactions) {
+      final alreadyAdded = all.any(
+        (t) =>
+            t.title == tx.title &&
+            t.subtitle.contains(tx.subtitle.split(',').last.trim()),
+      );
+      if (!alreadyAdded) all.add(tx);
+    }
+    return all;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final transaksi = _semuaTransaksi;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F6F8),
+      appBar: AppBar(
+        backgroundColor: primaryGreen,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Semua Transaksi',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+      ),
+      body: transaksi.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.receipt_long_outlined,
+                    size: 64,
+                    color: Colors.grey.shade300,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Belum ada transaksi',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey.shade400,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(20),
+              itemCount: transaksi.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final tx = transaksi[index];
+                return _buildItem(tx);
+              },
+            ),
+    );
+  }
+
+  Widget _buildItem(TransactionModel tx) {
+    final bool isFailed = tx.isFailed;
+    final Color iconBg = isFailed
+        ? const Color(0xFFFEE2E2)
+        : const Color(0xFFE8F5E9);
+    final Color iconColor = isFailed ? const Color(0xFFDC2626) : primaryGreen;
+    final Color pointsColor = isFailed ? const Color(0xFF94A3B8) : primaryGreen;
+    final Color badgeBg = isFailed
+        ? const Color(0xFFFEE2E2)
+        : const Color(0xFFDCFCE7);
+    final Color badgeText = isFailed
+        ? const Color(0xFFDC2626)
+        : const Color(0xFF166534);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(tx.icon, color: iconColor, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tx.title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  tx.subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                tx.points,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: pointsColor,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: badgeBg,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  tx.status,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: badgeText,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
