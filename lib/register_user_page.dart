@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'db_helper.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -22,14 +23,70 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  void _handleRegister() {
+  Future<void> _handleRegister() async {
     if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pendaftaran berhasil!'),
-          backgroundColor: Color(0xFF059669),
-        ),
+      final name = _nameController.text.trim();
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
       );
+
+      final isRegistered = await DatabaseHelper.instance.isEmailRegistered(
+        email,
+      );
+
+      if (mounted) Navigator.pop(context);
+
+      if (isRegistered) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Email sudah terdaftar!'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+        return;
+      }
+
+      final newUser = {
+        'id': 'user-${DateTime.now().microsecondsSinceEpoch}',
+        'phone_number': null,
+        'email': email,
+        'full_name': name,
+        'password': password,
+        'role': 'nasabah',
+        'address': '',
+        'default_setor_method': 'drop_in',
+        'point_balance': 0,
+      };
+
+      final success = await DatabaseHelper.instance.registerUser(newUser);
+
+      if (success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pendaftaran berhasil! Silakan login.'),
+              backgroundColor: Color(0xFF059669),
+            ),
+          );
+          Navigator.pop(context);
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pendaftaran gagal. Silakan coba lagi.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      }
     }
   }
 

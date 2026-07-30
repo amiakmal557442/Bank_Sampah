@@ -4,6 +4,7 @@ import 'drop_in_mandiri_page.dart';
 import 'transaction_service.dart';
 import 'jemput_sampah_page.dart';
 import 'map_location_screen.dart';
+import 'session_service.dart';
 
 void main() {
   runApp(const BankSampahApp());
@@ -342,8 +343,8 @@ class _BerandaPageState extends State<BerandaPage> {
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
+                        children: [
+                          const Text(
                             'Selamat pagi,',
                             style: TextStyle(
                               color: Colors.white70,
@@ -351,10 +352,10 @@ class _BerandaPageState extends State<BerandaPage> {
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
-                            'Budi Santoso',
-                            style: TextStyle(
+                            SessionService.fullName,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -1618,7 +1619,22 @@ class ProfilPage extends StatelessWidget {
                                   radius: 34,
                                   backgroundColor: const Color(0xFFDCFCE7),
                                   child: Text(
-                                    'BS',
+                                    (() {
+                                      final names = SessionService.fullName
+                                          .split(' ');
+                                      if (names.length >= 2) {
+                                        return (names[0].isNotEmpty
+                                                ? names[0][0]
+                                                : '') +
+                                            (names[1].isNotEmpty
+                                                ? names[1][0]
+                                                : '');
+                                      } else if (names.isNotEmpty &&
+                                          names[0].isNotEmpty) {
+                                        return names[0][0];
+                                      }
+                                      return 'US';
+                                    })().toUpperCase(),
                                     style: TextStyle(
                                       fontSize: 22,
                                       fontWeight: FontWeight.bold,
@@ -1655,9 +1671,9 @@ class ProfilPage extends StatelessWidget {
                                 children: [
                                   Row(
                                     children: [
-                                      const Text(
-                                        'Budi Santoso',
-                                        style: TextStyle(
+                                      Text(
+                                        SessionService.fullName,
+                                        style: const TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
                                           color: Color(0xFF0F172A),
@@ -1672,9 +1688,9 @@ class ProfilPage extends StatelessWidget {
                                     ],
                                   ),
                                   const SizedBox(height: 2),
-                                  const Text(
-                                    '+62 812-3456-7890',
-                                    style: TextStyle(
+                                  Text(
+                                    SessionService.phoneNumber,
+                                    style: const TextStyle(
                                       fontSize: 13,
                                       color: Color(0xFF64748B),
                                     ),
@@ -1843,6 +1859,7 @@ class ProfilPage extends StatelessWidget {
                 width: double.infinity,
                 child: TextButton.icon(
                   onPressed: () {
+                    SessionService.logout();
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'db_helper.dart';
 
 class PetugasRegistrationPage extends StatefulWidget {
   const PetugasRegistrationPage({super.key});
@@ -56,19 +57,96 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
     super.dispose();
   }
 
-  void _handleRegisterPetugas() {
+  Future<void> _handleRegisterPetugas() async {
     if (_formKey.currentState!.validate()) {
-      // Menampilkan Notifikasi Sukses
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            'Pendaftaran Petugas Berhasil! Menunggu Verifikasi Admin.',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: _oldGrassGreen,
-          duration: const Duration(seconds: 3),
-        ),
+      final name = _namaController.text.trim();
+      final phone = _phoneController.text.trim();
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
       );
+
+      final emailExists = await DatabaseHelper.instance.isEmailRegistered(
+        email,
+      );
+      final phoneExists = await DatabaseHelper.instance.isPhoneRegistered(
+        phone,
+      );
+
+      if (mounted) Navigator.pop(context);
+
+      if (emailExists) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Email sudah terdaftar!'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+        return;
+      }
+
+      if (phoneExists) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Nomor WhatsApp/HP sudah terdaftar!'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+        return;
+      }
+
+      final details =
+          'Zona: $_selectedZona, Armada: $_selectedKendaraan, Plat: ${_platNomorController.text.trim()}';
+
+      final newPetugas = {
+        'id': 'petugas-${DateTime.now().microsecondsSinceEpoch}',
+        'phone_number': phone,
+        'email': email,
+        'full_name': name,
+        'password': password,
+        'role': 'petugas',
+        'address': details,
+        'default_setor_method': 'pickup',
+        'point_balance': 0,
+      };
+
+      final success = await DatabaseHelper.instance.registerUser(newPetugas);
+
+      if (success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'Pendaftaran Petugas Berhasil! Silakan login.',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              backgroundColor: _oldGrassGreen,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+          Navigator.pop(context);
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pendaftaran gagal. Silakan coba lagi.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      }
     }
   }
 
