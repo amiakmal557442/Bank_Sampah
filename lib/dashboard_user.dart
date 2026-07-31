@@ -324,240 +324,240 @@ class _BerandaPageState extends State<BerandaPage> {
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                // Background Hijau dengan Lengkungan Atas
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.only(
-                    top: 50,
-                    left: 20,
-                    right: 20,
-                    bottom: 70,
-                  ),
-                  decoration: BoxDecoration(
-                    color: primaryGreen,
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(28),
-                      bottomRight: Radius.circular(28),
+                  // Background Hijau dengan Lengkungan Atas
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.only(
+                      top: 50,
+                      left: 20,
+                      right: 20,
+                      bottom: 70,
                     ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Selamat pagi,',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            SessionService.fullName,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      // Tombol Notifikasi
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            const Icon(
-                              Icons.notifications_none_rounded,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                            Positioned(
-                              top: 10,
-                              right: 11,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFFFD600),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Kartu Poin Saya
-                Positioned(
-                  left: 20,
-                  right: 20,
-                  top: 115,
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      color: primaryGreen,
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(28),
+                        bottomRight: Radius.circular(28),
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        const Text(
-                          'Poin saya',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF64748B),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              TransactionService.userPoints
-                                  .toString()
-                                  .replaceAllMapped(
-                                    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                                    (Match m) => '${m[1]}.',
-                                  ),
-                              style: const TextStyle(
-                                fontSize: 30,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
                             const Text(
-                              'poin',
+                              'Selamat pagi,',
                               style: TextStyle(
+                                color: Colors.white70,
                                 fontSize: 14,
-                                color: Color(0xFF64748B),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
+                            const SizedBox(height: 2),
+                            Text(
+                              SessionService.fullName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '≈ Rp ${(TransactionService.userPoints * 10).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} · Min. tarik: 1.000 poin',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF94A3B8),
+                        // Tombol Notifikasi
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
                           ),
-                        ),
-                        const SizedBox(height: 18),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () async {
-                                  await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const VoucherScreen(),
-                                    ),
-                                  );
-                                  setState(() {});
-                                },
-                                icon: const Icon(
-                                  Icons.swap_horiz_rounded,
-                                  size: 18,
-                                  color: Colors.white,
-                                ),
-                                label: const Text(
-                                  'Tukar poin',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: primaryGreen,
-                                  elevation: 0,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              const Icon(
+                                Icons.notifications_none_rounded,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                              Positioned(
+                                top: 10,
+                                right: 11,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFFFD600),
+                                    shape: BoxShape.circle,
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () async {
-                                  await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const VoucherScreen(),
-                                    ),
-                                  );
-                                  setState(() {});
-                                },
-                                icon: Icon(
-                                  Icons.card_giftcard_outlined,
-                                  size: 18,
-                                  color: const Color(0xFF334155),
-                                ),
-                                label: const Text(
-                                  'Voucher',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: Color(0xFF334155),
-                                  ),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  side: const BorderSide(
-                                    color: Color(0xFFE2E8F0),
-                                    width: 1.5,
-                                  ),
-                                  elevation: 0,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
+
+                  // Kartu Poin Saya
+                  Positioned(
+                    left: 20,
+                    right: 20,
+                    top: 115,
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.06),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Poin saya',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF64748B),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                TransactionService.userPoints
+                                    .toString()
+                                    .replaceAllMapped(
+                                      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+                                      (Match m) => '${m[1]}.',
+                                    ),
+                                style: const TextStyle(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'poin',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF64748B),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '≈ Rp ${(TransactionService.userPoints * 10).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} · Min. tarik: 1.000 poin',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF94A3B8),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const VoucherScreen(),
+                                      ),
+                                    );
+                                    setState(() {});
+                                  },
+                                  icon: const Icon(
+                                    Icons.swap_horiz_rounded,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                  label: const Text(
+                                    'Tukar poin',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryGreen,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () async {
+                                    await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const VoucherScreen(),
+                                      ),
+                                    );
+                                    setState(() {});
+                                  },
+                                  icon: Icon(
+                                    Icons.card_giftcard_outlined,
+                                    size: 18,
+                                    color: const Color(0xFF334155),
+                                  ),
+                                  label: const Text(
+                                    'Voucher',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: Color(0xFF334155),
+                                    ),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    side: const BorderSide(
+                                      color: Color(0xFFE2E8F0),
+                                      width: 1.5,
+                                    ),
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
 
             const SizedBox(height: 140),
 
@@ -1159,8 +1159,125 @@ class _RiwayatPageState extends State<RiwayatPage> {
 
   final Color primaryGreen = const Color(0xFF268B07);
 
+  // Helper untuk memfilter transaksi berdasarkan Jenis Transaksi dan Status
+  bool _matchesFilter({
+    required String title,
+    required String statusText,
+    required String valueText,
+    required bool isFailed,
+  }) {
+    final lowerTitle = title.toLowerCase();
+    String jenis = 'Poin dan saldo';
+    if (lowerTitle.contains('jemput') ||
+        lowerTitle.contains('drop-in') ||
+        lowerTitle.contains('setor') ||
+        lowerTitle.contains('sampah') ||
+        lowerTitle.contains('plastik') ||
+        lowerTitle.contains('kardus') ||
+        lowerTitle.contains('logam') ||
+        lowerTitle.contains('kaca') ||
+        lowerTitle.contains('elektronik')) {
+      jenis = 'Setor sampah';
+    }
+
+    final lowerStatus = statusText.toLowerCase();
+    final lowerValue = valueText.toLowerCase();
+    String status =
+        (isFailed ||
+            lowerStatus == 'gagal' ||
+            lowerStatus == 'dibatalkan' ||
+            lowerValue == 'dibatalkan')
+        ? 'Gagal'
+        : 'Selesai';
+
+    bool matchesJenis =
+        (_selectedJenis == 'Semua') || (_selectedJenis == jenis);
+    bool matchesStatus =
+        (_selectedStatus == 'Semua') || (_selectedStatus == status);
+
+    return matchesJenis && matchesStatus;
+  }
+
+  List<TransactionModel> get _riwayatKemarin => [
+    TransactionModel(
+      icon: Icons.local_shipping_outlined,
+      title: 'Jemput sampah',
+      subtitle: '14.30 - 2,8 kg',
+      points: '+210 poin',
+      status: 'Selesai',
+      isFailed: false,
+    ),
+    TransactionModel(
+      icon: Icons.account_balance_wallet_outlined,
+      title: 'Penarikan saldo ke Bank',
+      subtitle: '11.05 - Rekening tidak valid',
+      points: 'Rp 50.000',
+      status: 'Gagal',
+      isFailed: true,
+    ),
+    TransactionModel(
+      icon: Icons.recycling_rounded,
+      title: 'Drop-in — Logam dan Kaca',
+      subtitle: '09.40 - 0,8 kg',
+      points: '+85 poin',
+      status: 'Selesai',
+      isFailed: false,
+    ),
+  ];
+
+  List<TransactionModel> get _riwayat22Juli => [
+    TransactionModel(
+      icon: Icons.card_giftcard_outlined,
+      title: 'Tukar voucher belanja',
+      subtitle: '18.10 - Voucher Rp 25.000',
+      points: '-500 poin',
+      status: 'Selesai',
+      isFailed: false,
+    ),
+    TransactionModel(
+      icon: Icons.recycling_rounded,
+      title: 'Drop-in — Elektronik',
+      subtitle: '16.20 - 0,5 kg',
+      points: '+150 poin',
+      status: 'Selesai',
+      isFailed: false,
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final filteredHariIni = TransactionService.riwayatHariIni.where((tx) {
+      return _matchesFilter(
+        title: tx.title,
+        statusText: tx.status,
+        valueText: tx.points,
+        isFailed: tx.isFailed,
+      );
+    }).toList();
+
+    final filteredKemarin = _riwayatKemarin.where((tx) {
+      return _matchesFilter(
+        title: tx.title,
+        statusText: tx.status,
+        valueText: tx.points,
+        isFailed: tx.isFailed,
+      );
+    }).toList();
+
+    final filtered22Juli = _riwayat22Juli.where((tx) {
+      return _matchesFilter(
+        title: tx.title,
+        statusText: tx.status,
+        valueText: tx.points,
+        isFailed: tx.isFailed,
+      );
+    }).toList();
+
+    final bool isAllEmpty =
+        filteredHariIni.isEmpty &&
+        filteredKemarin.isEmpty &&
+        filtered22Juli.isEmpty;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6F8),
       body: SingleChildScrollView(
@@ -1224,15 +1341,22 @@ class _RiwayatPageState extends State<RiwayatPage> {
                         _buildFilterChip(
                           label: 'Setor sampah',
                           isSelected: _selectedJenis == 'Setor sampah',
-                          onTap: () =>
-                              setState(() => _selectedJenis = 'Setor sampah'),
+                          onTap: () => setState(() {
+                            _selectedJenis = (_selectedJenis == 'Setor sampah')
+                                ? 'Semua'
+                                : 'Setor sampah';
+                          }),
                         ),
                         const SizedBox(width: 8),
                         _buildFilterChip(
                           label: 'Poin dan saldo',
                           isSelected: _selectedJenis == 'Poin dan saldo',
-                          onTap: () =>
-                              setState(() => _selectedJenis = 'Poin dan saldo'),
+                          onTap: () => setState(() {
+                            _selectedJenis =
+                                (_selectedJenis == 'Poin dan saldo')
+                                ? 'Semua'
+                                : 'Poin dan saldo';
+                          }),
                         ),
                       ],
                     ),
@@ -1270,14 +1394,21 @@ class _RiwayatPageState extends State<RiwayatPage> {
                       _buildFilterChip(
                         label: 'Selesai',
                         isSelected: _selectedStatus == 'Selesai',
-                        onTap: () =>
-                            setState(() => _selectedStatus = 'Selesai'),
+                        onTap: () => setState(() {
+                          _selectedStatus = (_selectedStatus == 'Selesai')
+                              ? 'Semua'
+                              : 'Selesai';
+                        }),
                       ),
                       const SizedBox(width: 8),
                       _buildFilterChip(
                         label: 'Gagal',
                         isSelected: _selectedStatus == 'Gagal',
-                        onTap: () => setState(() => _selectedStatus = 'Gagal'),
+                        onTap: () => setState(() {
+                          _selectedStatus = (_selectedStatus == 'Gagal')
+                              ? 'Semua'
+                              : 'Gagal';
+                        }),
                       ),
                     ],
                   ),
@@ -1287,133 +1418,156 @@ class _RiwayatPageState extends State<RiwayatPage> {
 
             const SizedBox(height: 20),
 
-            // --- SEKSI: HARI INI ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'HARI INI',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.8,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  ...TransactionService.riwayatHariIni.map((tx) {
-                    return Column(
-                      children: [
-                        _buildRiwayatItem(
-                          icon: tx.icon,
-                          title: tx.title,
-                          subtitle: tx.subtitle,
-                          valueText: tx.points,
-                          statusText: tx.status,
-                          isFailed: tx.isFailed,
+            if (isAllEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 40,
+                  horizontal: 20,
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.search_off_rounded,
+                        size: 60,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Tidak ada riwayat transaksi',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade600,
                         ),
-                        const SizedBox(height: 10),
-                      ],
-                    );
-                  }).toList(),
-                ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tidak ditemukan transaksi dengan filter yang dipilih',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
 
-            const SizedBox(height: 20),
+            // --- SEKSI: HARI INI ---
+            if (filteredHariIni.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'HARI INI',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    ...filteredHariIni.map((tx) {
+                      return Column(
+                        children: [
+                          _buildRiwayatItem(
+                            icon: tx.icon,
+                            title: tx.title,
+                            subtitle: tx.subtitle,
+                            valueText: tx.points,
+                            statusText: tx.status,
+                            isFailed: tx.isFailed,
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
+              ),
+
+            if (filteredHariIni.isNotEmpty &&
+                (filteredKemarin.isNotEmpty || filtered22Juli.isNotEmpty))
+              const SizedBox(height: 20),
 
             // --- SEKSI: KEMARIN ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'KEMARIN',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.8,
-                      color: Color(0xFF64748B),
+            if (filteredKemarin.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'KEMARIN',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                        color: Color(0xFF64748B),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  _buildRiwayatItem(
-                    icon: Icons.local_shipping_outlined,
-                    title: 'Jemput sampah',
-                    subtitle: '14.30 - 2,8 kg',
-                    valueText: '+210 poin',
-                    statusText: 'Selesai',
-                    isFailed: false,
-                  ),
-                  const SizedBox(height: 10),
-
-                  _buildRiwayatItem(
-                    icon: Icons.account_balance_wallet_outlined,
-                    title: 'Penarikan saldo ke Bank',
-                    subtitle: '11.05 - Rekening tidak valid',
-                    valueText: 'Rp 50.000',
-                    statusText: 'Gagal',
-                    isFailed: true,
-                  ),
-                  const SizedBox(height: 10),
-
-                  _buildRiwayatItem(
-                    icon: Icons.recycling_rounded,
-                    title: 'Drop-in — Logam dan Kaca',
-                    subtitle: '09.40 - 0,8 kg',
-                    valueText: '+85 poin',
-                    statusText: 'Selesai',
-                    isFailed: false,
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    ...filteredKemarin.map((tx) {
+                      return Column(
+                        children: [
+                          _buildRiwayatItem(
+                            icon: tx.icon,
+                            title: tx.title,
+                            subtitle: tx.subtitle,
+                            valueText: tx.points,
+                            statusText: tx.status,
+                            isFailed: tx.isFailed,
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
               ),
-            ),
 
-            const SizedBox(height: 20),
+            if (filteredKemarin.isNotEmpty && filtered22Juli.isNotEmpty)
+              const SizedBox(height: 20),
 
             // --- SEKSI: 22 JULI 2026 ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    '22 JULI 2026',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.8,
-                      color: Color(0xFF64748B),
+            if (filtered22Juli.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '22 JULI 2026',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                        color: Color(0xFF64748B),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  _buildRiwayatItem(
-                    icon: Icons.card_giftcard_outlined,
-                    title: 'Tukar voucher belanja',
-                    subtitle: '18.10 - Voucher Rp 25.000',
-                    valueText: '-500 poin',
-                    statusText: 'Selesai',
-                    isFailed: false,
-                  ),
-                  const SizedBox(height: 10),
-
-                  _buildRiwayatItem(
-                    icon: Icons.recycling_rounded,
-                    title: 'Drop-in — Elektronik',
-                    subtitle: '16.20 - 0,5 kg',
-                    valueText: '+150 poin',
-                    statusText: 'Selesai',
-                    isFailed: false,
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    ...filtered22Juli.map((tx) {
+                      return Column(
+                        children: [
+                          _buildRiwayatItem(
+                            icon: tx.icon,
+                            title: tx.title,
+                            subtitle: tx.subtitle,
+                            valueText: tx.points,
+                            statusText: tx.status,
+                            isFailed: tx.isFailed,
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
               ),
-            ),
 
             const SizedBox(height: 30),
           ],
