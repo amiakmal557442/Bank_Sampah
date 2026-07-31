@@ -5,6 +5,7 @@ import 'transaction_service.dart';
 import 'jemput_sampah_page.dart';
 import 'map_location_screen.dart';
 import 'session_service.dart';
+import 'voucher_page.dart';
 
 void main() {
   runApp(const BankSampahApp());
@@ -318,9 +319,11 @@ class _BerandaPageState extends State<BerandaPage> {
         child: Column(
           children: [
             // --- HEADER ATAS & KARTU POIN ---
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
+            SizedBox(
+              height: 290,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
                 // Background Hijau dengan Lengkungan Atas
                 Container(
                   width: double.infinity,
@@ -469,7 +472,16 @@ class _BerandaPageState extends State<BerandaPage> {
                           children: [
                             Expanded(
                               child: ElevatedButton.icon(
-                                onPressed: () {},
+                                onPressed: () async {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const VoucherScreen(),
+                                    ),
+                                  );
+                                  setState(() {});
+                                },
                                 icon: const Icon(
                                   Icons.swap_horiz_rounded,
                                   size: 18,
@@ -498,7 +510,16 @@ class _BerandaPageState extends State<BerandaPage> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: OutlinedButton.icon(
-                                onPressed: () {},
+                                onPressed: () async {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const VoucherScreen(),
+                                    ),
+                                  );
+                                  setState(() {});
+                                },
                                 icon: Icon(
                                   Icons.card_giftcard_outlined,
                                   size: 18,
@@ -536,6 +557,7 @@ class _BerandaPageState extends State<BerandaPage> {
                 ),
               ],
             ),
+          ),
 
             const SizedBox(height: 140),
 
