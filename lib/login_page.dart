@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'register_user_page.dart';
 import 'register_petugas_page.dart';
 import 'dashboard_user.dart';
-import 'worker_dashboard_screen.dart';
+import 'dashboard_petugas.dart';
 import 'db_helper.dart';
 import 'session_service.dart';
 
