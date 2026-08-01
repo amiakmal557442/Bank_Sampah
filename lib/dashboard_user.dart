@@ -6,6 +6,7 @@ import 'jemput_sampah_page.dart';
 import 'map_location_screen.dart';
 import 'session_service.dart';
 import 'voucher_page.dart';
+import 'tukar_poin_page.dart';
 
 void main() {
   runApp(const BankSampahApp());
@@ -477,7 +478,7 @@ class _BerandaPageState extends State<BerandaPage> {
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) =>
-                                            const VoucherScreen(),
+                                            const TukarPoinScreen(),
                                       ),
                                     );
                                     setState(() {});
