@@ -3,6 +3,7 @@ import 'register_user_page.dart';
 import 'register_petugas_page.dart';
 import 'dashboard_user.dart';
 import 'dashboard_petugas.dart';
+import 'dashboard_admin.dart';
 import 'db_helper.dart';
 import 'session_service.dart';
 
@@ -60,9 +61,15 @@ class _LoginPageState extends State<LoginPage> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => role == 'petugas'
-                  ? const WorkerDashboardScreen()
-                  : const MainNavigationScreen(),
+              builder: (context) {
+                if (role == 'admin') {
+                  return const AdminDashboardScreen();
+                } else if (role == 'petugas') {
+                  return const WorkerDashboardScreen();
+                } else {
+                  return const MainNavigationScreen();
+                }
+              },
             ),
           );
         }
@@ -100,7 +107,9 @@ class _LoginPageState extends State<LoginPage> {
                     child: Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: _limeGreen.withValues(alpha: 0.2), // Warna latar hijau muda
+                        color: _limeGreen.withValues(
+                          alpha: 0.2,
+                        ), // Warna latar hijau muda
                         shape: BoxShape.circle,
                       ),
                       child: Icon(

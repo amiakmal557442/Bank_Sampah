@@ -7,7 +7,7 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
 
-  // In-memory fallback database for Web (Chrome)
+  // In-memory fallback database for Web (Chrome) & default seed users
   static final List<Map<String, dynamic>> _webUsers = [
     {
       'id': 'budi-uuid-1234-5678',
@@ -32,6 +32,28 @@ class DatabaseHelper {
       'default_setor_method': 'pickup',
       'point_balance': 0,
     },
+    {
+      'id': 'admin-uuid-akmal-223',
+      'phone_number': '+62 812-1111-2222',
+      'email': 'akmalahsan223@gmail.com',
+      'full_name': 'Akmal Ahsan',
+      'password': 'jasadidas557442',
+      'role': 'admin',
+      'address': 'Kantor Pusat Bank Sampah',
+      'default_setor_method': 'drop_in',
+      'point_balance': 99999,
+    },
+    {
+      'id': 'admin-uuid-fanska-221',
+      'phone_number': '+62 812-3333-4444',
+      'email': 'fanskawe221@gmail.com',
+      'full_name': 'Fanska',
+      'password': '557442337554',
+      'role': 'admin',
+      'address': 'Kantor Pusat Bank Sampah',
+      'default_setor_method': 'drop_in',
+      'point_balance': 99999,
+    },
   ];
 
   DatabaseHelper._init();
@@ -48,12 +70,22 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = p.join(dbPath, filePath);
 
-    return await openDatabase(
+    final db = await openDatabase(
       path,
       version: 1,
       onCreate: _createDB,
       onConfigure: _onConfigure,
     );
+
+    await _ensureDefaultAccounts(db);
+
+    return db;
+  }
+
+  Future<void> _ensureDefaultAccounts(Database db) async {
+    for (var u in _webUsers) {
+      await db.insert('users', u, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
   }
 
   Future _onConfigure(Database db) async {
