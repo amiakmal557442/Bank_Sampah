@@ -174,7 +174,8 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
     return null;
   }
 
-  bool get _needsKtpVerification => inputPoints >= ktpVerificationThresholdPoints;
+  bool get _needsKtpVerification =>
+      inputPoints >= ktpVerificationThresholdPoints;
 
   bool get _canSubmit =>
       selectedDestination != null &&
@@ -322,7 +323,9 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFF7FCF5) : Colors.white,
+                      color: isSelected
+                          ? const Color(0xFFF7FCF5)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isSelected ? primaryGreen : borderColor,
@@ -375,10 +378,16 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
                               color: isSelected ? primaryGreen : borderColor,
                               width: 2,
                             ),
-                            color: isSelected ? primaryGreen : Colors.transparent,
+                            color: isSelected
+                                ? primaryGreen
+                                : Colors.transparent,
                           ),
                           child: isSelected
-                              ? const Icon(Icons.check, size: 12, color: Colors.white)
+                              ? const Icon(
+                                  Icons.check,
+                                  size: 12,
+                                  color: Colors.white,
+                                )
                               : null,
                         ),
                       ],
@@ -403,12 +412,17 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
           child: Column(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: errorText != null ? Colors.red.shade300 : borderColor,
+                    color: errorText != null
+                        ? Colors.red.shade300
+                        : borderColor,
                     width: errorText != null ? 1.2 : 0.5,
                   ),
                 ),
@@ -465,7 +479,10 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
               const SizedBox(height: 10),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF0FCE8),
                   borderRadius: BorderRadius.circular(10),
@@ -570,7 +587,11 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
                 ),
                 child: const Column(
                   children: [
-                    Icon(Icons.camera_alt_rounded, color: primaryGreen, size: 22),
+                    Icon(
+                      Icons.camera_alt_rounded,
+                      color: primaryGreen,
+                      size: 22,
+                    ),
                     SizedBox(height: 6),
                     Text(
                       'Ambil atau unggah foto KTP',
@@ -627,8 +648,12 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
           child: Column(
             children: sampleHistory.map((item) {
               final isSuccess = item.status == 'Selesai';
-              final statusColor = isSuccess ? primaryGreen : const Color(0xFF5F5E5A);
-              final statusBg = isSuccess ? const Color(0xFFE8F8E8) : const Color(0xFFF1EFE8);
+              final statusColor = isSuccess
+                  ? primaryGreen
+                  : const Color(0xFF5F5E5A);
+              final statusBg = isSuccess
+                  ? const Color(0xFFE8F8E8)
+                  : const Color(0xFFF1EFE8);
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
@@ -693,7 +718,10 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
                         ),
                         const SizedBox(height: 3),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: statusBg,
                             borderRadius: BorderRadius.circular(20),

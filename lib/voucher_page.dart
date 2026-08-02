@@ -194,10 +194,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Batal',
-                style: TextStyle(color: Colors.grey),
-              ),
+              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -397,10 +394,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
                   ),
                   Text(
                     '${filteredVouchers.length} Tersedia',
-                    style: TextStyle(
-                      fontSize: 12.0,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 12.0, color: Colors.grey[600]),
                   ),
                 ],
               ),
@@ -517,10 +511,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
                   const SizedBox(height: 2.0),
                   Text(
                     'Berlaku s/d ${voucher.validUntil}',
-                    style: TextStyle(
-                      fontSize: 11.0,
-                      color: Colors.grey[500],
-                    ),
+                    style: TextStyle(fontSize: 11.0, color: Colors.grey[500]),
                   ),
                 ],
               ),
@@ -561,8 +552,8 @@ class _VoucherScreenState extends State<VoucherScreen> {
 
   String _formatPoints(int number) {
     return number.toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]}.',
-        );
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
   }
 }

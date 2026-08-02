@@ -38,7 +38,7 @@ class SetorTransaksiModel {
   final double berat;
   final int estimasiPoin;
   final String waktu;
-  final SetorStatus status;
+  SetorStatus status;
 
   SetorTransaksiModel({
     required this.userName,
@@ -59,7 +59,7 @@ class PenarikanModel {
   final int poin;
   final double nominal;
   final String waktu;
-  final PenarikanStatus status;
+  PenarikanStatus status;
   final bool isAnomali;
   final String? anomaliReason;
 
@@ -83,7 +83,7 @@ class B2BDealModel {
   final double totalBerat;
   final double hargaPerKg;
   final String tanggal;
-  final B2BStatus status;
+  B2BStatus status;
 
   B2BDealModel({
     required this.mitraName,
@@ -99,21 +99,89 @@ class B2BDealModel {
 
 // Sample data
 final List<SetorTransaksiModel> sampleSetor = [
-  SetorTransaksiModel(userName: 'Budi Santoso', jenis: 'Jemput', kategori: 'Plastik, Logam', berat: 2.8, estimasiPoin: 400, waktu: '10.02', status: SetorStatus.menunggu),
-  SetorTransaksiModel(userName: 'Rina Wulandari', jenis: 'Drop-in', kategori: 'Plastik', berat: 1.5, estimasiPoin: 150, waktu: '09.40', status: SetorStatus.menunggu),
-  SetorTransaksiModel(userName: 'Dewi Lestari', jenis: 'Drop-in', kategori: 'Kardus, Kertas', berat: 3.2, estimasiPoin: 240, waktu: '08.55', status: SetorStatus.terverifikasi),
+  SetorTransaksiModel(
+    userName: 'Budi Santoso',
+    jenis: 'Jemput',
+    kategori: 'Plastik, Logam',
+    berat: 2.8,
+    estimasiPoin: 400,
+    waktu: '10.02',
+    status: SetorStatus.menunggu,
+  ),
+  SetorTransaksiModel(
+    userName: 'Rina Wulandari',
+    jenis: 'Drop-in',
+    kategori: 'Plastik',
+    berat: 1.5,
+    estimasiPoin: 150,
+    waktu: '09.40',
+    status: SetorStatus.menunggu,
+  ),
+  SetorTransaksiModel(
+    userName: 'Dewi Lestari',
+    jenis: 'Drop-in',
+    kategori: 'Kardus, Kertas',
+    berat: 3.2,
+    estimasiPoin: 240,
+    waktu: '08.55',
+    status: SetorStatus.terverifikasi,
+  ),
 ];
 
 final List<PenarikanModel> samplePenarikan = [
-  PenarikanModel(userName: 'Agus Prasetyo', tujuan: 'Rekening Bank', poin: 85000, nominal: 850000, waktu: '11.05', status: PenarikanStatus.menunggu, isAnomali: true, anomaliReason: 'Nominal jauh di atas rata-rata (biasanya <Rp100rb)'),
-  PenarikanModel(userName: 'Dewi Lestari', tujuan: 'DANA', poin: 4500, nominal: 45000, waktu: '07.20', status: PenarikanStatus.menunggu),
-  PenarikanModel(userName: 'Hendra Gunawan', tujuan: 'GoPay', poin: 1000, nominal: 10000, waktu: 'Kemarin, 16.10', status: PenarikanStatus.selesai),
+  PenarikanModel(
+    userName: 'Agus Prasetyo',
+    tujuan: 'Rekening Bank',
+    poin: 85000,
+    nominal: 850000,
+    waktu: '11.05',
+    status: PenarikanStatus.menunggu,
+    isAnomali: true,
+    anomaliReason: 'Nominal jauh di atas rata-rata (biasanya <Rp100rb)',
+  ),
+  PenarikanModel(
+    userName: 'Dewi Lestari',
+    tujuan: 'DANA',
+    poin: 4500,
+    nominal: 45000,
+    waktu: '07.20',
+    status: PenarikanStatus.menunggu,
+  ),
+  PenarikanModel(
+    userName: 'Hendra Gunawan',
+    tujuan: 'GoPay',
+    poin: 1000,
+    nominal: 10000,
+    waktu: 'Kemarin, 16.10',
+    status: PenarikanStatus.selesai,
+  ),
 ];
 
 final List<B2BDealModel> sampleB2B = [
-  B2BDealModel(mitraName: 'PT Daur Ulang Nusantara', kategori: 'Plastik PET', totalBerat: 420, hargaPerKg: 3500, tanggal: '28 Jul 2026', status: B2BStatus.disepakati),
-  B2BDealModel(mitraName: 'CV Kertas Hijau', kategori: 'Kertas & Kardus', totalBerat: 680, hargaPerKg: 1800, tanggal: '25 Jul 2026', status: B2BStatus.terkirim),
-  B2BDealModel(mitraName: 'UD Logam Jaya', kategori: 'Logam Campur', totalBerat: 150, hargaPerKg: 6200, tanggal: '20 Jul 2026', status: B2BStatus.selesai),
+  B2BDealModel(
+    mitraName: 'PT Daur Ulang Nusantara',
+    kategori: 'Plastik PET',
+    totalBerat: 420,
+    hargaPerKg: 3500,
+    tanggal: '28 Jul 2026',
+    status: B2BStatus.disepakati,
+  ),
+  B2BDealModel(
+    mitraName: 'CV Kertas Hijau',
+    kategori: 'Kertas & Kardus',
+    totalBerat: 680,
+    hargaPerKg: 1800,
+    tanggal: '25 Jul 2026',
+    status: B2BStatus.terkirim,
+  ),
+  B2BDealModel(
+    mitraName: 'UD Logam Jaya',
+    kategori: 'Logam Campur',
+    totalBerat: 150,
+    hargaPerKg: 6200,
+    tanggal: '20 Jul 2026',
+    status: B2BStatus.selesai,
+  ),
 ];
 
 // --------------------------------------------------------------------------
@@ -124,14 +192,19 @@ class ManajemenTransaksiScreen extends StatefulWidget {
   const ManajemenTransaksiScreen({super.key});
 
   @override
-  State<ManajemenTransaksiScreen> createState() => _ManajemenTransaksiScreenState();
+  State<ManajemenTransaksiScreen> createState() =>
+      _ManajemenTransaksiScreenState();
 }
 
 class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  final List<String> tabs = ['Approval Setor', 'Penarikan Saldo', 'Penjualan B2B'];
+  final List<String> tabs = [
+    'Approval Setor',
+    'Penarikan Saldo',
+    'Penjualan B2B',
+  ];
 
   @override
   void initState() {
@@ -213,7 +286,10 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                   const Text('Penarikan Saldo'),
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
                       color: warningBg,
                       borderRadius: BorderRadius.circular(20),
@@ -306,7 +382,11 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
     );
   }
 
-  Widget _actionButton(String label, {bool primary = true, VoidCallback? onTap}) {
+  Widget _actionButton(
+    String label, {
+    bool primary = true,
+    VoidCallback? onTap,
+  }) {
     return GestureDetector(
       onTap: onTap ?? () {},
       child: Container(
@@ -360,99 +440,149 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
       child: _tableContainer(
         children: [
           _tableHeaderRow(
-            ['User', 'Jenis', 'Kategori', 'Berat', 'Est. Poin', 'Status', 'Aksi'],
+            [
+              'User',
+              'Jenis',
+              'Kategori',
+              'Berat',
+              'Est. Poin',
+              'Status',
+              'Aksi',
+            ],
             [2, 1, 2, 1, 1, 1, 2],
           ),
-          ...sampleSetor.map((tx) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: borderColor, width: 0.5)),
+          ...sampleSetor.map(
+            (tx) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: const BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: borderColor, width: 0.5),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(tx.userName,
-                              style: const TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
-                                color: darkText,
-                              )),
-                          Text(tx.waktu,
-                              style: const TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 10,
-                                fontWeight: FontWeight.w400,
-                                color: mutedText,
-                              )),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      flex: 1,
-                      child: _pill(
-                        tx.jenis,
-                        tx.jenis == 'Jemput' ? const Color(0xFF32CD32) : primaryGreen,
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(tx.kategori,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tx.userName,
                           style: const TextStyle(
                             fontFamily: 'PlusJakartaSans',
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w400,
-                            color: subtleText,
-                          )),
-                    ),
-                    Expanded(
-                      flex: 1,
-                      child: Text('${tx.berat} kg',
-                          style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: darkText,
-                          )),
-                    ),
-                    Expanded(
-                      flex: 1,
-                      child: Text('${tx.estimasiPoin}',
-                          style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 12,
+                            fontSize: 12.5,
                             fontWeight: FontWeight.w600,
-                            color: primaryGreen,
-                          )),
+                            color: darkText,
+                          ),
+                        ),
+                        Text(
+                          tx.waktu,
+                          style: const TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 10,
+                            fontWeight: FontWeight.w400,
+                            color: mutedText,
+                          ),
+                        ),
+                      ],
                     ),
-                    Expanded(
-                      flex: 1,
-                      child: _pill(_setorStatusLabel(tx.status), _setorStatusColor(tx.status)),
+                  ),
+                  Expanded(
+                    flex: 1,
+                    child: _pill(
+                      tx.jenis,
+                      tx.jenis == 'Jemput'
+                          ? const Color(0xFF32CD32)
+                          : primaryGreen,
                     ),
-                    Expanded(
-                      flex: 2,
-                      child: tx.status == SetorStatus.menunggu
-                          ? Row(
-                              children: [
-                                _actionButton('Setujui'),
-                                const SizedBox(width: 6),
-                                _actionButton('Tolak', primary: false),
-                              ],
-                            )
-                          : const Text('—',
-                              style: TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 12,
-                                color: mutedText,
-                              )),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      tx.kategori,
+                      style: const TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w400,
+                        color: subtleText,
+                      ),
                     ),
-                  ],
-                ),
-              )),
+                  ),
+                  Expanded(
+                    flex: 1,
+                    child: Text(
+                      '${tx.berat} kg',
+                      style: const TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: darkText,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 1,
+                    child: Text(
+                      '${tx.estimasiPoin}',
+                      style: const TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: primaryGreen,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 1,
+                    child: _pill(
+                      _setorStatusLabel(tx.status),
+                      _setorStatusColor(tx.status),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: tx.status == SetorStatus.menunggu
+                        ? Row(
+                            children: [
+                              _actionButton(
+                                'Setujui',
+                                onTap: () {
+                                  setState(() {
+                                    tx.status = SetorStatus.terverifikasi;
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Setor sampah disetujui'),
+                                      backgroundColor: primaryGreen,
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(width: 6),
+                              _actionButton(
+                                'Tolak',
+                                primary: false,
+                                onTap: () {
+                                  setState(() {
+                                    tx.status = SetorStatus.ditolak;
+                                  });
+                                },
+                              ),
+                            ],
+                          )
+                        : const Text(
+                            '—',
+                            style: TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              fontSize: 12,
+                              color: mutedText,
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -499,128 +629,182 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                 ['User', 'Tujuan', 'Nominal', 'Waktu', 'Status', 'Aksi'],
                 [2, 2, 2, 2, 2, 2],
               ),
-              ...samplePenarikan.map((p) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: p.isAnomali ? warningBg.withValues(alpha: 0.35) : null,
-                      border: const Border(
-                        bottom: BorderSide(color: borderColor, width: 0.5),
-                      ),
+              ...samplePenarikan.map(
+                (p) => Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: p.isAnomali
+                        ? warningBg.withValues(alpha: 0.35)
+                        : null,
+                    border: const Border(
+                      bottom: BorderSide(color: borderColor, width: 0.5),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              flex: 2,
-                              child: Row(
-                                children: [
-                                  if (p.isAnomali)
-                                    const Padding(
-                                      padding: EdgeInsets.only(right: 6),
-                                      child: Icon(Icons.warning_amber_rounded,
-                                          size: 15, color: warningAmber),
-                                    ),
-                                  Text(p.userName,
-                                      style: const TextStyle(
-                                        fontFamily: 'PlusJakartaSans',
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w600,
-                                        color: darkText,
-                                      )),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: Text(p.tujuan,
-                                  style: const TextStyle(
-                                    fontFamily: 'PlusJakartaSans',
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: subtleText,
-                                  )),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: Text(
-                                'Rp ${p.nominal.toStringAsFixed(0)}',
-                                style: TextStyle(
-                                  fontFamily: 'PlusJakartaSans',
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: p.isAnomali ? warningAmber : darkText,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: Text(p.waktu,
-                                  style: const TextStyle(
-                                    fontFamily: 'PlusJakartaSans',
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w400,
-                                    color: mutedText,
-                                  )),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: _pill(
-                                _penarikanStatusLabel(p.status),
-                                _penarikanStatusColor(p.status),
-                              ),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: p.status == PenarikanStatus.menunggu
-                                  ? Row(
-                                      children: [
-                                        _actionButton(p.isAnomali ? 'Tinjau' : 'Setujui'),
-                                        const SizedBox(width: 6),
-                                        _actionButton('Tolak', primary: false),
-                                      ],
-                                    )
-                                  : const Text('—',
-                                      style: TextStyle(
-                                        fontFamily: 'PlusJakartaSans',
-                                        fontSize: 12,
-                                        color: mutedText,
-                                      )),
-                            ),
-                          ],
-                        ),
-                        if (p.isAnomali && p.anomaliReason != null) ...[
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: warningBg,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 2,
                             child: Row(
                               children: [
-                                const Icon(Icons.info_outline_rounded,
-                                    size: 13, color: warningAmber),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    p.anomaliReason!,
-                                    style: const TextStyle(
-                                      fontFamily: 'PlusJakartaSans',
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
+                                if (p.isAnomali)
+                                  const Padding(
+                                    padding: EdgeInsets.only(right: 6),
+                                    child: Icon(
+                                      Icons.warning_amber_rounded,
+                                      size: 15,
                                       color: warningAmber,
                                     ),
+                                  ),
+                                Text(
+                                  p.userName,
+                                  style: const TextStyle(
+                                    fontFamily: 'PlusJakartaSans',
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: darkText,
                                   ),
                                 ),
                               ],
                             ),
                           ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              p.tujuan,
+                              style: const TextStyle(
+                                fontFamily: 'PlusJakartaSans',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: subtleText,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              'Rp ${p.nominal.toStringAsFixed(0)}',
+                              style: TextStyle(
+                                fontFamily: 'PlusJakartaSans',
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: p.isAnomali ? warningAmber : darkText,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              p.waktu,
+                              style: const TextStyle(
+                                fontFamily: 'PlusJakartaSans',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w400,
+                                color: mutedText,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: _pill(
+                              _penarikanStatusLabel(p.status),
+                              _penarikanStatusColor(p.status),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: p.status == PenarikanStatus.menunggu
+                                ? Row(
+                                    children: [
+                                      _actionButton(
+                                        p.isAnomali ? 'Tinjau' : 'Setujui',
+                                        onTap: () {
+                                          if (p.isAnomali) {
+                                            _showTinjauanAnomaliDialog(p);
+                                          } else {
+                                            setState(() {
+                                              p.status =
+                                                  PenarikanStatus.diproses;
+                                            });
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Penarikan saldo disetujui dan diproses',
+                                                ),
+                                                backgroundColor: primaryGreen,
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                      const SizedBox(width: 6),
+                                      _actionButton(
+                                        'Tolak',
+                                        primary: false,
+                                        onTap: () {
+                                          setState(() {
+                                            p.status = PenarikanStatus.ditolak;
+                                          });
+                                        },
+                                      ),
+                                    ],
+                                  )
+                                : const Text(
+                                    '—',
+                                    style: TextStyle(
+                                      fontFamily: 'PlusJakartaSans',
+                                      fontSize: 12,
+                                      color: mutedText,
+                                    ),
+                                  ),
+                          ),
                         ],
+                      ),
+                      if (p.isAnomali && p.anomaliReason != null) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: warningBg,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.info_outline_rounded,
+                                size: 13,
+                                color: warningAmber,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  p.anomaliReason!,
+                                  style: const TextStyle(
+                                    fontFamily: 'PlusJakartaSans',
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: warningAmber,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
-                    ),
-                  )),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ],
@@ -659,8 +843,10 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
   }
 
   Widget _buildB2BTab() {
-    final totalNilaiBulanIni =
-        sampleB2B.fold<double>(0, (sum, item) => sum + item.totalNilai);
+    final totalNilaiBulanIni = sampleB2B.fold<double>(
+      0,
+      (sum, item) => sum + item.totalNilai,
+    );
 
     return SingleChildScrollView(
       child: Column(
@@ -702,14 +888,17 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                 ),
                 ElevatedButton.icon(
                   onPressed: () {
-                    // TODO: buka form tambah kesepakatan B2B baru
+                    _showAddB2BDialog();
                   },
                   icon: const Icon(Icons.add_rounded, size: 16),
                   label: const Text('Tambah Kesepakatan'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: primaryGreen,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -727,94 +916,278 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
           _tableContainer(
             children: [
               _tableHeaderRow(
-                ['Mitra', 'Kategori', 'Total Berat', 'Harga/kg', 'Total Nilai', 'Status'],
+                [
+                  'Mitra',
+                  'Kategori',
+                  'Total Berat',
+                  'Harga/kg',
+                  'Total Nilai',
+                  'Status',
+                ],
                 [2, 2, 1, 1, 2, 1],
               ),
-              ...sampleB2B.map((deal) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: const BoxDecoration(
-                      border: Border(bottom: BorderSide(color: borderColor, width: 0.5)),
+              ...sampleB2B.map(
+                (deal) => Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: borderColor, width: 0.5),
                     ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(deal.mitraName,
-                                  style: const TextStyle(
-                                    fontFamily: 'PlusJakartaSans',
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: darkText,
-                                  )),
-                              Text(deal.tanggal,
-                                  style: const TextStyle(
-                                    fontFamily: 'PlusJakartaSans',
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w400,
-                                    color: mutedText,
-                                  )),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Text(deal.kategori,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              deal.mitraName,
                               style: const TextStyle(
                                 fontFamily: 'PlusJakartaSans',
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w400,
-                                color: subtleText,
-                              )),
-                        ),
-                        Expanded(
-                          flex: 1,
-                          child: Text('${deal.totalBerat.toStringAsFixed(0)} kg',
-                              style: const TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
                                 color: darkText,
-                              )),
-                        ),
-                        Expanded(
-                          flex: 1,
-                          child: Text('Rp ${deal.hargaPerKg.toStringAsFixed(0)}',
+                              ),
+                            ),
+                            Text(
+                              deal.tanggal,
                               style: const TextStyle(
                                 fontFamily: 'PlusJakartaSans',
-                                fontSize: 11.5,
+                                fontSize: 10,
                                 fontWeight: FontWeight.w400,
-                                color: subtleText,
-                              )),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Text(
-                            'Rp ${deal.totalNilai.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
-                              color: primaryGreen,
+                                color: mutedText,
+                              ),
                             ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          deal.kategori,
+                          style: const TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w400,
+                            color: subtleText,
                           ),
                         ),
-                        Expanded(
-                          flex: 1,
-                          child: _pill(
-                            _b2bStatusLabel(deal.status),
-                            _b2bStatusColor(deal.status),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Text(
+                          '${deal.totalBerat.toStringAsFixed(0)} kg',
+                          style: const TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: darkText,
                           ),
                         ),
-                      ],
-                    ),
-                  )),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Text(
+                          'Rp ${deal.hargaPerKg.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w400,
+                            color: subtleText,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          'Rp ${deal.totalNilai.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: primaryGreen,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: _pill(
+                          _b2bStatusLabel(deal.status),
+                          _b2bStatusColor(deal.status),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  void _showTinjauanAnomaliDialog(PenarikanModel p) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Tinjau Penarikan (Anomali)',
+          style: TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Alasan: ${p.anomaliReason}\n\nApakah Anda yakin ingin menyetujui penarikan ini?',
+          style: const TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal', style: TextStyle(color: subtleText)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              elevation: 0,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() {
+                p.status = PenarikanStatus.ditolak;
+              });
+            },
+            child: const Text('Tolak', style: TextStyle(color: Colors.white)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryGreen,
+              elevation: 0,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() {
+                p.status = PenarikanStatus.diproses;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Penarikan saldo disetujui dan diproses'),
+                  backgroundColor: primaryGreen,
+                ),
+              );
+            },
+            child: const Text('Setujui', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddB2BDialog() {
+    final mitraController = TextEditingController();
+    final kategoriController = TextEditingController();
+    final beratController = TextEditingController();
+    final hargaController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text(
+            'Tambah Kesepakatan B2B',
+            style: TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: mitraController,
+                  decoration: const InputDecoration(labelText: 'Nama Mitra'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: kategoriController,
+                  decoration: const InputDecoration(
+                    labelText: 'Kategori Sampah',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: beratController,
+                  decoration: const InputDecoration(
+                    labelText: 'Total Berat (kg)',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: hargaController,
+                  decoration: const InputDecoration(
+                    labelText: 'Harga per kg (Rp)',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Batal', style: TextStyle(color: subtleText)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryGreen,
+                elevation: 0,
+              ),
+              onPressed: () {
+                final mitra = mitraController.text.trim();
+                final kategori = kategoriController.text.trim();
+                final berat = double.tryParse(beratController.text.trim()) ?? 0;
+                final harga = double.tryParse(hargaController.text.trim()) ?? 0;
+
+                if (mitra.isNotEmpty &&
+                    kategori.isNotEmpty &&
+                    berat > 0 &&
+                    harga > 0) {
+                  setState(() {
+                    sampleB2B.add(
+                      B2BDealModel(
+                        mitraName: mitra,
+                        kategori: kategori,
+                        totalBerat: berat,
+                        hargaPerKg: harga,
+                        tanggal: 'Hari ini',
+                        status: B2BStatus.negosiasi,
+                      ),
+                    );
+                  });
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Kesepakatan B2B ditambahkan'),
+                      backgroundColor: primaryGreen,
+                    ),
+                  );
+                }
+              },
+              child: const Text(
+                'Simpan',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

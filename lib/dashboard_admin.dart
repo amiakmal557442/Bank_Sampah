@@ -229,16 +229,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       child: _selectedMenuIndex == 1
                           ? const MasterDataScreen()
                           : _selectedMenuIndex == 2
-                              ? const ManajemenTransaksiScreen()
-                              : SingleChildScrollView(
+                          ? const ManajemenTransaksiScreen()
+                          : SingleChildScrollView(
                               padding: const EdgeInsets.all(40.0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   // Header Section
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Expanded(
                                         child: Column(
@@ -259,7 +261,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                                 ),
                                                 const Text(
                                                   '👋',
-                                                  style: TextStyle(fontSize: 24),
+                                                  style: TextStyle(
+                                                    fontSize: 24,
+                                                  ),
                                                 ),
                                               ],
                                             ),
