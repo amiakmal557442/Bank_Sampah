@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'session_service.dart';
+import 'masterdata.dart';
+import 'manajemen_transaksi.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -224,107 +226,111 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                     // ==================== KONTEN UTAMA KANAN ====================
                     Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(40.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Header Section
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                      child: _selectedMenuIndex == 1
+                          ? const MasterDataScreen()
+                          : _selectedMenuIndex == 2
+                              ? const ManajemenTransaksiScreen()
+                              : SingleChildScrollView(
+                              padding: const EdgeInsets.all(40.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Header Section
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Wrap(
-                                        crossAxisAlignment:
-                                            WrapCrossAlignment.center,
-                                        children: [
-                                          Text(
-                                            'Halo, $adminName ',
-                                            style: TextStyle(
-                                              fontSize: 28,
-                                              fontWeight: FontWeight.bold,
-                                              color: baseBlack,
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Wrap(
+                                              crossAxisAlignment:
+                                                  WrapCrossAlignment.center,
+                                              children: [
+                                                Text(
+                                                  'Halo, $adminName ',
+                                                  style: TextStyle(
+                                                    fontSize: 28,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: baseBlack,
+                                                  ),
+                                                ),
+                                                const Text(
+                                                  '👋',
+                                                  style: TextStyle(fontSize: 24),
+                                                ),
+                                              ],
                                             ),
-                                          ),
-                                          const Text(
-                                            '👋',
-                                            style: TextStyle(fontSize: 24),
-                                          ),
-                                        ],
+                                            const SizedBox(height: 12),
+                                            Text(
+                                              'Sebagai Administrator, kamu punya akses penuh ke seluruh modul sistem — termasuk konfigurasi harga poin, kelola akun & role, serta audit log yang tidak bisa diakses Staf Kantor.',
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                color: textGrey,
+                                                height: 1.5,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        'Sebagai Administrator, kamu punya akses penuh ke seluruh modul sistem — termasuk konfigurasi harga poin, kelola akun & role, serta audit log yang tidak bisa diakses Staf Kantor.',
-                                        style: TextStyle(
-                                          fontSize: 15,
+                                      const SizedBox(width: 16),
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: borderGrey),
+                                        ),
+                                        child: Icon(
+                                          Icons.more_horiz,
                                           color: textGrey,
-                                          height: 1.5,
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                                const SizedBox(width: 16),
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: borderGrey),
-                                  ),
-                                  child: Icon(
-                                    Icons.more_horiz,
-                                    color: textGrey,
-                                  ),
-                                ),
-                              ],
-                            ),
 
-                            const SizedBox(height: 40),
+                                  const SizedBox(height: 40),
 
-                            // Grid Cards (2x2)
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildPrivilegeCard(
-                                    Icons.lock_outline,
-                                    'Master data & konfigurasi sistem',
+                                  // Grid Cards (2x2)
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _buildPrivilegeCard(
+                                          Icons.lock_outline,
+                                          'Master data & konfigurasi sistem',
+                                        ),
+                                      ),
+                                      const SizedBox(width: 24),
+                                      Expanded(
+                                        child: _buildPrivilegeCard(
+                                          Icons.lock_outline,
+                                          'Kelola akun, role &\npermission',
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(width: 24),
-                                Expanded(
-                                  child: _buildPrivilegeCard(
-                                    Icons.lock_outline,
-                                    'Kelola akun, role &\npermission',
+                                  const SizedBox(height: 24),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _buildPrivilegeCard(
+                                          Icons.lock_outline,
+                                          'Operasional lapangan & rute petugas',
+                                        ),
+                                      ),
+                                      const SizedBox(width: 24),
+                                      Expanded(
+                                        child: _buildPrivilegeCard(
+                                          Icons.lock_outline,
+                                          'Audit log seluruh sistem',
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                            const SizedBox(height: 24),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildPrivilegeCard(
-                                    Icons.lock_outline,
-                                    'Operasional lapangan & rute petugas',
-                                  ),
-                                ),
-                                const SizedBox(width: 24),
-                                Expanded(
-                                  child: _buildPrivilegeCard(
-                                    Icons.lock_outline,
-                                    'Audit log seluruh sistem',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
                     ),
                   ],
                 ),
