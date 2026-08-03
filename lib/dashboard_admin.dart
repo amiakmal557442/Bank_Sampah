@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'session_service.dart';
 import 'masterdata.dart';
 import 'manajemen_transaksi.dart';
+import 'operasional_lapangan.dart';
+import 'laporan_analitik.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -230,6 +232,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ? const MasterDataScreen()
                           : _selectedMenuIndex == 2
                           ? const ManajemenTransaksiScreen()
+                          : _selectedMenuIndex == 3
+                          ? const OperasionalLapanganScreen()
+                          : _selectedMenuIndex == 4
+                          ? const LaporanAnalitikScreen()
                           : SingleChildScrollView(
                               padding: const EdgeInsets.all(40.0),
                               child: Column(

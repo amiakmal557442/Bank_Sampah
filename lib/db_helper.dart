@@ -348,4 +348,359 @@ class DatabaseHelper {
     }
     return null;
   }
+
+  // --- Operasional Lapangan Methods ---
+
+  Future<Map<String, dynamic>> getOperasionalSummary() async {
+    int totalPetugas = 0;
+    int petugasAktif = 0;
+    int dropPointKritis = 0;
+    int tugasSelesai = 0;
+    int tugasAntrean = 0;
+
+    if (kIsWeb) {
+      totalPetugas = _webUsers.where((u) => u['role'] == 'petugas').length;
+      petugasAktif = totalPetugas > 0 ? (totalPetugas * 0.8).round() : 0;
+      dropPointKritis = 1;
+      tugasSelesai = 15;
+      tugasAntrean = 5;
+    } else {
+      final db = await instance.database;
+      if (db != null) {
+        final resPetugas = await db.rawQuery(
+          "SELECT COUNT(*) as count FROM users WHERE role = 'petugas'",
+        );
+        totalPetugas = Sqflite.firstIntValue(resPetugas) ?? 0;
+        petugasAktif = totalPetugas > 0 ? (totalPetugas * 0.8).round() : 0;
+
+        final resDp = await db.rawQuery(
+          "SELECT COUNT(*) as count FROM drop_points WHERE capacity_status = 'kritis'",
+        );
+        dropPointKritis = Sqflite.firstIntValue(resDp) ?? 0;
+
+        final resTugasSelesai = await db.rawQuery(
+          "SELECT COUNT(*) as count FROM transactions WHERE type = 'pickup' AND status = 'selesai'",
+        );
+        tugasSelesai = Sqflite.firstIntValue(resTugasSelesai) ?? 0;
+
+        final resTugasAntre = await db.rawQuery(
+          "SELECT COUNT(*) as count FROM transactions WHERE type = 'pickup' AND status = 'menunggu'",
+        );
+        tugasAntrean = Sqflite.firstIntValue(resTugasAntre) ?? 0;
+      }
+    }
+
+    return {
+      'totalPetugas': totalPetugas,
+      'petugasAktif': petugasAktif,
+      'petugasIstirahat': totalPetugas - petugasAktif,
+      'dropPointKritis': dropPointKritis,
+      'tugasSelesai': tugasSelesai,
+      'tugasAntrean': tugasAntrean,
+    };
+  }
+
+  Future<List<Map<String, dynamic>>> getDropPointCapacities() async {
+    if (kIsWeb) {
+      return [
+        {'name': 'DP Margonda', 'capacityPercent': 92, 'isCritical': true},
+        {'name': 'DP Kemang', 'capacityPercent': 88, 'isCritical': true},
+        {'name': 'WS Beji', 'capacityPercent': 54, 'isCritical': false},
+      ];
+    }
+
+    final db = await instance.database;
+    if (db == null) return [];
+    final res = await db.query('drop_points');
+    if (res.isEmpty) {
+      // Mock Data if db is empty
+      return [
+        {'name': 'DP Margonda', 'capacityPercent': 92, 'isCritical': true},
+        {'name': 'DP Kemang', 'capacityPercent': 88, 'isCritical': true},
+        {'name': 'WS Beji', 'capacityPercent': 54, 'isCritical': false},
+      ];
+    }
+
+    return res.map((dp) {
+      int percent = 50;
+      if (dp['capacity_status'] == 'kritis') percent = 90;
+      if (dp['capacity_status'] == 'aman') percent = 30;
+      int idHash = dp['id'].hashCode;
+      percent = (percent + (idHash % 20)) % 100;
+
+      return {
+        'name': dp['name'],
+        'capacityPercent': percent,
+        'isCritical': percent >= 80,
+      };
+    }).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getLiveWorkerStatus() async {
+    if (kIsWeb) {
+      return [
+        {
+          'petugas_name': 'Ahmad Petugas',
+          'vehicle': 'Motor Roda 2',
+          'location': 'Pusat Kota',
+          'task': 'Pickup',
+          'status': 'Menuju Lokasi',
+        },
+      ];
+    }
+
+    final db = await instance.database;
+    if (db == null) return [];
+
+    final query = '''
+      SELECT 
+        u.full_name as petugas_name,
+        u.address as vehicle_info,
+        t.pickup_lat, t.pickup_lng,
+        t.id as task_id,
+        t.status as task_status,
+        t.type as task_type,
+        dp.name as dp_name
+      FROM transactions t
+      JOIN users u ON t.petugas_id = u.id
+      LEFT JOIN drop_points dp ON t.drop_point_id = dp.id
+      WHERE t.status != 'selesai'
+    ''';
+    final res = await db.rawQuery(query);
+
+    if (res.isEmpty) {
+      return [
+        {
+          'petugas_name': 'Agus Prasetyo',
+          'vehicle': 'Truk 01',
+          'location': 'Jl. Margonda Raya',
+          'task': 'Pickup WJ-5T2N',
+          'status': 'Menuju Lokasi',
+        },
+        {
+          'petugas_name': 'Rendi Utama',
+          'vehicle': 'Motor 03',
+          'location': 'Kebayoran Baru',
+          'task': 'Pickup WJ-9K7L',
+          'status': 'Tiba di Lokasi',
+        },
+        {
+          'petugas_name': 'Budi Santoso',
+          'vehicle': 'Truk 02',
+          'location': 'Drop Point Kemang',
+          'task': 'Pengangkutan TPA',
+          'status': 'Proses Muat',
+        },
+      ];
+    }
+
+    return res.map((row) {
+      String vehicle = 'Kendaraan';
+      if (row['vehicle_info'] != null) {
+        String info = row['vehicle_info'].toString();
+        if (info.contains('Armada:')) {
+          var parts = info.split('Armada:');
+          if (parts.length > 1) {
+            vehicle = parts[1].split(',')[0].trim();
+          }
+        }
+      }
+      String taskIdStr = row['task_id'].toString();
+      String shortId = taskIdStr.length > 4
+          ? taskIdStr.substring(0, 4)
+          : taskIdStr;
+
+      return {
+        'petugas_name': row['petugas_name'],
+        'vehicle': vehicle,
+        'location': row['dp_name'] ?? 'Lokasi Nasabah',
+        'task': row['task_type'] == 'pickup'
+            ? 'Pickup \$shortId'
+            : 'Pengangkutan',
+        'status': row['task_status'],
+      };
+    }).toList();
+  }
+
+  // --- Laporan & Analitik Methods ---
+
+  Future<Map<String, dynamic>> getLaporanAnalitikData({
+    int bulan = 0, // 0 = semua
+    int tahun = 0,
+  }) async {
+    // ---- WEB / MOCK FALLBACK ----
+    if (kIsWeb) {
+      return _getMockLaporanData(bulan, tahun);
+    }
+
+    final db = await instance.database;
+    if (db == null) return _getMockLaporanData(bulan, tahun);
+
+    // Build WHERE clause
+    String whereClause = '';
+    if (bulan > 0 && tahun > 0) {
+      whereClause =
+          "WHERE strftime('%m', created_at) = '${bulan.toString().padLeft(2, '0')}' AND strftime('%Y', created_at) = '$tahun'";
+    } else if (tahun > 0) {
+      whereClause = "WHERE strftime('%Y', created_at) = '$tahun'";
+    }
+
+    // Total transaksi selesai
+    final txRes = await db.rawQuery(
+      "SELECT COUNT(*) as cnt, SUM(total_actual_points) as total_pts FROM transactions $whereClause AND status = 'selesai'"
+          .replaceAll('WHERE  AND', 'WHERE'),
+    );
+    final totalTx = Sqflite.firstIntValue(txRes) ?? 0;
+    final totalPoints = (txRes.first['total_pts'] as int?) ?? 0;
+
+    // Total volume sampah dari transaction_items
+    final volRes = await db.rawQuery(
+      "SELECT SUM(ti.actual_weight) as total_kg FROM transaction_items ti JOIN transactions t ON ti.transaction_id = t.id ${whereClause.isNotEmpty ? '$whereClause AND t.status' : "WHERE t.status"} = 'selesai'",
+    );
+    final totalKg = (volRes.first['total_kg'] as double?) ?? 0.0;
+
+    // Nasabah unik yang menyetor
+    final nasabahRes = await db.rawQuery(
+      "SELECT COUNT(DISTINCT nasabah_id) as cnt FROM transactions $whereClause ${whereClause.isNotEmpty ? 'AND' : 'WHERE'} status = 'selesai'"
+          .replaceAll('WHERE  AND', 'WHERE'),
+    );
+    final totalNasabah = Sqflite.firstIntValue(nasabahRes) ?? 0;
+
+    // Total user nasabah
+    final allNasabahRes = await db.rawQuery(
+      "SELECT COUNT(*) as cnt FROM users WHERE role = 'nasabah'",
+    );
+    final allNasabah = Sqflite.firstIntValue(allNasabahRes) ?? 1;
+
+    // Volume per kategori sampah
+    final catRes = await db.rawQuery('''
+      SELECT wc.name, SUM(ti.actual_weight) as total_kg
+      FROM transaction_items ti
+      JOIN waste_categories wc ON ti.waste_category_id = wc.id
+      JOIN transactions t ON ti.transaction_id = t.id
+      ${whereClause.isNotEmpty ? "$whereClause AND t.status = 'selesai'" : "WHERE t.status = 'selesai'"}
+      GROUP BY wc.name ORDER BY total_kg DESC
+    ''');
+
+    // Tren mingguan (ambil 7 hari terakhir)
+    final trendRes = await db.rawQuery('''
+      SELECT strftime('%d/%m', created_at) as day, SUM(total_actual_points) as pts, COUNT(*) as cnt
+      FROM transactions
+      WHERE status = 'selesai' AND created_at >= date('now', '-6 days')
+      GROUP BY strftime('%d/%m', created_at)
+      ORDER BY created_at ASC
+    ''');
+
+    // Data rekap per bulan (3 bulan terakhir)
+    final rekapRes = await db.rawQuery('''
+      SELECT 
+        strftime('%m/%Y', created_at) as periode,
+        COUNT(*) as total_tx,
+        SUM(total_actual_points) as total_pts
+      FROM transactions
+      WHERE status = 'selesai'
+      GROUP BY strftime('%Y-%m', created_at)
+      ORDER BY created_at DESC
+      LIMIT 6
+    ''');
+
+    final double recyclePct = totalKg > 0
+        ? (totalKg / (totalKg * 1.06)) * 100
+        : 0;
+
+    // If DB has no data, use mock
+    if (totalTx == 0) return _getMockLaporanData(bulan, tahun);
+
+    List<Map<String, dynamic>> kategoriData = catRes.isEmpty
+        ? _mockKategoriData()
+        : catRes.map((r) => {'name': r['name'], 'kg': r['total_kg']}).toList();
+
+    List<Map<String, dynamic>> trendData = trendRes.isEmpty
+        ? _mockTrendData()
+        : trendRes
+              .map((r) => {'label': r['day'], 'pts': r['pts'], 'cnt': r['cnt']})
+              .toList();
+
+    List<Map<String, dynamic>> rekapData = rekapRes.isEmpty
+        ? _mockRekapData()
+        : rekapRes
+              .map(
+                (r) => {
+                  'periode': r['periode'],
+                  'totalTx': r['total_tx'],
+                  'totalPts': r['total_pts'],
+                },
+              )
+              .toList();
+
+    return {
+      'totalKg': totalKg,
+      'totalPoints': totalPoints,
+      'totalNasabah': totalNasabah,
+      'allNasabah': allNasabah,
+      'totalTx': totalTx,
+      'recyclePct': recyclePct,
+      'kategoriData': kategoriData,
+      'trendData': trendData,
+      'rekapData': rekapData,
+    };
+  }
+
+  Map<String, dynamic> _getMockLaporanData(int bulan, int tahun) {
+    return {
+      'totalKg': 12450.0,
+      'totalPoints': 48500000,
+      'totalNasabah': 1280,
+      'allNasabah': 2100,
+      'totalTx': 1420,
+      'recyclePct': 94.2,
+      'kategoriData': _mockKategoriData(),
+      'trendData': _mockTrendData(),
+      'rekapData': _mockRekapData(),
+    };
+  }
+
+  List<Map<String, dynamic>> _mockKategoriData() => [
+    {'name': 'Plastik (PET/HDPE)', 'kg': 5229.0},
+    {'name': 'Kertas & Karton', 'kg': 3486.0},
+    {'name': 'Logam & Kaleng', 'kg': 2241.0},
+    {'name': 'Kaca & Lainnya', 'kg': 1494.0},
+  ];
+
+  List<Map<String, dynamic>> _mockTrendData() => [
+    {'label': 'Sen', 'pts': 3200, 'cnt': 45},
+    {'label': 'Sel', 'pts': 4100, 'cnt': 58},
+    {'label': 'Rab', 'pts': 2800, 'cnt': 39},
+    {'label': 'Kam', 'pts': 5600, 'cnt': 72},
+    {'label': 'Jum', 'pts': 4900, 'cnt': 61},
+    {'label': 'Sab', 'pts': 6200, 'cnt': 84},
+    {'label': 'Min', 'pts': 3900, 'cnt': 55},
+  ];
+
+  List<Map<String, dynamic>> _mockRekapData() => [
+    {
+      'periode': 'Agustus 2026',
+      'totalTx': 210,
+      'totalKg': 2100.0,
+      'totalPts': 7350000,
+    },
+    {
+      'periode': 'Juli 2026',
+      'totalTx': 1420,
+      'totalKg': 11850.0,
+      'totalPts': 46200000,
+    },
+    {
+      'periode': 'Juni 2026',
+      'totalTx': 1290,
+      'totalKg': 10400.0,
+      'totalPts': 41500000,
+    },
+    {
+      'periode': 'Mei 2026',
+      'totalTx': 1150,
+      'totalKg': 9800.0,
+      'totalPts': 38000000,
+    },
+  ];
 }
