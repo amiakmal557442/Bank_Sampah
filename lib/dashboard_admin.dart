@@ -7,6 +7,7 @@ import 'laporan_analitik.dart';
 import 'kelolaakun.dart';
 import 'konfigurasi_sistem.dart';
 import 'audit_log.dart';
+import 'login_page.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -219,6 +220,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                           ),
                                         ),
                                       ],
+                                    ),
+                                  ),
+                                  Tooltip(
+                                    message: 'Keluar (Logout)',
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(8),
+                                        onTap: () {
+                                          SessionService.logout();
+                                          Navigator.pushAndRemoveUntil(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (ctx) => const LoginPage(),
+                                            ),
+                                            (route) => false,
+                                          );
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Icon(
+                                            Icons.logout_rounded,
+                                            color: Colors.red.shade400,
+                                            size: 22,
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ],
