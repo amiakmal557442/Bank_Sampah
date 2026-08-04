@@ -19,6 +19,7 @@ class DatabaseHelper {
       'address': 'Jl. Mawar No. 12, Jakarta',
       'default_setor_method': 'drop_in',
       'point_balance': 4820,
+      'is_active': 1,
     },
     {
       'id': 'petugas-uuid-1234-5678',
@@ -31,6 +32,7 @@ class DatabaseHelper {
           'Zona: Drop Point 01 - Pusat Kota, Armada: Motor Roda 2, Plat: B 1234 ABC',
       'default_setor_method': 'pickup',
       'point_balance': 0,
+      'is_active': 1,
     },
     {
       'id': 'admin-uuid-akmal-223',
@@ -42,6 +44,7 @@ class DatabaseHelper {
       'address': 'Kantor Pusat Bank Sampah',
       'default_setor_method': 'drop_in',
       'point_balance': 99999,
+      'is_active': 1,
     },
     {
       'id': 'admin-uuid-fanska-221',
@@ -53,8 +56,58 @@ class DatabaseHelper {
       'address': 'Kantor Pusat Bank Sampah',
       'default_setor_method': 'drop_in',
       'point_balance': 99999,
+      'is_active': 1,
+    },
+    {
+      'id': 'staf-uuid-andi-001',
+      'phone_number': '+62 812-5555-6666',
+      'email': 'andi.wijaya@banksampah.id',
+      'full_name': 'Andi Wijaya',
+      'password': 'staf123456',
+      'role': 'staf_kantor',
+      'address': 'Kantor Pusat Bank Sampah',
+      'default_setor_method': 'drop_in',
+      'point_balance': 0,
+      'is_active': 1,
+    },
+    {
+      'id': 'staf-uuid-rina-002',
+      'phone_number': '+62 812-7777-8888',
+      'email': 'rina.m@banksampah.id',
+      'full_name': 'Rina Marlina',
+      'password': 'staf123456',
+      'role': 'staf_kantor',
+      'address': 'Kantor Pusat Bank Sampah',
+      'default_setor_method': 'drop_in',
+      'point_balance': 0,
+      'is_active': 0,
     },
   ];
+
+  // In-memory permissions for Staf Kantor (web & native fallback)
+  static final Map<String, bool> _webPermissions = {
+    'Overview': true,
+    'Master Data': false,
+    'Manajemen Transaksi': true,
+    'Operasional Lapangan': false,
+    'Laporan & Analitik': false,
+    'Konfigurasi Sistem': false,
+    'Kelola Akun & Role': false,
+    'Audit Log': false,
+  };
+
+  // In-memory system configuration for Web (Chrome fallback)
+  static Map<String, dynamic> _webSystemConfig = {
+    'min_weight': 1.0,
+    'max_radius': 5.0,
+    'min_withdraw': 10000.0,
+    'point_rate': 1.0,
+    'auto_assign': 1,
+    'jam_buka': '08:00',
+    'jam_tutup': '17:00',
+    'wa_notif': 1,
+    'push_notif': 1,
+  };
 
   DatabaseHelper._init();
 
@@ -72,8 +125,9 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       path,
-      version: 1,
+      version: 4,
       onCreate: _createDB,
+      onUpgrade: _onUpgrade,
       onConfigure: _onConfigure,
     );
 
@@ -92,6 +146,56 @@ class DatabaseHelper {
     await db.execute('PRAGMA foreign_keys = ON');
   }
 
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Add is_active column if upgrading from v1
+      try {
+        await db.execute(
+          'ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1',
+        );
+        await db.execute('UPDATE users SET is_active = 1');
+      } catch (_) {}
+    }
+    if (oldVersion < 3) {
+      // Create system_configs table
+      try {
+        await db.execute('''
+          CREATE TABLE system_configs (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+          )
+        ''');
+      } catch (_) {}
+    }
+    if (oldVersion < 4) {
+      // Create audit_logs table
+      try {
+        await db.execute('''
+          CREATE TABLE audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            time TEXT NOT NULL,
+            user_name TEXT NOT NULL,
+            role TEXT NOT NULL,
+            module TEXT NOT NULL,
+            action TEXT NOT NULL,
+            ip_address TEXT NOT NULL,
+            status TEXT NOT NULL
+          )
+        ''');
+
+        // Insert sample data
+        await db.execute('''
+          INSERT INTO audit_logs (time, user_name, role, module, action, ip_address, status) 
+          VALUES ('04 Aug 2026 - 10:42', 'Akmal Ahsan', 'Administrator', 'Konfigurasi Sistem', 'Mengubah Rasio Poin dari Rp 1 ke Rp 1.2/Poin', '192.168.1.10', 'SUKSES')
+        ''');
+        await db.execute('''
+          INSERT INTO audit_logs (time, user_name, role, module, action, ip_address, status) 
+          VALUES ('04 Aug 2026 - 08:30', 'Unknown User', 'Guest', 'Authentication', 'Percobaan Login Gagal (Salah Password 3x)', '180.252.10.4', 'GAGAL')
+        ''');
+      } catch (_) {}
+    }
+  }
+
   Future _createDB(Database db, int version) async {
     // 1. Table users
     await db.execute('''
@@ -105,6 +209,7 @@ class DatabaseHelper {
         address TEXT,
         default_setor_method TEXT,
         point_balance INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     ''');
@@ -209,6 +314,33 @@ class DatabaseHelper {
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     ''');
+
+    // 9. Table system_configs
+    await db.execute('''
+      CREATE TABLE system_configs (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
+
+    // 10. Table audit_logs
+    await db.execute('''
+      CREATE TABLE audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        time TEXT NOT NULL,
+        user_name TEXT NOT NULL,
+        role TEXT NOT NULL,
+        module TEXT NOT NULL,
+        action TEXT NOT NULL,
+        ip_address TEXT NOT NULL,
+        status TEXT NOT NULL
+      )
+    ''');
+
+    // Seed mock audit logs
+    for (var log in _webAuditLogs) {
+      await db.insert('audit_logs', log);
+    }
 
     // Seeding default users
     for (var u in _webUsers) {
@@ -676,6 +808,268 @@ class DatabaseHelper {
     {'label': 'Sab', 'pts': 6200, 'cnt': 84},
     {'label': 'Min', 'pts': 3900, 'cnt': 55},
   ];
+
+  // ── ACCOUNT MANAGEMENT CRUD ─────────────────────────────────────────────
+
+  /// Returns all users, optionally filtered by role.
+  Future<List<Map<String, dynamic>>> getAllUsers({String? roleFilter}) async {
+    if (kIsWeb) {
+      final list = roleFilter == null
+          ? List<Map<String, dynamic>>.from(_webUsers)
+          : _webUsers.where((u) => u['role'] == roleFilter).toList();
+      return list;
+    }
+
+    final db = await instance.database;
+    if (db == null) return [];
+
+    if (roleFilter != null) {
+      return await db.query(
+        'users',
+        where: 'role = ?',
+        whereArgs: [roleFilter],
+        orderBy: 'full_name ASC',
+      );
+    }
+    return await db.query('users', orderBy: 'role ASC, full_name ASC');
+  }
+
+  /// Updates arbitrary fields on a user record.
+  Future<bool> updateUserProfile(
+    String userId,
+    Map<String, dynamic> data,
+  ) async {
+    if (kIsWeb) {
+      final idx = _webUsers.indexWhere((u) => u['id'] == userId);
+      if (idx == -1) return false;
+      final updated = Map<String, dynamic>.from(_webUsers[idx]);
+      updated.addAll(data);
+      _webUsers[idx] = updated;
+      return true;
+    }
+
+    final db = await instance.database;
+    if (db == null) return false;
+    try {
+      final rows = await db.update(
+        'users',
+        data,
+        where: 'id = ?',
+        whereArgs: [userId],
+      );
+      return rows > 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Toggles the active/inactive status of a user.
+  Future<bool> toggleUserStatus(String userId, bool isActive) async {
+    return updateUserProfile(userId, {'is_active': isActive ? 1 : 0});
+  }
+
+  /// Updates only the role field of a user.
+  Future<bool> updateUserRole(String userId, String newRole) async {
+    return updateUserProfile(userId, {'role': newRole});
+  }
+
+  /// Permanently deletes a user account.
+  Future<bool> deleteUser(String userId) async {
+    if (kIsWeb) {
+      final idx = _webUsers.indexWhere((u) => u['id'] == userId);
+      if (idx == -1) return false;
+      _webUsers.removeAt(idx);
+      return true;
+    }
+
+    final db = await instance.database;
+    if (db == null) return false;
+    try {
+      final rows = await db.delete(
+        'users',
+        where: 'id = ?',
+        whereArgs: [userId],
+      );
+      return rows > 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ── STAF KANTOR PERMISSIONS ───────────────────────────────────────────────
+
+  /// Returns the current permission map for Staf Kantor role.
+  Future<Map<String, bool>> getStafPermissions() async {
+    // Returns a copy so mutations don't affect the source directly
+    return Map<String, bool>.from(_webPermissions);
+  }
+
+  /// Persists the Staf Kantor permission map (in-memory for web/native).
+  Future<bool> saveStafPermissions(Map<String, bool> permissions) async {
+    try {
+      _webPermissions.addAll(permissions);
+      // TODO: persist to a DB table (e.g. staf_permissions) for production
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ── SYSTEM CONFIGURATION ──────────────────────────────────────────────────
+
+  /// Fetches system configuration settings
+  Future<Map<String, dynamic>> getSystemConfig() async {
+    if (kIsWeb) {
+      return Map<String, dynamic>.from(_webSystemConfig);
+    }
+
+    final db = await instance.database;
+    if (db == null) return Map<String, dynamic>.from(_webSystemConfig);
+
+    final res = await db.query('system_configs');
+    if (res.isEmpty) {
+      return Map<String, dynamic>.from(_webSystemConfig);
+    }
+
+    Map<String, dynamic> config = Map<String, dynamic>.from(_webSystemConfig);
+    for (var row in res) {
+      String key = row['key'] as String;
+      String valStr = row['value'] as String;
+
+      // Try parsing numeric or bool types
+      if (['jam_buka', 'jam_tutup'].contains(key)) {
+        config[key] = valStr;
+      } else if (['auto_assign', 'wa_notif', 'push_notif'].contains(key)) {
+        config[key] = int.tryParse(valStr) ?? 1;
+      } else {
+        config[key] = double.tryParse(valStr) ?? _webSystemConfig[key];
+      }
+    }
+    return config;
+  }
+
+  /// Saves system configuration settings
+  Future<bool> saveSystemConfig(Map<String, dynamic> config) async {
+    if (kIsWeb) {
+      _webSystemConfig.addAll(config);
+      return true;
+    }
+
+    final db = await instance.database;
+    if (db == null) return false;
+
+    try {
+      await db.transaction((txn) async {
+        for (var entry in config.entries) {
+          await txn.insert('system_configs', {
+            'key': entry.key,
+            'value': entry.value.toString(),
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ── AUDIT LOGS ────────────────────────────────────────────────────────────
+
+  static final List<Map<String, dynamic>> _webAuditLogs = [
+    {
+      'time': '04 Aug 2026 - 10:42',
+      'user_name': 'Akmal Ahsan',
+      'role': 'Administrator',
+      'module': 'Konfigurasi Sistem',
+      'action': 'Mengubah Rasio Poin dari Rp 1 ke Rp 1.2/Poin',
+      'ip_address': '192.168.1.10',
+      'status': 'SUKSES',
+    },
+    {
+      'time': '04 Aug 2026 - 10:15',
+      'user_name': 'Budi Santoso',
+      'role': 'Staf Kantor',
+      'module': 'Master Data',
+      'action': 'Menambahkan Harga Sampah Kategori Plastic PET',
+      'ip_address': '192.168.1.15',
+      'status': 'SUKSES',
+    },
+    {
+      'time': '04 Aug 2026 - 09:50',
+      'user_name': 'System Auto',
+      'role': 'System',
+      'module': 'Operasional',
+      'action': 'Penugasan Otomatis Driver (Driver ID: #DRV-09)',
+      'ip_address': '127.0.0.1',
+      'status': 'SUKSES',
+    },
+    {
+      'time': '04 Aug 2026 - 08:30',
+      'user_name': 'Unknown User',
+      'role': 'Guest',
+      'module': 'Authentication',
+      'action': 'Percobaan Login Gagal (Salah Password 3x)',
+      'ip_address': '180.252.10.4',
+      'status': 'GAGAL',
+    },
+    {
+      'time': '04 Aug 2026 - 08:00',
+      'user_name': 'Siti Aminah',
+      'role': 'Staf Kantor',
+      'module': 'Manajemen Transaksi',
+      'action': 'Menyetujui Pencairan Poin Rp 50.000 (#TX-8821)',
+      'ip_address': '192.168.1.18',
+      'status': 'SUKSES',
+    },
+  ];
+
+  Future<List<Map<String, dynamic>>> getAuditLogs({
+    String? modul,
+    String query = '',
+  }) async {
+    List<Map<String, dynamic>> logs = [];
+    if (kIsWeb) {
+      logs = List<Map<String, dynamic>>.from(_webAuditLogs);
+    } else {
+      final db = await instance.database;
+      if (db != null) {
+        logs = await db.query('audit_logs', orderBy: 'id DESC');
+      }
+    }
+
+    // Apply filters
+    if (modul != null && modul != 'Semua Modul') {
+      logs = logs.where((log) => log['module'] == modul).toList();
+    }
+
+    if (query.trim().isNotEmpty) {
+      String q = query.toLowerCase();
+      logs = logs.where((log) {
+        return (log['user_name'] ?? '').toString().toLowerCase().contains(q) ||
+            (log['action'] ?? '').toString().toLowerCase().contains(q) ||
+            (log['role'] ?? '').toString().toLowerCase().contains(q);
+      }).toList();
+    }
+
+    return logs;
+  }
+
+  Future<bool> insertAuditLog(Map<String, dynamic> log) async {
+    if (kIsWeb) {
+      _webAuditLogs.insert(0, log);
+      return true;
+    }
+    final db = await instance.database;
+    if (db == null) return false;
+    try {
+      await db.insert('audit_logs', log);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ── MOCK DATA ─────────────────────────────────────────────────────────────
 
   List<Map<String, dynamic>> _mockRekapData() => [
     {

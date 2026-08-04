@@ -789,20 +789,21 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
 
   // ── Bar Chart Custom (tanpa library)
   Widget _buildBarChart(List<Map<String, dynamic>> data, int maxPts) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final barW =
-            (constraints.maxWidth - (data.length - 1) * 8) / data.length;
-        return Column(
-          children: [
-            // Chart area
-            Expanded(
-              child: Row(
+    return Column(
+      children: [
+        // Chart area
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final barW =
+                  (constraints.maxWidth - (data.length - 1) * 8) / data.length;
+              return Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: data.map((item) {
                   final pts = (item['pts'] as num?)?.toInt() ?? 0;
                   final pct = maxPts > 0 ? pts / maxPts : 0.0;
-                  return Expanded(
+                  return SizedBox(
+                    width: barW,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Column(
@@ -824,8 +825,9 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 600),
                             curve: Curves.easeOut,
-                            width: barW,
-                            height: (constraints.maxHeight - 28) * pct,
+                            width: double.infinity,
+                            // Maximum bar height = available height minus the space taken by Text and SizedBox (~18px)
+                            height: (constraints.maxHeight - 20) * pct,
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [_lime, _green],
@@ -842,24 +844,24 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
                     ),
                   );
                 }).toList(),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        // X Labels
+        Row(
+          children: data.map((item) {
+            return Expanded(
+              child: Text(
+                item['label']?.toString() ?? '',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 10, color: _grey),
               ),
-            ),
-            const SizedBox(height: 8),
-            // X Labels
-            Row(
-              children: data.map((item) {
-                return Expanded(
-                  child: Text(
-                    item['label']?.toString() ?? '',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 10, color: _grey),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        );
-      },
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 

@@ -5,6 +5,8 @@ import 'manajemen_transaksi.dart';
 import 'operasional_lapangan.dart';
 import 'laporan_analitik.dart';
 import 'kelolaakun.dart';
+import 'konfigurasi_sistem.dart';
+import 'audit_log.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -237,8 +239,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ? const OperasionalLapanganScreen()
                           : _selectedMenuIndex == 4
                           ? const LaporanAnalitikScreen()
+                          : _selectedMenuIndex == 5
+                          ? const KonfigurasiSistemScreen()
                           : _selectedMenuIndex == 6
                           ? const KelolaAkunRoleScreen()
+                          : _selectedMenuIndex == 7
+                          ? const AuditLogScreen()
                           : SingleChildScrollView(
                               padding: const EdgeInsets.all(40.0),
                               child: Column(
