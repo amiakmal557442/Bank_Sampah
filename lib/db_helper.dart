@@ -1493,4 +1493,99 @@ class DatabaseHelper {
       return false;
     }
   }
+
+  Future<List<Map<String, dynamic>>> getPendingPickupTasks() async {
+    if (kIsWeb) {
+      final pendingTxs = _webTransactions
+          .where(
+            (tx) =>
+                tx['type'] == 'pickup' &&
+                tx['status'] != 'selesai' &&
+                tx['status'] != 'ditolak',
+          )
+          .toList();
+
+      List<Map<String, dynamic>> result = [];
+      for (var tx in pendingTxs) {
+        final user = _webUsers.firstWhere(
+          (u) => u['id'] == tx['nasabah_id'],
+          orElse: () => {'full_name': 'Unknown', 'address': 'Unknown'},
+        );
+        final items = _webTransactionItems
+            .where((i) => i['transaction_id'] == tx['id'])
+            .toList();
+
+        // Sum estimated weight and join category names (dummy categories if not found)
+        double estWeight = 0.0;
+        List<String> categories = [];
+        for (var item in items) {
+          estWeight += (item['estimated_weight'] as num?)?.toDouble() ?? 0.0;
+          final catId = item['waste_category_id'];
+          final catName = _webWasteCategories.firstWhere(
+            (c) => c['id'] == catId,
+            orElse: () => {'name': 'Lainnya'},
+          )['name'];
+          if (!categories.contains(catName)) {
+            categories.add(catName.toString());
+          }
+        }
+
+        result.add({
+          'id_transaksi': tx['id'],
+          'nama_nasabah': user['full_name'],
+          'alamat': user['address'],
+          'estimasi_berat': '${estWeight.toStringAsFixed(1)} kg',
+          'jenis_sampah': categories.join(', '),
+          'status': tx['status'],
+          'jarak': 'Menghitung...', // Dummy for now
+        });
+      }
+      return result;
+    }
+
+    final db = await instance.database;
+    if (db == null) return [];
+
+    final List<Map<String, dynamic>> txs = await db.rawQuery('''
+      SELECT t.id, t.status, u.full_name, u.address 
+      FROM transactions t 
+      LEFT JOIN users u ON t.nasabah_id = u.id
+      WHERE t.type = 'pickup' AND t.status != 'selesai' AND t.status != 'ditolak'
+      ORDER BY t.created_at DESC
+    ''');
+
+    List<Map<String, dynamic>> result = [];
+    for (var tx in txs) {
+      final items = await db.rawQuery(
+        '''
+        SELECT ti.estimated_weight, wc.name as category_name
+        FROM transaction_items ti
+        LEFT JOIN waste_categories wc ON ti.waste_category_id = wc.id
+        WHERE ti.transaction_id = ?
+      ''',
+        [tx['id']],
+      );
+
+      double estWeight = 0.0;
+      List<String> categories = [];
+      for (var item in items) {
+        estWeight += (item['estimated_weight'] as num?)?.toDouble() ?? 0.0;
+        final catName = item['category_name']?.toString() ?? 'Lainnya';
+        if (!categories.contains(catName)) {
+          categories.add(catName);
+        }
+      }
+
+      result.add({
+        'id_transaksi': tx['id'],
+        'nama_nasabah': tx['full_name'] ?? 'Unknown',
+        'alamat': tx['address'] ?? 'Unknown',
+        'estimasi_berat': '${estWeight.toStringAsFixed(1)} kg',
+        'jenis_sampah': categories.join(', '),
+        'status': tx['status'],
+        'jarak': 'Menghitung...', // Dummy for now
+      });
+    }
+    return result;
+  }
 }

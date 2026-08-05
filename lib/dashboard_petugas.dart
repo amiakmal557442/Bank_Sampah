@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'session_service.dart';
 import 'profil_petugas.dart';
 import 'riwayatpetugas.dart';
-
-
+import 'halaman_tugas.dart';
 
 // ============================================================
 // Model Data Dummy untuk Antrean Penjemputan
@@ -160,14 +159,18 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgGrey,
-      appBar: (_bottomNavIndex == 2 || _bottomNavIndex == 3) ? null : _buildAppBar(),
+      appBar: (_bottomNavIndex == 2 || _bottomNavIndex == 3)
+          ? null
+          : _buildAppBar(),
       body: _bottomNavIndex == 0
           ? _buildBerandaBody()
+          : _bottomNavIndex == 1
+          ? const HalamanTugas()
           : _bottomNavIndex == 2
-              ? const PetugasRiwayatScreen()
-              : _bottomNavIndex == 3
-                  ? const PetugasProfilScreen()
-                  : _buildComingSoonBody(_bottomNavIndex),
+          ? const PetugasRiwayatScreen()
+          : _bottomNavIndex == 3
+          ? const PetugasProfilScreen()
+          : _buildComingSoonBody(_bottomNavIndex),
       bottomNavigationBar: _buildBottomNav(),
     );
   }

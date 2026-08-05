@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'db_helper.dart';
 
 class MapLocationScreen extends StatefulWidget {
@@ -22,6 +23,16 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
 
   List<Map<String, dynamic>> _dropPoints = [];
   bool _isLoading = true;
+  GoogleMapController? _mapController;
+
+  final LatLng _defaultCenter = const LatLng(
+    -6.200000,
+    106.816666,
+  ); // Default Jakarta center
+
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
+  }
 
   @override
   void initState() {
@@ -140,71 +151,50 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
               ),
             ),
 
-            // 2. Placeholder Peta
+            // 2. Google Maps API
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
-              height: 180,
+              height: 250, // Slightly taller for better view
               decoration: BoxDecoration(
-                color: Colors.green[50]?.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.green, width: 2),
               ),
-              child: Stack(
-                children: [
-                  const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Peta interaktif (Google Maps API)',
-                          style: TextStyle(
-                            color: Colors.green,
-                            fontWeight: FontWeight.bold,
-                          ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : GoogleMap(
+                        onMapCreated: _onMapCreated,
+                        initialCameraPosition: CameraPosition(
+                          target: _dropPoints.isNotEmpty
+                              ? LatLng(
+                                  _dropPoints[0]['latitude'] as double? ??
+                                      -6.200000,
+                                  _dropPoints[0]['longitude'] as double? ??
+                                      106.816666,
+                                )
+                              : _defaultCenter,
+                          zoom: 12.0,
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Placeholder — pin drop point akan tampil di sini',
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(
-                            Icons.my_location,
-                            size: 16,
-                            color: Colors.green,
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            'Lokasi saya',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
+                        myLocationEnabled: true,
+                        myLocationButtonEnabled: true,
+                        markers: _dropPoints.map((dp) {
+                          return Marker(
+                            markerId: MarkerId(dp['id'].toString()),
+                            position: LatLng(
+                              dp['latitude'] as double? ?? -6.2,
+                              dp['longitude'] as double? ?? 106.8,
                             ),
-                          ),
-                        ],
+                            infoWindow: InfoWindow(
+                              title: dp['name'].toString(),
+                              snippet: dp['address'].toString(),
+                            ),
+                            icon: BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueGreen,
+                            ),
+                          );
+                        }).toSet(),
                       ),
-                    ),
-                  ),
-                ],
               ),
             ),
 
