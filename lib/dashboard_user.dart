@@ -52,6 +52,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 
   Future<void> _loadData() async {
+    await SessionService.refresh();
     await TransactionService.loadTransactions(SessionService.userId);
     if (mounted) {
       setState(() {});
@@ -323,6 +324,17 @@ class BerandaPage extends StatefulWidget {
 }
 
 class _BerandaPageState extends State<BerandaPage> {
+  @override
+  void initState() {
+    super.initState();
+    _refreshPoints();
+  }
+
+  Future<void> _refreshPoints() async {
+    await SessionService.refresh();
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final Color primaryGreen = const Color(0xFF268B07);

@@ -72,7 +72,7 @@ CREATE TABLE `transactions` (
   `petugas_id` varchar(36) DEFAULT NULL,
   `drop_point_id` varchar(36) DEFAULT NULL,
   `type` enum('drop_in','pickup','rvm','donasi') NOT NULL,
-  `status` enum('menunggu','dikonfirmasi','menuju_lokasi','tiba','selesai','dibatalkan') DEFAULT 'menunggu',
+  `status` enum('menunggu','dikonfirmasi','menuju_lokasi','tiba','selesai','dibatalkan','terverifikasi','ditolak') DEFAULT 'menunggu',
   `pickup_date` date DEFAULT NULL,
   `pickup_time_slot` varchar(50) DEFAULT NULL,
   `pickup_lat` double DEFAULT NULL,

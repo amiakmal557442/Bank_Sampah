@@ -144,6 +144,7 @@ class DatabaseHelper {
 
   static final List<Map<String, dynamic>> _webTransactions = [
     {
+      // TRX-0991: Status 'menunggu' — untuk demo alur approval admin
       'id': 'TRX-0991',
       'nasabah_id': 'USR-003',
       'petugas_id': 'USR-002',
@@ -160,12 +161,13 @@ class DatabaseHelper {
       'created_at': '2026-08-05 10:09:24',
     },
     {
+      // TRX-0992: Status 'dikonfirmasi' — langsung muncul di dashboard petugas
       'id': 'TRX-0992',
       'nasabah_id': 'USR-004',
       'petugas_id': 'USR-002',
       'drop_point_id': null,
       'type': 'pickup',
-      'status': 'menunggu',
+      'status': 'dikonfirmasi',
       'pickup_date': '2026-08-05',
       'pickup_time_slot': null,
       'pickup_lat': -6.22,
@@ -633,7 +635,6 @@ class DatabaseHelper {
         final updated = Map<String, dynamic>.from(_webUsers[index]);
         updated['point_balance'] = newBalance;
         _webUsers[index] = updated;
-        await _saveWebUsers();
         return 1;
       }
       return 0;
@@ -1438,11 +1439,15 @@ class DatabaseHelper {
       return _webTransactions.map((tx) {
         final user = _webUsers.firstWhere(
           (u) => u['id'] == tx['nasabah_id'],
-          orElse: () => {'full_name': 'Unknown'},
+          // Gunakan nama yang disimpan langsung di transaksi sebagai fallback
+          orElse: () => {
+            'full_name': tx['full_name'] ?? 'Unknown',
+            'address': tx['address'] ?? '',
+          },
         );
         return {
           ...tx,
-          'nasabah_name': user['full_name'],
+          'nasabah_name': user['full_name'] ?? tx['full_name'] ?? 'Unknown',
           'items': _webTransactionItems
               .where((i) => i['transaction_id'] == tx['id'])
               .toList(),
@@ -1540,14 +1545,74 @@ class DatabaseHelper {
     }
   }
 
+  Future<bool> completeTransaction(String id, int earnedPoints) async {
+    if (kIsWeb) {
+      final txIdx = _webTransactions.indexWhere((tx) => tx['id'] == id);
+      if (txIdx != -1) {
+        _webTransactions[txIdx]['status'] = 'selesai';
+        _webTransactions[txIdx]['total_actual_points'] = earnedPoints;
+
+        // Tambah poin ke user di in-memory list
+        final userId = _webTransactions[txIdx]['nasabah_id'];
+        final userIdx = _webUsers.indexWhere((u) => u['id'] == userId);
+        if (userIdx != -1) {
+          final currentPts =
+              (_webUsers[userIdx]['point_balance'] as num?)?.toInt() ?? 0;
+          _webUsers[userIdx]['point_balance'] = currentPts + earnedPoints;
+        }
+        return true;
+      }
+      return false;
+    }
+
+    final db = await instance.database;
+    if (db == null) return false;
+
+    try {
+      await db.transaction((txn) async {
+        // Update transaction
+        await txn.update(
+          'transactions',
+          {'status': 'selesai', 'total_actual_points': earnedPoints},
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+
+        // Get user ID
+        final txRes = await txn.query(
+          'transactions',
+          columns: ['nasabah_id'],
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+
+        if (txRes.isNotEmpty) {
+          final userId = txRes.first['nasabah_id'] as String?;
+          if (userId != null) {
+            // Update user balance
+            await txn.rawUpdate(
+              'UPDATE users SET point_balance = point_balance + ? WHERE id = ?',
+              [earnedPoints, userId],
+            );
+          }
+        }
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getPendingPickupTasks() async {
     if (kIsWeb) {
+      // Tampilkan tugas pickup DAN drop_in yang sudah dikonfirmasi admin
       final pendingTxs = _webTransactions
           .where(
             (tx) =>
-                tx['type'] == 'pickup' &&
-                tx['status'] != 'selesai' &&
-                tx['status'] != 'ditolak',
+                (tx['type'] == 'pickup' || tx['type'] == 'drop_in') &&
+                (tx['status'] == 'dikonfirmasi' ||
+                    tx['status'] == 'menuju_lokasi' ||
+                    tx['status'] == 'tiba'),
           )
           .toList();
 
@@ -1555,13 +1620,17 @@ class DatabaseHelper {
       for (var tx in pendingTxs) {
         final user = _webUsers.firstWhere(
           (u) => u['id'] == tx['nasabah_id'],
-          orElse: () => {'full_name': 'Unknown', 'address': 'Unknown'},
+          // Gunakan nama dan alamat yang disimpan langsung di transaksi sebagai fallback
+          orElse: () => {
+            'full_name': tx['full_name'] ?? 'Unknown',
+            'address': tx['address'] ?? 'Alamat tidak tersedia',
+          },
         );
         final items = _webTransactionItems
             .where((i) => i['transaction_id'] == tx['id'])
             .toList();
 
-        // Sum estimated weight and join category names (dummy categories if not found)
+        // Sum estimated weight and join category names
         double estWeight = 0.0;
         List<String> categories = [];
         for (var item in items) {
@@ -1576,14 +1645,27 @@ class DatabaseHelper {
           }
         }
 
+        // Untuk drop_in: tampilkan drop point; untuk pickup: alamat nasabah
+        String alamat = user['address'] ?? 'Alamat tidak tersedia';
+        if (tx['type'] == 'drop_in') {
+          final dropPoint = _webDropPoints.firstWhere(
+            (dp) => dp['id'] == tx['drop_point_id'],
+            orElse: () => {'name': 'Drop Point', 'address': '-'},
+          );
+          alamat = '${dropPoint['name']} — ${dropPoint['address']}';
+        }
+
         result.add({
           'id_transaksi': tx['id'],
           'nama_nasabah': user['full_name'],
-          'alamat': user['address'],
+          'alamat': alamat,
           'estimasi_berat': '${estWeight.toStringAsFixed(1)} kg',
-          'jenis_sampah': categories.join(', '),
+          'jenis_sampah': categories.isEmpty
+              ? 'Belum diisi'
+              : categories.join(', '),
           'status': tx['status'],
-          'jarak': 'Menghitung...', // Dummy for now
+          'tipe_tugas': tx['type'] == 'drop_in' ? 'Drop-in' : 'Jemput',
+          'jarak': tx['type'] == 'drop_in' ? 'Di drop point' : 'Menghitung...',
         });
       }
       return result;
@@ -1592,11 +1674,17 @@ class DatabaseHelper {
     final db = await instance.database;
     if (db == null) return [];
 
+    // Ambil tugas pickup DAN drop_in yang sudah dikonfirmasi admin
     final List<Map<String, dynamic>> txs = await db.rawQuery('''
-      SELECT t.id, t.status, u.full_name, u.address 
+      SELECT 
+        t.id, t.type, t.status,
+        u.full_name, u.address,
+        dp.name as drop_point_name, dp.address as drop_point_address
       FROM transactions t 
       LEFT JOIN users u ON t.nasabah_id = u.id
-      WHERE t.type = 'pickup' AND t.status != 'selesai' AND t.status != 'ditolak'
+      LEFT JOIN drop_points dp ON t.drop_point_id = dp.id
+      WHERE t.type IN ('pickup', 'drop_in')
+        AND t.status IN ('dikonfirmasi', 'menuju_lokasi', 'tiba')
       ORDER BY t.created_at DESC
     ''');
 
@@ -1622,14 +1710,23 @@ class DatabaseHelper {
         }
       }
 
+      // Untuk drop_in: tampilkan lokasi drop point; pickup: alamat nasabah
+      final bool isDropIn = tx['type']?.toString() == 'drop_in';
+      final String alamat = isDropIn
+          ? '${tx['drop_point_name'] ?? 'Drop Point'} — ${tx['drop_point_address'] ?? '-'}'
+          : tx['address']?.toString() ?? 'Unknown';
+
       result.add({
         'id_transaksi': tx['id'],
         'nama_nasabah': tx['full_name'] ?? 'Unknown',
-        'alamat': tx['address'] ?? 'Unknown',
+        'alamat': alamat,
         'estimasi_berat': '${estWeight.toStringAsFixed(1)} kg',
-        'jenis_sampah': categories.join(', '),
+        'jenis_sampah': categories.isEmpty
+            ? 'Belum diisi'
+            : categories.join(', '),
         'status': tx['status'],
-        'jarak': 'Menghitung...', // Dummy for now
+        'tipe_tugas': isDropIn ? 'Drop-in' : 'Jemput',
+        'jarak': isDropIn ? 'Di drop point' : 'Menghitung...',
       });
     }
     return result;
