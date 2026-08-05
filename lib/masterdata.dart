@@ -55,22 +55,6 @@ class DropPointModel {
   });
 }
 
-enum UserRole { admin, stafKantor, petugas, endUser }
-
-class AccountModel {
-  final String name;
-  final String email;
-  final UserRole role;
-  final bool isActive;
-
-  AccountModel({
-    required this.name,
-    required this.email,
-    required this.role,
-    required this.isActive,
-  });
-}
-
 // Icon options for category picker
 const Map<String, IconData> categoryIconOptions = {
   'Plastik': Icons.local_drink_rounded,
@@ -103,45 +87,26 @@ class _MasterDataScreenState extends State<MasterDataScreen>
   final List<String> tabs = [
     'Kategori Sampah',
     'Drop Point',
-    'Kelola Akun & Role',
   ];
 
   // Mutable in-memory data lists
   final List<WasteCategoryModel> _categories = [
     WasteCategoryModel(
-      name: 'Plastik',
+      name: 'Kardus, Plastik, Kertas & Kaca',
       pointsPerKg: 100,
       isActive: true,
-      icon: Icons.local_drink_rounded,
+      icon: Icons.recycling_rounded,
     ),
     WasteCategoryModel(
-      name: 'Kertas',
-      pointsPerKg: 80,
-      isActive: true,
-      icon: Icons.description_rounded,
-    ),
-    WasteCategoryModel(
-      name: 'Kardus',
-      pointsPerKg: 70,
-      isActive: true,
-      icon: Icons.inventory_2_rounded,
-    ),
-    WasteCategoryModel(
-      name: 'Logam',
+      name: 'Barang Besi',
       pointsPerKg: 250,
       isActive: true,
       icon: Icons.build_rounded,
     ),
     WasteCategoryModel(
-      name: 'Kaca',
-      pointsPerKg: 60,
+      name: 'Sampah Elektronik',
+      pointsPerKg: 500,
       isActive: true,
-      icon: Icons.wine_bar_rounded,
-    ),
-    WasteCategoryModel(
-      name: 'Elektronik',
-      pointsPerKg: 400,
-      isActive: false,
       icon: Icons.devices_rounded,
     ),
   ];
@@ -170,33 +135,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
     ),
   ];
 
-  final List<AccountModel> _accounts = [
-    AccountModel(
-      name: 'Siti Admin',
-      email: 'siti.admin@banksampah.id',
-      role: UserRole.admin,
-      isActive: true,
-    ),
-    AccountModel(
-      name: 'Andi Wijaya',
-      email: 'andi.wijaya@banksampah.id',
-      role: UserRole.stafKantor,
-      isActive: true,
-    ),
-    AccountModel(
-      name: 'Dedi Kurniawan',
-      email: 'dedi.k@banksampah.id',
-      role: UserRole.petugas,
-      isActive: true,
-    ),
-    AccountModel(
-      name: 'Rina Marlina',
-      email: 'rina.m@banksampah.id',
-      role: UserRole.stafKantor,
-      isActive: false,
-    ),
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -218,10 +156,8 @@ class _MasterDataScreenState extends State<MasterDataScreen>
     switch (_tabController.index) {
       case 0:
         return 'Tambah Kategori';
-      case 1:
-        return 'Tambah Drop Point';
       default:
-        return 'Tambah Akun';
+        return 'Tambah Drop Point';
     }
   }
 
@@ -250,7 +186,7 @@ class _MasterDataScreenState extends State<MasterDataScreen>
               ),
               const SizedBox(height: 3),
               Text(
-                'FR-AD-01 · FR-AD-02 · FR-AD-03 — kategori sampah, drop point, dan akun pengguna',
+                'FR-AD-01 · FR-AD-02 — kategori sampah dan drop point',
                 style: const TextStyle(
                   fontFamily: 'PlusJakartaSans',
                   fontSize: 12,
@@ -268,9 +204,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                   break;
                 case 1:
                   _showDropPointFormDialog();
-                  break;
-                case 2:
-                  _showAkunFormDialog();
                   break;
               }
             },
@@ -883,202 +816,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
   }
 
   // ------------------------------------------------------------------------
-  // DIALOG: TAMBAH AKUN
-  // ------------------------------------------------------------------------
-
-  void _showAkunFormDialog({AccountModel? account, int? index}) {
-    final isEdit = account != null && index != null;
-    final nameController = TextEditingController(text: account?.name ?? '');
-    final emailController = TextEditingController(text: account?.email ?? '');
-    UserRole selectedRole = account?.role ?? UserRole.stafKantor;
-    bool isActive = account?.isActive ?? true;
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Container(
-                width: 440,
-                padding: const EdgeInsets.all(28),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Dialog Header
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE8F8E8),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.person_add_alt_1_rounded,
-                            color: primaryGreen,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            isEdit ? 'Edit Akun' : 'Tambah Akun',
-                            style: const TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: darkText,
-                            ),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => Navigator.pop(ctx),
-                          child: const Icon(
-                            Icons.close_rounded,
-                            color: subtleText,
-                            size: 20,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Nama
-                    _dialogLabel('Nama Lengkap'),
-                    const SizedBox(height: 6),
-                    _dialogTextField(nameController, 'Contoh: Andi Wijaya'),
-                    const SizedBox(height: 16),
-
-                    // Email
-                    _dialogLabel('Email'),
-                    const SizedBox(height: 6),
-                    _dialogTextField(
-                      emailController,
-                      'Contoh: andi@banksampah.id',
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Role
-                    _dialogLabel('Role'),
-                    const SizedBox(height: 6),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: borderColor),
-                        color: Colors.white,
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<UserRole>(
-                          value: selectedRole,
-                          isExpanded: true,
-                          style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 13,
-                            color: darkText,
-                          ),
-                          items: UserRole.values.map((role) {
-                            return DropdownMenuItem(
-                              value: role,
-                              child: Text(_roleLabel(role)),
-                            );
-                          }).toList(),
-                          onChanged: (v) {
-                            if (v != null) {
-                              setDialogState(() => selectedRole = v);
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Status
-                    Row(
-                      children: [
-                        _dialogLabel('Status'),
-                        const Spacer(),
-                        Switch(
-                          value: isActive,
-                          activeThumbColor: primaryGreen,
-                          onChanged: (v) => setDialogState(() => isActive = v),
-                        ),
-                        Text(
-                          isActive ? 'Aktif' : 'Nonaktif',
-                          style: TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isActive ? primaryGreen : subtleText,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Actions
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        _dialogCancelButton(ctx),
-                        const SizedBox(width: 10),
-                        _dialogSubmitButton(
-                          isEdit ? 'Simpan' : 'Tambah Akun',
-                          () {
-                            final name = nameController.text.trim();
-                            final email = emailController.text.trim();
-                            if (name.isEmpty || email.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Mohon isi nama dan email.'),
-                                  backgroundColor: Colors.redAccent,
-                                ),
-                              );
-                              return;
-                            }
-                            setState(() {
-                              final model = AccountModel(
-                                name: name,
-                                email: email,
-                                role: selectedRole,
-                                isActive: isActive,
-                              );
-                              if (isEdit) {
-                                _accounts[index] = model;
-                              } else {
-                                _accounts.add(model);
-                              }
-                            });
-                            Navigator.pop(ctx);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Akun "$name" berhasil ${isEdit ? 'diperbarui' : 'ditambahkan'}!',
-                                ),
-                                backgroundColor: primaryGreen,
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // ------------------------------------------------------------------------
   // DIALOG SHARED WIDGETS
   // ------------------------------------------------------------------------
 
@@ -1397,156 +1134,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
     );
   }
 
-  // ------------------------------------------------------------------------
-  // TAB 3: KELOLA AKUN & ROLE (FR-AD-03)
-  // ------------------------------------------------------------------------
-
-  String _roleLabel(UserRole role) {
-    switch (role) {
-      case UserRole.admin:
-        return 'Administrator';
-      case UserRole.stafKantor:
-        return 'Staf Kantor';
-      case UserRole.petugas:
-        return 'Petugas Lapangan';
-      case UserRole.endUser:
-        return 'End User';
-    }
-  }
-
-  Color _roleColor(UserRole role) {
-    switch (role) {
-      case UserRole.admin:
-        return primaryGreen;
-      case UserRole.stafKantor:
-        return const Color(0xFF5F8A4A);
-      case UserRole.petugas:
-        return const Color(0xFF64748B);
-      case UserRole.endUser:
-        return mutedText;
-    }
-  }
-
-  Widget _buildKelolaAkunTab() {
-    return SingleChildScrollView(
-      child: _tableContainer(
-        children: [
-          _tableHeaderRow(
-            ['Nama', 'Email', 'Role', 'Status', 'Aksi'],
-            [2, 3, 2, 1, 2],
-          ),
-          ..._accounts.map(
-            (acc) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: const BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: borderColor, width: 0.5),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 26,
-                          height: 26,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFE8F8E8),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Text(
-                              acc.name.substring(0, 1),
-                              style: const TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: primaryGreen,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            acc.name,
-                            style: const TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: darkText,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    flex: 3,
-                    child: Text(
-                      acc.email,
-                      style: const TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w400,
-                        color: subtleText,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _roleColor(acc.role).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        _roleLabel(acc.role),
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600,
-                          color: _roleColor(acc.role),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(flex: 1, child: _statusBadge(acc.isActive)),
-                  Expanded(
-                    flex: 2,
-                    child: _actionButtons(
-                      onEdit: () {
-                        _showAkunFormDialog(
-                          account: acc,
-                          index: _accounts.indexOf(acc),
-                        );
-                      },
-                      onDelete: () {
-                        _showDeleteConfirmation(acc.name, () {
-                          setState(() {
-                            _accounts.remove(acc);
-                          });
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1562,7 +1149,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
               children: [
                 _buildKategoriSampahTab(),
                 _buildDropPointTab(),
-                _buildKelolaAkunTab(),
               ],
             ),
           ),

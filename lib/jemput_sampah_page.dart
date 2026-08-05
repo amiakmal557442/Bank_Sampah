@@ -408,28 +408,9 @@ class PickupWasteScreen extends StatefulWidget {
 }
 
 class _PickupWasteScreenState extends State<PickupWasteScreen> {
-  double plasticWeight = 2.0;
-  double metalWeight = 0.8;
-  double paperWeight = 1.0;
-  bool isPlasticSelected = true;
-  bool isMetalSelected = true;
-  bool isPaperSelected = false;
-
-  int get totalPoints {
-    int pts = 0;
-    if (isPlasticSelected) pts += (plasticWeight * 100).round();
-    if (isMetalSelected) pts += (metalWeight * 250).round();
-    if (isPaperSelected) pts += (paperWeight * 80).round();
-    return pts;
-  }
-
-  double get totalWeight {
-    double w = 0;
-    if (isPlasticSelected) w += plasticWeight;
-    if (isMetalSelected) w += metalWeight;
-    if (isPaperSelected) w += paperWeight;
-    return w;
-  }
+  bool isRecyclableSelected = true;
+  bool isBesiSelected = false;
+  bool isElektronikSelected = false;
 
   @override
   Widget build(BuildContext context) {
@@ -509,40 +490,34 @@ class _PickupWasteScreenState extends State<PickupWasteScreen> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'Estimasi saja — berat final ditentukan petugas saat penimbangan di lokasi',
+            'Pilih kategori sampah — penimbangan dilakukan petugas di lokasi',
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
           const SizedBox(height: 16),
           _buildWasteCard(
-            title: 'Plastik',
+            title: 'Kardus, Plastik, Kertas & Kaca',
             subtitle: '100 poin/kg',
-            icon: Icons.local_drink_rounded,
-            isSelected: isPlasticSelected,
-            weight: plasticWeight,
+            icon: Icons.recycling_rounded,
+            isSelected: isRecyclableSelected,
             primaryGreen: primaryGreen,
             onToggle: () =>
-                setState(() => isPlasticSelected = !isPlasticSelected),
-            onWeightChanged: (val) => setState(() => plasticWeight = val),
+                setState(() => isRecyclableSelected = !isRecyclableSelected),
           ),
           _buildWasteCard(
-            title: 'Logam',
+            title: 'Barang Besi',
             subtitle: '250 poin/kg',
-            icon: Icons.settings_rounded,
-            isSelected: isMetalSelected,
-            weight: metalWeight,
+            icon: Icons.build_rounded,
+            isSelected: isBesiSelected,
             primaryGreen: primaryGreen,
-            onToggle: () => setState(() => isMetalSelected = !isMetalSelected),
-            onWeightChanged: (val) => setState(() => metalWeight = val),
+            onToggle: () => setState(() => isBesiSelected = !isBesiSelected),
           ),
           _buildWasteCard(
-            title: 'Kertas & Kardus',
-            subtitle: '80 poin/kg',
-            icon: Icons.article_rounded,
-            isSelected: isPaperSelected,
-            weight: paperWeight,
+            title: 'Sampah Elektronik',
+            subtitle: '500 poin/kg',
+            icon: Icons.devices_rounded,
+            isSelected: isElektronikSelected,
             primaryGreen: primaryGreen,
-            onToggle: () => setState(() => isPaperSelected = !isPaperSelected),
-            onWeightChanged: (val) => setState(() => paperWeight = val),
+            onToggle: () => setState(() => isElektronikSelected = !isElektronikSelected),
           ),
         ],
       ),
@@ -573,18 +548,17 @@ class _PickupWasteScreenState extends State<PickupWasteScreen> {
                   border: Border.all(color: primaryGreen.withOpacity(0.2)),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Estimasi total ${totalWeight.toStringAsFixed(1)} kg',
-                      style: TextStyle(color: primaryGreen),
-                    ),
-                    Text(
-                      '≈ $totalPoints poin',
-                      style: TextStyle(
-                        color: primaryGreen,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                    Icon(Icons.info_outline, size: 18, color: primaryGreen),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Berat & poin final ditentukan petugas saat penimbangan di lokasi',
+                        style: TextStyle(
+                          color: primaryGreen,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],
@@ -610,25 +584,22 @@ class _PickupWasteScreenState extends State<PickupWasteScreen> {
                   onPressed: () {
                     // Build selected waste items list
                     final List<Map<String, dynamic>> items = [];
-                    if (isPlasticSelected) {
+                    if (isRecyclableSelected) {
                       items.add({
-                        'name': 'Plastik',
-                        'weight': plasticWeight,
-                        'points': (plasticWeight * 100).round(),
+                        'name': 'Kardus, Plastik, Kertas & Kaca',
+                        'rate': '100 poin/kg',
                       });
                     }
-                    if (isMetalSelected) {
+                    if (isBesiSelected) {
                       items.add({
-                        'name': 'Logam',
-                        'weight': metalWeight,
-                        'points': (metalWeight * 250).round(),
+                        'name': 'Barang Besi',
+                        'rate': '250 poin/kg',
                       });
                     }
-                    if (isPaperSelected) {
+                    if (isElektronikSelected) {
                       items.add({
-                        'name': 'Kertas & Kardus',
-                        'weight': paperWeight,
-                        'points': (paperWeight * 80).round(),
+                        'name': 'Sampah Elektronik',
+                        'rate': '500 poin/kg',
                       });
                     }
                     Navigator.push(
@@ -640,8 +611,6 @@ class _PickupWasteScreenState extends State<PickupWasteScreen> {
                           selectedTime: widget.selectedTime,
                           note: widget.note,
                           wasteItems: items,
-                          totalWeight: totalWeight,
-                          totalPoints: totalPoints,
                         ),
                       ),
                     );
@@ -664,10 +633,8 @@ class _PickupWasteScreenState extends State<PickupWasteScreen> {
     required String subtitle,
     required IconData icon,
     required bool isSelected,
-    required double weight,
     required Color primaryGreen,
     required VoidCallback onToggle,
-    required Function(double) onWeightChanged,
   }) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -681,105 +648,58 @@ class _PickupWasteScreenState extends State<PickupWasteScreen> {
         borderRadius: BorderRadius.circular(14),
         color: isSelected ? primaryGreen.withOpacity(0.05) : Colors.white,
       ),
-      child: Column(
-        children: [
-          GestureDetector(
-            onTap: onToggle,
-            child: Row(
-              children: [
-                Icon(
-                  isSelected
-                      ? Icons.check_box_rounded
-                      : Icons.check_box_outline_blank_rounded,
-                  color: isSelected ? primaryGreen : Colors.grey,
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? primaryGreen.withOpacity(0.1)
-                        : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: isSelected ? primaryGreen : Colors.grey,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: primaryGreen,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+      child: GestureDetector(
+        onTap: onToggle,
+        child: Row(
+          children: [
+            Icon(
+              isSelected
+                  ? Icons.check_box_rounded
+                  : Icons.check_box_outline_blank_rounded,
+              color: isSelected ? primaryGreen : Colors.grey,
             ),
-          ),
-          if (isSelected) ...[
-            const Divider(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Estimasi berat',
-                  style: TextStyle(color: Colors.grey.shade600),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? primaryGreen.withOpacity(0.1)
+                    : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                color: isSelected ? primaryGreen : Colors.grey,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
                 ),
-                Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        Icons.remove_circle_outline,
-                        color: primaryGreen,
-                      ),
-                      onPressed: () => onWeightChanged(
-                        weight > 0.1
-                            ? double.parse((weight - 0.1).toStringAsFixed(1))
-                            : 0.1,
-                      ),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      '${weight.toStringAsFixed(1)} kg',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    IconButton(
-                      icon: Icon(Icons.add_circle_outline, color: primaryGreen),
-                      onPressed: () => onWeightChanged(
-                        double.parse((weight + 0.1).toStringAsFixed(1)),
-                      ),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-              ],
+              ),
+            ),
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: primaryGreen,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }
 }
 
+// ============================================================================
+// 3. HALAMAN KONFIRMASI & RINGKASAN
+// ============================================================================
 // ============================================================================
 // 3. HALAMAN KONFIRMASI & RINGKASAN
 // ============================================================================
@@ -789,8 +709,6 @@ class PickupConfirmationScreen extends StatelessWidget {
   final String selectedTime;
   final String note;
   final List<Map<String, dynamic>> wasteItems;
-  final double totalWeight;
-  final int totalPoints;
 
   const PickupConfirmationScreen({
     super.key,
@@ -799,8 +717,6 @@ class PickupConfirmationScreen extends StatelessWidget {
     required this.selectedTime,
     required this.note,
     required this.wasteItems,
-    required this.totalWeight,
-    required this.totalPoints,
   });
 
   @override
@@ -898,7 +814,7 @@ class PickupConfirmationScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _buildSectionCard(
-            title: 'JENIS & ESTIMASI SAMPAH',
+            title: 'JENIS SAMPAH',
             context: context,
             content: Column(
               children: wasteItems
@@ -910,7 +826,7 @@ class PickupConfirmationScreen extends StatelessWidget {
                         if (entry.key > 0) const Divider(),
                         _buildWasteRow(
                           entry.value['name'],
-                          '${entry.value['weight'].toStringAsFixed(1).replaceAll('.', ',')} kg • ${entry.value['points']} poin',
+                          entry.value['rate'] ?? '',
                         ),
                       ],
                     ),
@@ -927,18 +843,17 @@ class PickupConfirmationScreen extends StatelessWidget {
               border: Border.all(color: primaryGreen.withOpacity(0.2)),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Total estimasi poin',
-                  style: TextStyle(fontSize: 16, color: Colors.black87),
-                ),
-                Text(
-                  '$totalPoints poin',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: primaryGreen,
+                Icon(Icons.info_outline, size: 20, color: primaryGreen),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Poin final ditentukan setelah petugas menimbang berat aktual di lokasi.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
                   ),
                 ),
               ],
@@ -952,7 +867,7 @@ class PickupConfirmationScreen extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Poin final ditentukan setelah petugas menimbang berat aktual di lokasi. Kode Waste-ID kamu akan dibuat setelah permintaan ini diajukan.',
+                  'Kode Waste-ID kamu akan dibuat setelah permintaan ini diajukan.',
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
               ),
@@ -984,8 +899,6 @@ class PickupConfirmationScreen extends StatelessWidget {
                     .join(' dan ');
                 TransactionService.addTransaction(
                   title: names,
-                  weight: totalWeight,
-                  points: totalPoints,
                   type: 'Jemput',
                 );
 
@@ -993,8 +906,6 @@ class PickupConfirmationScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => PickupSuccessScreen(
-                      totalWeight: totalWeight,
-                      totalPoints: totalPoints,
                       selectedDay: selectedDay,
                       selectedDate: selectedDate,
                       selectedTime: selectedTime,
@@ -1080,16 +991,12 @@ class PickupConfirmationScreen extends StatelessWidget {
 // 4. HASIL: PERMINTAAN BERHASIL DIBUAT
 // ============================================================================
 class PickupSuccessScreen extends StatelessWidget {
-  final double totalWeight;
-  final int totalPoints;
   final String selectedDay;
   final String selectedDate;
   final String selectedTime;
 
   const PickupSuccessScreen({
     super.key,
-    required this.totalWeight,
-    required this.totalPoints,
     required this.selectedDay,
     required this.selectedDate,
     required this.selectedTime,

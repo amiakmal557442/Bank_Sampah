@@ -77,21 +77,21 @@ class TransactionService {
 
   static void addTransaction({
     required String title,
-    required double weight,
-    required int points,
+    double weight = 0.0,
+    int points = 0,
     required String type, // 'Drop-in' atau 'Jemput'
   }) {
     userPoints += points;
     totalWasteKg += weight;
 
     String finalTitle = '$type — $title';
-    String pointsText = '+$points poin';
+    String pointsText = points > 0 ? '+$points poin' : 'Menunggu Penimbangan';
 
     final now = DateTime.now();
     final hour = now.hour.toString().padLeft(2, '0');
     final minute = now.minute.toString().padLeft(2, '0');
-    final weightStr = weight.toStringAsFixed(1).replaceAll('.', ',');
-    String subtitle = 'Hari ini, $hour.$minute · $weightStr kg';
+    final weightStr = weight > 0 ? ' · ${weight.toStringAsFixed(1).replaceAll('.', ',')} kg' : '';
+    String subtitle = 'Hari ini, $hour.$minute$weightStr';
 
     final newTx = TransactionModel(
       icon: type == 'Drop-in'
@@ -112,7 +112,7 @@ class TransactionService {
           ? Icons.recycling_rounded
           : Icons.local_shipping_outlined,
       title: finalTitle,
-      subtitle: '$hour.$minute - $weightStr kg',
+      subtitle: '$hour.$minute${weightStr.isNotEmpty ? weightStr : ' - Menunggu'}',
       points: pointsText,
       status: 'Proses',
       isFailed: false,

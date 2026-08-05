@@ -25,7 +25,6 @@ class WasteCategory {
   final int pointsPerKg;
   final IconData icon;
   bool isSelected;
-  double weightKg;
 
   WasteCategory({
     required this.id,
@@ -33,10 +32,7 @@ class WasteCategory {
     required this.pointsPerKg,
     required this.icon,
     this.isSelected = false,
-    this.weightKg = 1.0,
   });
-
-  int get totalPoints => (pointsPerKg * weightKg).round();
 }
 
 class DropInMandiriScreen extends StatefulWidget {
@@ -91,53 +87,29 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
   final List<WasteCategory> _wasteCategories = [
     WasteCategory(
       id: 'w1',
-      name: 'Plastik',
+      name: 'Kardus, Plastik, Kertas & Kaca',
       pointsPerKg: 100,
-      icon: Icons.local_drink_outlined,
+      icon: Icons.recycling_outlined,
       isSelected: true,
-      weightKg: 1.5,
     ),
     WasteCategory(
       id: 'w2',
-      name: 'Kardus',
-      pointsPerKg: 70,
-      icon: Icons.inventory_2_outlined,
-      isSelected: true,
-      weightKg: 0.8,
-    ),
-    WasteCategory(
-      id: 'w3',
-      name: 'Kertas',
-      pointsPerKg: 80,
-      icon: Icons.description_outlined,
-      isSelected: false,
-      weightKg: 1.0,
-    ),
-    WasteCategory(
-      id: 'w4',
-      name: 'Logam',
+      name: 'Barang Besi',
       pointsPerKg: 250,
       icon: Icons.build_outlined,
       isSelected: false,
-      weightKg: 1.0,
+    ),
+    WasteCategory(
+      id: 'w3',
+      name: 'Sampah Elektronik',
+      pointsPerKg: 500,
+      icon: Icons.devices_outlined,
+      isSelected: false,
     ),
   ];
 
   // Step 3 Data: Simulated Photos
   final List<String> _uploadedPhotos = ['photo_1.jpg'];
-
-  // Total weight & points calculation getters
-  double get _totalWeightKg {
-    return _wasteCategories
-        .where((item) => item.isSelected)
-        .fold(0.0, (sum, item) => sum + item.weightKg);
-  }
-
-  int get _totalPoints {
-    return _wasteCategories
-        .where((item) => item.isSelected)
-        .fold(0, (sum, item) => sum + item.totalPoints);
-  }
 
   void _goToNextStep() {
     if (_currentStep == 0 && _selectedDropPointIndex < 0) {
@@ -158,8 +130,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
 
         TransactionService.addTransaction(
           title: selectedNames,
-          weight: _totalWeightKg,
-          points: _totalPoints,
           type: 'Drop-in',
         );
       } catch (e, stack) {
@@ -690,87 +660,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
                     ),
                   ],
                 ),
-
-                // Weight Stepper (Only active if selected)
-                if (item.isSelected) ...[
-                  const SizedBox(height: 12),
-                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Estimasi berat',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          // Minus Button
-                          OutlinedButton(
-                            onPressed: () {
-                              if (item.weightKg > 0.1) {
-                                setState(() {
-                                  item.weightKg = double.parse(
-                                    (item.weightKg - 0.1).toStringAsFixed(1),
-                                  );
-                                });
-                              }
-                            },
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(36, 36),
-                              padding: EdgeInsets.zero,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              side: const BorderSide(color: Color(0xFFCBD5E1)),
-                            ),
-                            child: const Icon(
-                              Icons.remove,
-                              size: 16,
-                              color: Color(0xFF334155),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            '${item.weightKg.toStringAsFixed(1).replaceAll('.', ',')} kg',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0F172A),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          // Plus Button
-                          OutlinedButton(
-                            onPressed: () {
-                              setState(() {
-                                item.weightKg = double.parse(
-                                  (item.weightKg + 0.1).toStringAsFixed(1),
-                                );
-                              });
-                            },
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(36, 36),
-                              padding: EdgeInsets.zero,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              side: const BorderSide(color: Color(0xFFCBD5E1)),
-                            ),
-                            child: const Icon(
-                              Icons.add,
-                              size: 16,
-                              color: Color(0xFF334155),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
               ],
             ),
           );
@@ -778,7 +667,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
 
         const SizedBox(height: 16),
 
-        // Live Total Estimation Summary Box
+        // Info Banner Box
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
@@ -786,22 +675,17 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Estimasi total ${_totalWeightKg.toStringAsFixed(1).replaceAll('.', ',')} kg',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF334155),
-                ),
-              ),
-              Text(
-                '\u2248 $_totalPoints poin',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: _primaryGreen,
+              Icon(Icons.info_outline, size: 18, color: _primaryGreen),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Berat & poin final akan ditentukan petugas saat penimbangan di lokasi drop point.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF334155),
+                  ),
                 ),
               ),
             ],
@@ -1018,9 +902,9 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         ),
         const SizedBox(height: 14),
 
-        // Jenis & Berat Sampah Card
+        // Jenis Sampah Card
         _buildConfirmationCard(
-          title: 'JENIS & BERAT SAMPAH',
+          title: 'JENIS SAMPAH',
           onEdit: () => setState(() => _currentStep = 1),
           child: Column(
             children: List.generate(selectedItems.length, (index) {
@@ -1039,7 +923,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
                       ),
                     ),
                     Text(
-                      '${item.weightKg.toStringAsFixed(1).replaceAll('.', ',')} kg · ${item.totalPoints} poin',
+                      '${item.pointsPerKg} poin/kg',
                       style: const TextStyle(
                         fontSize: 13,
                         color: Color(0xFF64748B),
@@ -1077,7 +961,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         ),
         const SizedBox(height: 20),
 
-        // Total Estimasi Banner
+        // Info Banner
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -1085,22 +969,17 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Total estimasi poin',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF334155),
-                ),
-              ),
-              Text(
-                '$_totalPoints poin',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: _primaryGreen,
+              Icon(Icons.info_outline, size: 20, color: _primaryGreen),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Poin akan dihitung dan ditambahkan otomatis setelah petugas menimbang sampah di drop point.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF334155),
+                  ),
                 ),
               ),
             ],
