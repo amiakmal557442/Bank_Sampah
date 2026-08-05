@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'transaction_service.dart';
+import 'session_service.dart';
+import 'db_helper.dart';
 
 class DropPoint {
   final String id;
@@ -54,64 +56,18 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  // Step 1 Data: Drop Points
+  // Step 1 Data: Drop Points (loaded from DB)
   int _selectedDropPointIndex = 0;
-  final List<DropPoint> _dropPoints = [
-    DropPoint(
-      id: 'dp1',
-      name: 'Drop Point Margonda',
-      address: 'Jl. Margonda Raya No. 12, Depok',
-      hours: 'Buka 08.00–17.00',
-      distance: '~1,2 km',
-      categories: ['Plastik', 'Kertas', 'Logam'],
-    ),
-    DropPoint(
-      id: 'dp2',
-      name: 'Waste Station Beji',
-      address: 'Jl. Kartini No. 5, Beji, Depok',
-      hours: 'Buka 07.00–16.00',
-      distance: '~2,8 km',
-      categories: ['Plastik', 'Kertas', 'Kaca', 'Elektronik'],
-    ),
-    DropPoint(
-      id: 'dp3',
-      name: 'Bank Sampah Pancoran Mas',
-      address: 'Jl. Pitara Raya No. 88, Depok',
-      hours: 'Buka 08.00–15.00',
-      distance: '~4,1 km',
-      categories: ['Plastik', 'Kertas', 'Logam', 'Minyak'],
-    ),
-  ];
+  List<DropPoint> _dropPoints = [];
 
-  // Step 2 Data: Waste Items
-  final List<WasteCategory> _wasteCategories = [
-    WasteCategory(
-      id: 'w1',
-      name: 'Kardus, Plastik, Kertas & Kaca',
-      pointsPerKg: 100,
-      icon: Icons.recycling_outlined,
-      isSelected: true,
-    ),
-    WasteCategory(
-      id: 'w2',
-      name: 'Barang Besi',
-      pointsPerKg: 250,
-      icon: Icons.build_outlined,
-      isSelected: false,
-    ),
-    WasteCategory(
-      id: 'w3',
-      name: 'Sampah Elektronik',
-      pointsPerKg: 500,
-      icon: Icons.devices_outlined,
-      isSelected: false,
-    ),
-  ];
+  // Step 2 Data: Waste Items (loaded from DB)
+  List<WasteCategory> _wasteCategories = [];
+  bool _isLoadingData = true;
 
   // Step 3 Data: Simulated Photos
   final List<String> _uploadedPhotos = ['photo_1.jpg'];
 
-  void _goToNextStep() {
+  Future<void> _goToNextStep() async {
     if (_currentStep == 0 && _selectedDropPointIndex < 0) {
       _showToast('Silakan pilih drop point terlebih dahulu');
       return;
@@ -123,6 +79,32 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
     bool success = true;
     if (_currentStep == 3) {
       try {
+        final txId = 'TRX-${DateTime.now().millisecondsSinceEpoch}';
+        final txData = {
+          'id': txId,
+          'nasabah_id': SessionService.userId,
+          'drop_point_id': _dropPoints[_selectedDropPointIndex].id,
+          'type': 'drop_in',
+          'status': 'menunggu',
+        };
+
+        final itemsData = _wasteCategories
+            .where((e) => e.isSelected)
+            .map(
+              (item) => {
+                'id': 'ITI-${DateTime.now().microsecondsSinceEpoch}',
+                'transaction_id': txId,
+                'waste_category_id': int.tryParse(item.id) ?? 0,
+                'estimated_weight': 0.0,
+                'actual_weight': 0.0,
+                'final_points': 0,
+              },
+            )
+            .toList();
+
+        await DatabaseHelper.instance.createTransaction(txData, itemsData);
+
+        // Keep UI logic fallback
         final selectedNames = _wasteCategories
             .where((e) => e.isSelected)
             .map((e) => e.name)
@@ -163,7 +145,52 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final dbDps = await DatabaseHelper.instance.getDropPoints();
+    final dbCats = await DatabaseHelper.instance.getWasteCategories();
+    if (!mounted) return;
+    setState(() {
+      _dropPoints = dbDps
+          .map(
+            (m) => DropPoint(
+              id: m['id']?.toString() ?? '',
+              name: m['name'] as String,
+              address: m['address'] as String,
+              hours: 'Buka ${m['operating_hours'] ?? '08:00-17:00'}',
+              distance: '~-',
+              categories: ['Semua Jenis'],
+            ),
+          )
+          .toList();
+      _wasteCategories = dbCats
+          .map(
+            (m) => WasteCategory(
+              id: m['id'].toString(),
+              name: m['name'] as String,
+              pointsPerKg: (m['point_per_kg'] as int?) ?? 0,
+              icon: Icons.recycling_outlined,
+            ),
+          )
+          .toList();
+      _isLoadingData = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoadingData) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF268B07)),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -1263,7 +1290,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
             width: double.infinity,
             height: 48,
             child: OutlinedButton(
-              onPressed: _goToNextStep,
+              onPressed: () async => await _goToNextStep(),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                 shape: RoundedRectangleBorder(

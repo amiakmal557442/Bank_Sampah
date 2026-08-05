@@ -130,7 +130,6 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialog) {
-          bool isExporting = false;
           return AlertDialog(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
@@ -308,7 +307,7 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
     final totalNasabah = (_data['totalNasabah'] as num?)?.toInt() ?? 0;
     final allNasabah = (_data['allNasabah'] as num?)?.toInt() ?? 1;
     final recyclePct = (_data['recyclePct'] as num?)?.toDouble() ?? 94.2;
-    final totalTx = (_data['totalTx'] as num?)?.toInt() ?? 0;
+    final _ = (_data['totalTx'] as num?)?.toInt() ?? 0;
     final kategoriData =
         (_data['kategoriData'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     final trendData =

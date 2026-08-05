@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'transaction_service.dart';
+import 'db_helper.dart';
+import 'session_service.dart';
 
 // ============================================================================
 // 1. HALAMAN JADWAL & LOKASI PENJEMPUTAN
@@ -408,9 +410,28 @@ class PickupWasteScreen extends StatefulWidget {
 }
 
 class _PickupWasteScreenState extends State<PickupWasteScreen> {
-  bool isRecyclableSelected = true;
-  bool isBesiSelected = false;
-  bool isElektronikSelected = false;
+  List<Map<String, dynamic>> _wasteCategories = [];
+  final Set<int> _selectedIndices = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    final cats = await DatabaseHelper.instance.getWasteCategories();
+    if (!mounted) return;
+    setState(() {
+      _wasteCategories = cats
+          .where((c) => (c['is_active'] as int?) == 1)
+          .toList();
+      // Default: first category selected
+      if (_wasteCategories.isNotEmpty) _selectedIndices.add(0);
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -494,31 +515,30 @@ class _PickupWasteScreenState extends State<PickupWasteScreen> {
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
           const SizedBox(height: 16),
-          _buildWasteCard(
-            title: 'Kardus, Plastik, Kertas & Kaca',
-            subtitle: '100 poin/kg',
-            icon: Icons.recycling_rounded,
-            isSelected: isRecyclableSelected,
-            primaryGreen: primaryGreen,
-            onToggle: () =>
-                setState(() => isRecyclableSelected = !isRecyclableSelected),
-          ),
-          _buildWasteCard(
-            title: 'Barang Besi',
-            subtitle: '250 poin/kg',
-            icon: Icons.build_rounded,
-            isSelected: isBesiSelected,
-            primaryGreen: primaryGreen,
-            onToggle: () => setState(() => isBesiSelected = !isBesiSelected),
-          ),
-          _buildWasteCard(
-            title: 'Sampah Elektronik',
-            subtitle: '500 poin/kg',
-            icon: Icons.devices_rounded,
-            isSelected: isElektronikSelected,
-            primaryGreen: primaryGreen,
-            onToggle: () => setState(() => isElektronikSelected = !isElektronikSelected),
-          ),
+          if (_isLoading)
+            const Center(
+              child: CircularProgressIndicator(color: Color(0xFF268B07)),
+            )
+          else
+            ..._wasteCategories.asMap().entries.map((entry) {
+              final i = entry.key;
+              final cat = entry.value;
+              final isSelected = _selectedIndices.contains(i);
+              return _buildWasteCard(
+                title: cat['name'] as String,
+                subtitle: '${cat['point_per_kg']} poin/kg',
+                icon: Icons.recycling_rounded,
+                isSelected: isSelected,
+                primaryGreen: const Color(0xFF268B07),
+                onToggle: () => setState(() {
+                  if (isSelected) {
+                    _selectedIndices.remove(i);
+                  } else {
+                    _selectedIndices.add(i);
+                  }
+                }),
+              );
+            }),
         ],
       ),
       bottomNavigationBar: SafeArea(
@@ -584,22 +604,11 @@ class _PickupWasteScreenState extends State<PickupWasteScreen> {
                   onPressed: () {
                     // Build selected waste items list
                     final List<Map<String, dynamic>> items = [];
-                    if (isRecyclableSelected) {
+                    for (final i in _selectedIndices) {
+                      final cat = _wasteCategories[i];
                       items.add({
-                        'name': 'Kardus, Plastik, Kertas & Kaca',
-                        'rate': '100 poin/kg',
-                      });
-                    }
-                    if (isBesiSelected) {
-                      items.add({
-                        'name': 'Barang Besi',
-                        'rate': '250 poin/kg',
-                      });
-                    }
-                    if (isElektronikSelected) {
-                      items.add({
-                        'name': 'Sampah Elektronik',
-                        'rate': '500 poin/kg',
+                        'name': cat['name'],
+                        'rate': '${cat['point_per_kg']} poin/kg',
                       });
                     }
                     Navigator.push(
@@ -703,7 +712,7 @@ class _PickupWasteScreenState extends State<PickupWasteScreen> {
 // ============================================================================
 // 3. HALAMAN KONFIRMASI & RINGKASAN
 // ============================================================================
-class PickupConfirmationScreen extends StatelessWidget {
+class PickupConfirmationScreen extends StatefulWidget {
   final String selectedDay;
   final String selectedDate;
   final String selectedTime;
@@ -718,6 +727,15 @@ class PickupConfirmationScreen extends StatelessWidget {
     required this.note,
     required this.wasteItems,
   });
+
+  @override
+  State<PickupConfirmationScreen> createState() =>
+      _PickupConfirmationScreenState();
+}
+
+class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
+  String? _photoPath;
+  bool _isSubmitting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -768,14 +786,14 @@ class PickupConfirmationScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '$selectedDay, $selectedDate Juli 2026',
+                            '${widget.selectedDay}, ${widget.selectedDate} Juli 2026',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
                           ),
                           Text(
-                            selectedTime + ' WIB',
+                            widget.selectedTime + ' WIB',
                             style: const TextStyle(color: Colors.grey),
                           ),
                           const SizedBox(height: 10),
@@ -792,7 +810,7 @@ class PickupConfirmationScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (note.isNotEmpty) ...[
+                if (widget.note.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -801,7 +819,7 @@ class PickupConfirmationScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '"$note"',
+                      '"${widget.note}"',
                       style: const TextStyle(
                         fontStyle: FontStyle.italic,
                         color: Colors.black54,
@@ -817,7 +835,7 @@ class PickupConfirmationScreen extends StatelessWidget {
             title: 'JENIS SAMPAH',
             context: context,
             content: Column(
-              children: wasteItems
+              children: widget.wasteItems
                   .asMap()
                   .entries
                   .map(
@@ -860,6 +878,100 @@ class PickupConfirmationScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+          _buildSectionCard(
+            title: 'FOTO BUKTI SAMPAH',
+            context: context,
+            content: _photoPath == null
+                ? InkWell(
+                    onTap: () async {
+                      // Simulasi ambil foto
+                      await Future.delayed(const Duration(milliseconds: 500));
+                      setState(() {
+                        _photoPath = 'simulated_photo_path.jpg';
+                      });
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      decoration: BoxDecoration(
+                        color: primaryGreen.withOpacity(0.05),
+                        border: Border.all(
+                          color: primaryGreen.withOpacity(0.3),
+                          style: BorderStyle.solid,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.camera_alt_outlined,
+                            size: 40,
+                            color: primaryGreen,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Ambil Foto Bukti',
+                            style: TextStyle(
+                              color: primaryGreen,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : Row(
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: const Icon(
+                          Icons.image,
+                          size: 40,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Foto tersimpan',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _photoPath!,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            InkWell(
+                              onTap: () => setState(() => _photoPath = null),
+                              child: Text(
+                                'Ubah Foto',
+                                style: TextStyle(
+                                  color: primaryGreen,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: 16),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -892,32 +1004,93 @@ class PickupConfirmationScreen extends StatelessWidget {
                 ),
                 elevation: 0,
               ),
-              onPressed: () {
-                // Simpan transaksi ke TransactionService
-                final names = wasteItems
-                    .map((e) => e['name'] as String)
-                    .join(' dan ');
-                TransactionService.addTransaction(
-                  title: names,
-                  type: 'Jemput',
-                );
+              onPressed: _isSubmitting
+                  ? null
+                  : () async {
+                      if (_photoPath == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Harap lampirkan foto bukti sampah'),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                        return;
+                      }
 
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PickupSuccessScreen(
-                      selectedDay: selectedDay,
-                      selectedDate: selectedDate,
-                      selectedTime: selectedTime,
+                      setState(() => _isSubmitting = true);
+
+                      // Prepare Data for DB
+                      final txId =
+                          'TRX-${DateTime.now().millisecondsSinceEpoch}';
+                      final txData = {
+                        'id': txId,
+                        'nasabah_id':
+                            SessionService.userId, // using active session
+                        'type': 'pickup',
+                        'status': 'menunggu',
+                        'pickup_date':
+                            '${widget.selectedDay}, ${widget.selectedDate} Juli 2026',
+                        'pickup_time_slot': widget.selectedTime,
+                        'photo_evidence': _photoPath,
+                      };
+
+                      final itemsData = widget.wasteItems
+                          .map(
+                            (item) => {
+                              'id':
+                                  'ITI-${DateTime.now().microsecondsSinceEpoch}',
+                              'transaction_id': txId,
+                              'waste_category_id':
+                                  0, // Using 0 as mock ID for text categories, normally map this correctly
+                              'estimated_weight': 0.0,
+                              'actual_weight': 0.0,
+                              'final_points': 0,
+                            },
+                          )
+                          .toList();
+
+                      await DatabaseHelper.instance.createTransaction(
+                        txData,
+                        itemsData,
+                      );
+
+                      // Keep the UI logic for transaction history (if any remains)
+                      final names = widget.wasteItems
+                          .map((e) => e['name'] as String)
+                          .join(' dan ');
+                      TransactionService.addTransaction(
+                        title: names,
+                        type: 'Jemput',
+                      );
+
+                      if (!mounted) return;
+                      setState(() => _isSubmitting = false);
+
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PickupSuccessScreen(
+                            selectedDay: widget.selectedDay,
+                            selectedDate: widget.selectedDate,
+                            selectedTime: widget.selectedTime,
+                          ),
+                        ),
+                        (route) => route.isFirst,
+                      );
+                    },
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    )
+                  : const Text(
+                      'Ajukan Permintaan Jemput',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  (route) => route.isFirst,
-                );
-              },
-              child: const Text(
-                'Ajukan Permintaan Jemput',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
             ),
           ),
         ),

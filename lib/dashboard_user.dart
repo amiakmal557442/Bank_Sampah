@@ -45,6 +45,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     with TickerProviderStateMixin {
   int _currentIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    await TransactionService.loadTransactions(SessionService.userId);
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   final List<Widget> _pages = const [
     BerandaPage(),
     MapLocationScreen(),
@@ -437,7 +450,7 @@ class _BerandaPageState extends State<BerandaPage> {
                             textBaseline: TextBaseline.alphabetic,
                             children: [
                               Text(
-                                TransactionService.userPoints
+                                SessionService.pointBalance
                                     .toString()
                                     .replaceAllMapped(
                                       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
@@ -2035,8 +2048,8 @@ class ProfilPage extends StatelessWidget {
               child: SizedBox(
                 width: double.infinity,
                 child: TextButton.icon(
-                  onPressed: () {
-                    SessionService.logout();
+                  onPressed: () async {
+                    await SessionService.logout();
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(

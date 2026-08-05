@@ -2,6 +2,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -14,7 +17,8 @@ class DatabaseHelper {
       'phone_number': '+62 812-3456-7890',
       'email': 'budi@gmail.com',
       'full_name': 'Budi Santoso',
-      'password': 'password123',
+      'password':
+          'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f',
       'role': 'nasabah',
       'address': 'Jl. Mawar No. 12, Jakarta',
       'default_setor_method': 'drop_in',
@@ -26,7 +30,8 @@ class DatabaseHelper {
       'phone_number': '+62 812-9999-8888',
       'email': 'petugas@gmail.com',
       'full_name': 'Ahmad Petugas',
-      'password': 'password123',
+      'password':
+          'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f',
       'role': 'petugas',
       'address':
           'Zona: Drop Point 01 - Pusat Kota, Armada: Motor Roda 2, Plat: B 1234 ABC',
@@ -39,7 +44,8 @@ class DatabaseHelper {
       'phone_number': '+62 812-1111-2222',
       'email': 'akmalahsan223@gmail.com',
       'full_name': 'Akmal Ahsan',
-      'password': 'jasadidas557442',
+      'password':
+          '808d5293ca7453bfbaa369f8f7c581cbf37f6a0ce85f13de00e67e08feeb45e5',
       'role': 'admin',
       'address': 'Kantor Pusat Bank Sampah',
       'default_setor_method': 'drop_in',
@@ -51,7 +57,8 @@ class DatabaseHelper {
       'phone_number': '+62 812-3333-4444',
       'email': 'fanskawe221@gmail.com',
       'full_name': 'Fanska',
-      'password': '557442337554',
+      'password':
+          '32062e2d61502920f0207935c0bdd7cc27f1c024c8b49c92ced155f547d37c50',
       'role': 'admin',
       'address': 'Kantor Pusat Bank Sampah',
       'default_setor_method': 'drop_in',
@@ -63,7 +70,8 @@ class DatabaseHelper {
       'phone_number': '+62 812-5555-6666',
       'email': 'andi.wijaya@banksampah.id',
       'full_name': 'Andi Wijaya',
-      'password': 'staf123456',
+      'password':
+          '22875a9282a98b312c1a775aaabb4b54fca6caf2fc73762652a3370b583ef32d',
       'role': 'staf_kantor',
       'address': 'Kantor Pusat Bank Sampah',
       'default_setor_method': 'drop_in',
@@ -75,7 +83,8 @@ class DatabaseHelper {
       'phone_number': '+62 812-7777-8888',
       'email': 'rina.m@banksampah.id',
       'full_name': 'Rina Marlina',
-      'password': 'staf123456',
+      'password':
+          '22875a9282a98b312c1a775aaabb4b54fca6caf2fc73762652a3370b583ef32d',
       'role': 'staf_kantor',
       'address': 'Kantor Pusat Bank Sampah',
       'default_setor_method': 'drop_in',
@@ -105,11 +114,90 @@ class DatabaseHelper {
     'auto_assign': 1,
     'jam_buka': '08:00',
     'jam_tutup': '17:00',
-    'wa_notif': 1,
     'push_notif': 1,
   };
 
+  static final List<Map<String, dynamic>> _webDropPoints = [
+    {
+      'id': 'dp-1',
+      'name': 'Drop Point 01 - Pusat Kota',
+      'address': 'Jl. Merdeka No.1, Jakarta Pusat',
+      'latitude': -6.1751,
+      'longitude': 106.8272,
+      'capacity_status': 'aman',
+      'operating_hours': '08:00 - 17:00',
+    },
+    {
+      'id': 'dp-2',
+      'name': 'Drop Point 02 - Margonda',
+      'address': 'Jl. Margonda Raya No. 10',
+      'latitude': -6.3732,
+      'longitude': 106.8323,
+      'capacity_status': 'kritis',
+      'operating_hours': '08:00 - 17:00',
+    },
+  ];
+
+  static final List<Map<String, dynamic>> _webWasteCategories = [
+    {
+      'id': 1,
+      'name': 'Plastik (PET/HDPE)',
+      'point_per_kg': 2500,
+      'icon_url': 'assets/icons/plastik.png',
+      'is_active': 1,
+    },
+    {
+      'id': 2,
+      'name': 'Kertas & Karton',
+      'point_per_kg': 1500,
+      'icon_url': 'assets/icons/kertas.png',
+      'is_active': 1,
+    },
+    {
+      'id': 3,
+      'name': 'Logam & Besi',
+      'point_per_kg': 4000,
+      'icon_url': 'assets/icons/logam.png',
+      'is_active': 1,
+    },
+    {
+      'id': 4,
+      'name': 'Minyak Jelantah',
+      'point_per_kg': 3500,
+      'icon_url': 'assets/icons/minyak.png',
+      'is_active': 1,
+    },
+  ];
+
+  static final List<Map<String, dynamic>> _webTransactions = [];
+  static final List<Map<String, dynamic>> _webTransactionItems = [];
+
   DatabaseHelper._init();
+
+  // Initialize Web Data from SharedPreferences
+  Future<void> initWebStorage() async {
+    if (!kIsWeb) return;
+    final prefs = await SharedPreferences.getInstance();
+    final usersJson = prefs.getString('web_users');
+    if (usersJson != null) {
+      try {
+        final List<dynamic> decoded = jsonDecode(usersJson);
+        _webUsers.clear();
+        _webUsers.addAll(decoded.cast<Map<String, dynamic>>());
+      } catch (e) {
+        // Fallback to default if decoding fails
+      }
+    } else {
+      // Save default users on first run
+      await _saveWebUsers();
+    }
+  }
+
+  Future<void> _saveWebUsers() async {
+    if (!kIsWeb) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('web_users', jsonEncode(_webUsers));
+  }
 
   Future<Database?> get database async {
     if (kIsWeb) return null; // SQLite is not supported on web
@@ -346,18 +434,32 @@ class DatabaseHelper {
     for (var u in _webUsers) {
       await db.insert('users', u);
     }
+    for (var dp in _webDropPoints) {
+      await db.insert('drop_points', dp);
+    }
+    for (var wc in _webWasteCategories) {
+      await db.insert('waste_categories', wc);
+    }
+  }
+
+  // Helper for password hashing
+  String _hashPassword(String password) {
+    final bytes = utf8.encode(password);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
   }
 
   // User auth and operations
   Future<Map<String, dynamic>?> login(String email, String password) async {
     final cleanEmail = email.trim().toLowerCase();
+    final hashedPassword = _hashPassword(password);
 
     if (kIsWeb) {
       try {
         return _webUsers.firstWhere(
           (u) =>
               u['email'].toString().toLowerCase() == cleanEmail &&
-              u['password'] == password,
+              u['password'] == hashedPassword,
         );
       } catch (e) {
         return null;
@@ -369,7 +471,7 @@ class DatabaseHelper {
     final maps = await db.query(
       'users',
       where: 'LOWER(email) = ? AND password = ?',
-      whereArgs: [cleanEmail, password],
+      whereArgs: [cleanEmail, hashedPassword],
     );
 
     if (maps.isNotEmpty) {
@@ -379,9 +481,15 @@ class DatabaseHelper {
   }
 
   Future<bool> registerUser(Map<String, dynamic> user) async {
+    // Hash password before saving
+    final userToSave = Map<String, dynamic>.from(user);
+    if (userToSave.containsKey('password')) {
+      userToSave['password'] = _hashPassword(userToSave['password']);
+    }
+
     if (kIsWeb) {
-      final email = user['email']?.toString().toLowerCase();
-      final phone = user['phone_number']?.toString();
+      final email = userToSave['email']?.toString().toLowerCase();
+      final phone = userToSave['phone_number']?.toString();
 
       final exists = _webUsers.any(
         (u) =>
@@ -391,18 +499,49 @@ class DatabaseHelper {
 
       if (exists) return false;
 
-      _webUsers.add(user);
+      _webUsers.add(userToSave);
+      await _saveWebUsers(); // Persist for Web
       return true;
     }
 
     final db = await instance.database;
     if (db == null) return false;
     try {
-      await db.insert('users', user);
+      await db.insert('users', userToSave);
+      // Record audit log for account creation
+      final auditLog = {
+        'time':
+            '${DateTime.now().day.toString().padLeft(2, '0')} ${_getMonthName(DateTime.now().month)} ${DateTime.now().year} - ${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+        'user_name': userToSave['full_name'] ?? 'Unknown User',
+        'role': userToSave['role'] ?? 'Nasabah',
+        'module': 'Authentication',
+        'action': 'Pembuatan Akun Baru',
+        'ip_address': 'Aplikasi Mobile',
+        'status': 'SUKSES',
+      };
+      await db.insert('audit_logs', auditLog);
       return true;
     } catch (e) {
       return false;
     }
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return months[month - 1];
   }
 
   Future<bool> isEmailRegistered(String email) async {
@@ -448,6 +587,7 @@ class DatabaseHelper {
         final updated = Map<String, dynamic>.from(_webUsers[index]);
         updated['point_balance'] = newBalance;
         _webUsers[index] = updated;
+        await _saveWebUsers();
         return 1;
       }
       return 0;
@@ -638,16 +778,13 @@ class DatabaseHelper {
         }
       }
       String taskIdStr = row['task_id'].toString();
-      String shortId = taskIdStr.length > 4
-          ? taskIdStr.substring(0, 4)
-          : taskIdStr;
 
       return {
         'petugas_name': row['petugas_name'],
         'vehicle': vehicle,
         'location': row['dp_name'] ?? 'Lokasi Nasabah',
         'task': row['task_type'] == 'pickup'
-            ? 'Pickup \$shortId'
+            ? 'Pickup #${taskIdStr.length > 4 ? taskIdStr.substring(0, 4) : taskIdStr}'
             : 'Pengangkutan',
         'status': row['task_status'],
       };
@@ -845,6 +982,7 @@ class DatabaseHelper {
       final updated = Map<String, dynamic>.from(_webUsers[idx]);
       updated.addAll(data);
       _webUsers[idx] = updated;
+      await _saveWebUsers();
       return true;
     }
 
@@ -879,6 +1017,7 @@ class DatabaseHelper {
       final idx = _webUsers.indexWhere((u) => u['id'] == userId);
       if (idx == -1) return false;
       _webUsers.removeAt(idx);
+      await _saveWebUsers();
       return true;
     }
 
@@ -1097,4 +1236,261 @@ class DatabaseHelper {
       'totalPts': 38000000,
     },
   ];
+
+  // ── DROP POINTS CRUD ──────────────────────────────────────────────────────
+  Future<List<Map<String, dynamic>>> getDropPoints() async {
+    if (kIsWeb) return List.from(_webDropPoints);
+    final db = await instance.database;
+    if (db == null) return [];
+    return await db.query('drop_points');
+  }
+
+  Future<bool> addDropPoint(Map<String, dynamic> dp) async {
+    if (kIsWeb) {
+      _webDropPoints.add(dp);
+      return true;
+    }
+    final db = await instance.database;
+    if (db == null) return false;
+    try {
+      await db.insert('drop_points', dp);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> updateDropPoint(String id, Map<String, dynamic> dp) async {
+    if (kIsWeb) {
+      final idx = _webDropPoints.indexWhere((e) => e['id'] == id);
+      if (idx != -1) {
+        _webDropPoints[idx] = dp;
+        return true;
+      }
+      return false;
+    }
+    final db = await instance.database;
+    if (db == null) return false;
+    try {
+      await db.update('drop_points', dp, where: 'id = ?', whereArgs: [id]);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteDropPoint(String id) async {
+    if (kIsWeb) {
+      _webDropPoints.removeWhere((e) => e['id'] == id);
+      return true;
+    }
+    final db = await instance.database;
+    if (db == null) return false;
+    try {
+      await db.delete('drop_points', where: 'id = ?', whereArgs: [id]);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ── WASTE CATEGORIES CRUD ─────────────────────────────────────────────────
+  Future<List<Map<String, dynamic>>> getWasteCategories() async {
+    if (kIsWeb) return List.from(_webWasteCategories);
+    final db = await instance.database;
+    if (db == null) return [];
+    return await db.query('waste_categories');
+  }
+
+  Future<bool> addWasteCategory(Map<String, dynamic> wc) async {
+    if (kIsWeb) {
+      if (!wc.containsKey('id')) {
+        wc['id'] = _webWasteCategories.length + 1;
+      }
+      _webWasteCategories.add(wc);
+      return true;
+    }
+    final db = await instance.database;
+    if (db == null) return false;
+    try {
+      await db.insert('waste_categories', wc);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> updateWasteCategory(int id, Map<String, dynamic> wc) async {
+    if (kIsWeb) {
+      final idx = _webWasteCategories.indexWhere((e) => e['id'] == id);
+      if (idx != -1) {
+        _webWasteCategories[idx] = wc;
+        return true;
+      }
+      return false;
+    }
+    final db = await instance.database;
+    if (db == null) return false;
+    try {
+      await db.update('waste_categories', wc, where: 'id = ?', whereArgs: [id]);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteWasteCategory(int id) async {
+    if (kIsWeb) {
+      _webWasteCategories.removeWhere((e) => e['id'] == id);
+      return true;
+    }
+    final db = await instance.database;
+    if (db == null) return false;
+    try {
+      await db.delete('waste_categories', where: 'id = ?', whereArgs: [id]);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ==========================================
+  // TRANSACTIONS
+  // ==========================================
+
+  Future<bool> createTransaction(
+    Map<String, dynamic> txData,
+    List<Map<String, dynamic>> items,
+  ) async {
+    if (kIsWeb) {
+      _webTransactions.add(txData);
+      for (var item in items) {
+        _webTransactionItems.add(item);
+      }
+      return true;
+    }
+
+    final db = await instance.database;
+    if (db == null) return false;
+
+    try {
+      await db.transaction((txn) async {
+        await txn.insert('transactions', txData);
+        for (var item in items) {
+          await txn.insert('transaction_items', item);
+        }
+      });
+      return true;
+    } catch (e) {
+      print('Error creating transaction: $e');
+      return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getAllTransactions() async {
+    if (kIsWeb) {
+      return _webTransactions.map((tx) {
+        final user = _webUsers.firstWhere(
+          (u) => u['id'] == tx['nasabah_id'],
+          orElse: () => {'full_name': 'Unknown'},
+        );
+        return {
+          ...tx,
+          'nasabah_name': user['full_name'],
+          'items': _webTransactionItems
+              .where((i) => i['transaction_id'] == tx['id'])
+              .toList(),
+        };
+      }).toList();
+    }
+
+    final db = await instance.database;
+    if (db == null) return [];
+
+    final List<Map<String, dynamic>> txs = await db.rawQuery('''
+      SELECT t.*, u.full_name as nasabah_name 
+      FROM transactions t 
+      LEFT JOIN users u ON t.nasabah_id = u.id
+      ORDER BY t.created_at DESC
+    ''');
+
+    List<Map<String, dynamic>> result = [];
+    for (var tx in txs) {
+      final items = await db.query(
+        'transaction_items',
+        where: 'transaction_id = ?',
+        whereArgs: [tx['id']],
+      );
+      Map<String, dynamic> txMap = Map<String, dynamic>.from(tx);
+      txMap['items'] = items;
+      result.add(txMap);
+    }
+    return result;
+  }
+
+  Future<List<Map<String, dynamic>>> getUserTransactions(
+    String nasabahId,
+  ) async {
+    if (kIsWeb) {
+      return _webTransactions.where((tx) => tx['nasabah_id'] == nasabahId).map((
+        tx,
+      ) {
+        return {
+          ...tx,
+          'items': _webTransactionItems
+              .where((i) => i['transaction_id'] == tx['id'])
+              .toList(),
+        };
+      }).toList();
+    }
+
+    final db = await instance.database;
+    if (db == null) return [];
+
+    final List<Map<String, dynamic>> txs = await db.query(
+      'transactions',
+      where: 'nasabah_id = ?',
+      whereArgs: [nasabahId],
+      orderBy: 'created_at DESC',
+    );
+
+    List<Map<String, dynamic>> result = [];
+    for (var tx in txs) {
+      final items = await db.query(
+        'transaction_items',
+        where: 'transaction_id = ?',
+        whereArgs: [tx['id']],
+      );
+      Map<String, dynamic> txMap = Map<String, dynamic>.from(tx);
+      txMap['items'] = items;
+      result.add(txMap);
+    }
+    return result;
+  }
+
+  Future<bool> updateTransactionStatus(String id, String status) async {
+    if (kIsWeb) {
+      final idx = _webTransactions.indexWhere((tx) => tx['id'] == id);
+      if (idx != -1) {
+        _webTransactions[idx]['status'] = status;
+        return true;
+      }
+      return false;
+    }
+
+    final db = await instance.database;
+    if (db == null) return false;
+
+    try {
+      await db.update(
+        'transactions',
+        {'status': status},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }

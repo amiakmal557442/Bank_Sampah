@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'db_helper.dart';
 
 // ============================================================================
 // Halaman Master Data — Admin Dashboard (Desktop/Web)
@@ -26,20 +27,41 @@ const Color secondaryDarkText = Color(0xFF334155);
 // --------------------------------------------------------------------------
 
 class WasteCategoryModel {
+  final int? id;
   final String name;
   final int pointsPerKg;
   final bool isActive;
   IconData icon;
 
   WasteCategoryModel({
+    this.id,
     required this.name,
     required this.pointsPerKg,
     required this.isActive,
     required this.icon,
   });
+
+  factory WasteCategoryModel.fromMap(Map<String, dynamic> map) {
+    return WasteCategoryModel(
+      id: map['id'] as int?,
+      name: map['name'] as String,
+      pointsPerKg: (map['point_per_kg'] as int?) ?? 0,
+      isActive: (map['is_active'] as int?) == 1,
+      icon: Icons.recycling_rounded, // default icon
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    if (id != null) 'id': id,
+    'name': name,
+    'point_per_kg': pointsPerKg,
+    'icon_url': '',
+    'is_active': isActive ? 1 : 0,
+  };
 }
 
 class DropPointModel {
+  final String? id;
   final String name;
   final String address;
   final String operatingHours;
@@ -47,12 +69,35 @@ class DropPointModel {
   final bool isActive;
 
   DropPointModel({
+    this.id,
     required this.name,
     required this.address,
     required this.operatingHours,
     required this.capacityPercent,
     required this.isActive,
   });
+
+  factory DropPointModel.fromMap(Map<String, dynamic> map) {
+    int capPercent = 50;
+    if (map['capacity_status'] == 'kritis') capPercent = 90;
+    if (map['capacity_status'] == 'aman') capPercent = 30;
+    return DropPointModel(
+      id: map['id']?.toString(),
+      name: map['name'] as String,
+      address: map['address'] as String,
+      operatingHours: (map['operating_hours'] as String?) ?? '08:00 - 17:00',
+      capacityPercent: capPercent,
+      isActive: true,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    if (id != null) 'id': id,
+    'name': name,
+    'address': address,
+    'operating_hours': operatingHours,
+    'capacity_status': capacityPercent >= 80 ? 'kritis' : 'aman',
+  };
 }
 
 // Icon options for category picker
@@ -84,56 +129,12 @@ class _MasterDataScreenState extends State<MasterDataScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  final List<String> tabs = [
-    'Kategori Sampah',
-    'Drop Point',
-  ];
+  final List<String> tabs = ['Kategori Sampah', 'Drop Point'];
 
-  // Mutable in-memory data lists
-  final List<WasteCategoryModel> _categories = [
-    WasteCategoryModel(
-      name: 'Kardus, Plastik, Kertas & Kaca',
-      pointsPerKg: 100,
-      isActive: true,
-      icon: Icons.recycling_rounded,
-    ),
-    WasteCategoryModel(
-      name: 'Barang Besi',
-      pointsPerKg: 250,
-      isActive: true,
-      icon: Icons.build_rounded,
-    ),
-    WasteCategoryModel(
-      name: 'Sampah Elektronik',
-      pointsPerKg: 500,
-      isActive: true,
-      icon: Icons.devices_rounded,
-    ),
-  ];
-
-  final List<DropPointModel> _dropPoints = [
-    DropPointModel(
-      name: 'Drop Point Margonda',
-      address: 'Jl. Margonda Raya No. 12, Depok',
-      operatingHours: '08.00–17.00',
-      capacityPercent: 92,
-      isActive: true,
-    ),
-    DropPointModel(
-      name: 'Waste Station Beji',
-      address: 'Jl. Kartini No. 5, Beji, Depok',
-      operatingHours: '07.00–16.00',
-      capacityPercent: 88,
-      isActive: true,
-    ),
-    DropPointModel(
-      name: 'Drop Point Kemang Pratama',
-      address: 'Jl. Kemang Raya No. 3, Depok',
-      operatingHours: '08.00–18.00',
-      capacityPercent: 31,
-      isActive: true,
-    ),
-  ];
+  // Dynamic data lists loaded from SQLite
+  List<WasteCategoryModel> _categories = [];
+  List<DropPointModel> _dropPoints = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -143,6 +144,18 @@ class _MasterDataScreenState extends State<MasterDataScreen>
       if (!_tabController.indexIsChanging) {
         setState(() {});
       }
+    });
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    final dbCats = await DatabaseHelper.instance.getWasteCategories();
+    final dbDps = await DatabaseHelper.instance.getDropPoints();
+    setState(() {
+      _categories = dbCats.map((m) => WasteCategoryModel.fromMap(m)).toList();
+      _dropPoints = dbDps.map((m) => DropPointModel.fromMap(m)).toList();
+      _isLoading = false;
     });
   }
 
@@ -571,7 +584,7 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                         const SizedBox(width: 10),
                         _dialogSubmitButton(
                           isEdit ? 'Simpan' : 'Tambah Kategori',
-                          () {
+                          () async {
                             final name = nameController.text.trim();
                             final points = int.tryParse(
                               pointsController.text.trim(),
@@ -587,28 +600,35 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                               );
                               return;
                             }
-                            setState(() {
-                              final model = WasteCategoryModel(
-                                name: name,
-                                pointsPerKg: points,
-                                isActive: isActive,
-                                icon: selectedIcon,
-                              );
-                              if (isEdit) {
-                                _categories[index] = model;
-                              } else {
-                                _categories.add(model);
-                              }
-                            });
-                            Navigator.pop(ctx);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Kategori "$name" berhasil ${isEdit ? 'diperbarui' : 'ditambahkan'}!',
-                                ),
-                                backgroundColor: primaryGreen,
-                              ),
+                            final model = WasteCategoryModel(
+                              id: category?.id,
+                              name: name,
+                              pointsPerKg: points,
+                              isActive: isActive,
+                              icon: selectedIcon,
                             );
+                            Navigator.pop(ctx);
+                            if (isEdit) {
+                              await DatabaseHelper.instance.updateWasteCategory(
+                                model.id!,
+                                model.toMap(),
+                              );
+                            } else {
+                              await DatabaseHelper.instance.addWasteCategory(
+                                model.toMap(),
+                              );
+                            }
+                            await _loadData();
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Kategori "$name" berhasil ${isEdit ? 'diperbarui' : 'ditambahkan'}!',
+                                  ),
+                                  backgroundColor: primaryGreen,
+                                ),
+                              );
+                            }
                           },
                         ),
                       ],
@@ -761,47 +781,64 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                         children: [
                           _dialogCancelButton(ctx),
                           const SizedBox(width: 10),
-                          _dialogSubmitButton('Tambah Drop Point', () {
-                            final name = nameController.text.trim();
-                            final address = addressController.text.trim();
-                            final hours = hoursController.text.trim();
-                            final capacity =
-                                int.tryParse(capacityController.text.trim()) ??
-                                0;
-                            if (name.isEmpty ||
-                                address.isEmpty ||
-                                hours.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Mohon isi semua field yang diperlukan.',
+                          _dialogSubmitButton(
+                            isEdit ? 'Simpan' : 'Tambah Drop Point',
+                            () async {
+                              final name = nameController.text.trim();
+                              final address = addressController.text.trim();
+                              final hours = hoursController.text.trim();
+                              final capacity =
+                                  int.tryParse(
+                                    capacityController.text.trim(),
+                                  ) ??
+                                  0;
+                              if (name.isEmpty ||
+                                  address.isEmpty ||
+                                  hours.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Mohon isi semua field yang diperlukan.',
+                                    ),
+                                    backgroundColor: Colors.redAccent,
                                   ),
-                                  backgroundColor: Colors.redAccent,
-                                ),
+                                );
+                                return;
+                              }
+                              final model = DropPointModel(
+                                id:
+                                    dropPoint?.id ??
+                                    'dp-${DateTime.now().millisecondsSinceEpoch}',
+                                name: name,
+                                address: address,
+                                operatingHours: hours,
+                                capacityPercent: capacity.clamp(0, 100),
+                                isActive: isActive,
                               );
-                              return;
-                            }
-                            setState(() {
-                              _dropPoints.add(
-                                DropPointModel(
-                                  name: name,
-                                  address: address,
-                                  operatingHours: hours,
-                                  capacityPercent: capacity.clamp(0, 100),
-                                  isActive: isActive,
-                                ),
-                              );
-                            });
-                            Navigator.pop(ctx);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Drop Point "$name" berhasil ditambahkan!',
-                                ),
-                                backgroundColor: primaryGreen,
-                              ),
-                            );
-                          }),
+                              Navigator.pop(ctx);
+                              if (isEdit) {
+                                await DatabaseHelper.instance.updateDropPoint(
+                                  model.id!,
+                                  model.toMap(),
+                                );
+                              } else {
+                                await DatabaseHelper.instance.addDropPoint(
+                                  model.toMap(),
+                                );
+                              }
+                              await _loadData();
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Drop Point "$name" berhasil ${isEdit ? 'diperbarui' : 'ditambahkan'}!',
+                                    ),
+                                    backgroundColor: primaryGreen,
+                                  ),
+                                );
+                              }
+                            },
+                          ),
                         ],
                       ),
                     ],
@@ -985,10 +1022,13 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                         );
                       },
                       onDelete: () {
-                        _showDeleteConfirmation(cat.name, () {
-                          setState(() {
-                            _categories.remove(cat);
-                          });
+                        _showDeleteConfirmation(cat.name, () async {
+                          if (cat.id != null) {
+                            await DatabaseHelper.instance.deleteWasteCategory(
+                              cat.id!,
+                            );
+                          }
+                          await _loadData();
                         });
                       },
                     ),
@@ -1117,10 +1157,13 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                         );
                       },
                       onDelete: () {
-                        _showDeleteConfirmation(dp.name, () {
-                          setState(() {
-                            _dropPoints.remove(dp);
-                          });
+                        _showDeleteConfirmation(dp.name, () async {
+                          if (dp.id != null) {
+                            await DatabaseHelper.instance.deleteDropPoint(
+                              dp.id!,
+                            );
+                          }
+                          await _loadData();
                         });
                       },
                     ),
@@ -1136,6 +1179,12 @@ class _MasterDataScreenState extends State<MasterDataScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: pageBackground,
+        body: Center(child: CircularProgressIndicator(color: primaryGreen)),
+      );
+    }
     return Scaffold(
       backgroundColor: pageBackground,
       body: Column(
@@ -1146,10 +1195,7 @@ class _MasterDataScreenState extends State<MasterDataScreen>
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: [
-                _buildKategoriSampahTab(),
-                _buildDropPointTab(),
-              ],
+              children: [_buildKategoriSampahTab(), _buildDropPointTab()],
             ),
           ),
         ],

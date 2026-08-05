@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'db_helper.dart';
 
 class MapLocationScreen extends StatefulWidget {
   final bool showBottomNav;
@@ -18,6 +19,24 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
     'Kardus',
     'Logam',
   ];
+
+  List<Map<String, dynamic>> _dropPoints = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDropPoints();
+  }
+
+  Future<void> _loadDropPoints() async {
+    final dps = await DatabaseHelper.instance.getDropPoints();
+    if (!mounted) return;
+    setState(() {
+      _dropPoints = dps;
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -248,8 +267,8 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
+                children: [
+                  const Text(
                     'DROP POINT TERDEKAT',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
@@ -258,8 +277,8 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                     ),
                   ),
                   Text(
-                    '6 lokasi',
-                    style: TextStyle(
+                    '${_dropPoints.length} lokasi',
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.green,
                       fontSize: 13,
@@ -270,15 +289,37 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
             ),
 
             // Item Drop Point
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 3,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemBuilder: (context, index) {
-                return _buildDropPointCard();
-              },
-            ),
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(
+                  child: CircularProgressIndicator(color: Colors.green),
+                ),
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _dropPoints.isEmpty ? 1 : _dropPoints.length,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemBuilder: (context, index) {
+                  if (_dropPoints.isEmpty) {
+                    return _buildDropPointCard(
+                      name: 'Drop Point Margonda',
+                      address: 'Jl. Margonda Raya No. 12, Depok',
+                      hours: '08:00–17:00',
+                      status: 'aman',
+                    );
+                  }
+                  final dp = _dropPoints[index];
+                  return _buildDropPointCard(
+                    name: dp['name'] as String,
+                    address: dp['address'] as String,
+                    hours: (dp['operating_hours'] as String?) ?? '08:00–17:00',
+                    status: (dp['capacity_status'] as String?) ?? 'aman',
+                  );
+                },
+              ),
             const SizedBox(height: 16),
           ],
         ),
@@ -334,7 +375,13 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
     );
   }
 
-  Widget _buildDropPointCard() {
+  Widget _buildDropPointCard({
+    required String name,
+    required String address,
+    required String hours,
+    required String status,
+  }) {
+    final bool isOpen = status != 'tutup';
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -356,7 +403,6 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
             child: const Icon(Icons.location_on, color: Colors.green, size: 28),
           ),
           const SizedBox(width: 12),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,10 +410,10 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Drop Point Margonda',
-                        style: TextStyle(
+                        name,
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -380,13 +426,13 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.green[50],
+                        color: isOpen ? Colors.green[50] : Colors.red[50],
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: const Text(
-                        'Buka',
+                      child: Text(
+                        isOpen ? 'Buka' : 'Tutup',
                         style: TextStyle(
-                          color: Colors.green,
+                          color: isOpen ? Colors.green : Colors.red,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -395,23 +441,22 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'Jl. Margonda Raya No. 12, Depok',
-                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                Text(
+                  address,
+                  style: const TextStyle(color: Colors.grey, fontSize: 13),
                 ),
                 const SizedBox(height: 4),
                 Row(
-                  children: const [
-                    Icon(Icons.schedule, size: 14, color: Colors.grey),
-                    SizedBox(width: 4),
+                  children: [
+                    const Icon(Icons.schedule, size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
                     Text(
-                      '08.00–17.00 • ~1,2 km',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                      hours,
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-
                 Row(
                   children: [
                     _buildMiniChip('Plastik'),
@@ -422,7 +467,6 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
               ],
             ),
           ),
-
           const Padding(
             padding: EdgeInsets.only(top: 16.0),
             child: Icon(Icons.chevron_right, color: Colors.green),

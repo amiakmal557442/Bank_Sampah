@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'db_helper.dart';
 
 // ============================================================================
 // Halaman Manajemen Transaksi — Admin Dashboard (Desktop/Web)
@@ -206,10 +207,23 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
     'Penjualan B2B',
   ];
 
+  List<Map<String, dynamic>> _dbTransactions = [];
+  bool _isLoading = true;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: tabs.length, vsync: this);
+    _loadTransactions();
+  }
+
+  Future<void> _loadTransactions() async {
+    final txs = await DatabaseHelper.instance.getAllTransactions();
+    if (!mounted) return;
+    setState(() {
+      _dbTransactions = txs;
+      _isLoading = false;
+    });
   }
 
   @override
@@ -451,138 +465,199 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
             ],
             [2, 1, 2, 1, 1, 1, 2],
           ),
-          ...sampleSetor.map(
-            (tx) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: const BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: borderColor, width: 0.5),
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.all(32.0),
+              child: Center(
+                child: CircularProgressIndicator(color: primaryGreen),
+              ),
+            )
+          else if (_dbTransactions.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(32.0),
+              child: Center(
+                child: Text(
+                  'Belum ada transaksi',
+                  style: TextStyle(color: subtleText),
                 ),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          tx.userName,
-                          style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: darkText,
-                          ),
-                        ),
-                        Text(
-                          tx.waktu,
-                          style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 10,
-                            fontWeight: FontWeight.w400,
-                            color: mutedText,
-                          ),
-                        ),
-                      ],
-                    ),
+            )
+          else
+            ..._dbTransactions.map((tx) {
+              final String statusStr = tx['status'] ?? 'menunggu';
+              final statusEnum = statusStr == 'menunggu'
+                  ? SetorStatus.menunggu
+                  : statusStr == 'terverifikasi' || statusStr == 'selesai'
+                  ? SetorStatus.terverifikasi
+                  : SetorStatus.ditolak;
+
+              final String jenis = tx['type'] == 'drop_in'
+                  ? 'Drop-in'
+                  : 'Jemput';
+              final String waktu = tx['pickup_date'] ?? tx['created_at'] ?? '';
+              final items = (tx['items'] as List?) ?? [];
+
+              String kategori = 'Campur';
+              double berat = 0.0;
+              int estimasiPoin = tx['total_est_points'] ?? 0;
+
+              if (items.isNotEmpty) {
+                // Mapped logic: usually waste category names are stored, or we just show a generic string since we only have IDs in items table here.
+                kategori = items.length == 1
+                    ? '1 Jenis Sampah'
+                    : '${items.length} Jenis Sampah';
+                for (var item in items) {
+                  berat +=
+                      (item['estimated_weight'] as num?)?.toDouble() ?? 0.0;
+                }
+              }
+
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: const BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: borderColor, width: 0.5),
                   ),
-                  Expanded(
-                    flex: 1,
-                    child: _pill(
-                      tx.jenis,
-                      tx.jenis == 'Jemput'
-                          ? const Color(0xFF32CD32)
-                          : primaryGreen,
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      tx.kategori,
-                      style: const TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w400,
-                        color: subtleText,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 1,
-                    child: Text(
-                      '${tx.berat} kg',
-                      style: const TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: darkText,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 1,
-                    child: Text(
-                      '${tx.estimasiPoin}',
-                      style: const TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: primaryGreen,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 1,
-                    child: _pill(
-                      _setorStatusLabel(tx.status),
-                      _setorStatusColor(tx.status),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: tx.status == SetorStatus.menunggu
-                        ? Row(
-                            children: [
-                              _actionButton(
-                                'Setujui',
-                                onTap: () {
-                                  setState(() {
-                                    tx.status = SetorStatus.terverifikasi;
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Setor sampah disetujui'),
-                                      backgroundColor: primaryGreen,
-                                    ),
-                                  );
-                                },
-                              ),
-                              const SizedBox(width: 6),
-                              _actionButton(
-                                'Tolak',
-                                primary: false,
-                                onTap: () {
-                                  setState(() {
-                                    tx.status = SetorStatus.ditolak;
-                                  });
-                                },
-                              ),
-                            ],
-                          )
-                        : const Text(
-                            '—',
-                            style: TextStyle(
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            tx['nasabah_name'] ?? 'Unknown',
+                            style: const TextStyle(
                               fontFamily: 'PlusJakartaSans',
-                              fontSize: 12,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: darkText,
+                            ),
+                          ),
+                          Text(
+                            waktu,
+                            style: const TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              fontSize: 10,
+                              fontWeight: FontWeight.w400,
                               color: mutedText,
                             ),
                           ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      flex: 1,
+                      child: _pill(
+                        jenis,
+                        jenis == 'Jemput'
+                            ? const Color(0xFF32CD32)
+                            : primaryGreen,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        kategori,
+                        style: const TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w400,
+                          color: subtleText,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 1,
+                      child: Text(
+                        '${berat.toStringAsFixed(1)} kg',
+                        style: const TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: darkText,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 1,
+                      child: Text(
+                        '$estimasiPoin',
+                        style: const TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: primaryGreen,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 1,
+                      child: _pill(
+                        _setorStatusLabel(statusEnum),
+                        _setorStatusColor(statusEnum),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: statusEnum == SetorStatus.menunggu
+                          ? Row(
+                              children: [
+                                _actionButton(
+                                  'Setujui',
+                                  onTap: () async {
+                                    await DatabaseHelper.instance
+                                        .updateTransactionStatus(
+                                          tx['id'],
+                                          'terverifikasi',
+                                        );
+                                    _loadTransactions();
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Setor sampah disetujui',
+                                          ),
+                                          backgroundColor: primaryGreen,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                                const SizedBox(width: 6),
+                                _actionButton(
+                                  'Tolak',
+                                  primary: false,
+                                  onTap: () async {
+                                    await DatabaseHelper.instance
+                                        .updateTransactionStatus(
+                                          tx['id'],
+                                          'ditolak',
+                                        );
+                                    _loadTransactions();
+                                  },
+                                ),
+                              ],
+                            )
+                          : const Text(
+                              '—',
+                              style: TextStyle(
+                                fontFamily: 'PlusJakartaSans',
+                                fontSize: 12,
+                                color: mutedText,
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
         ],
       ),
     );

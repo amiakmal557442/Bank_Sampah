@@ -47,7 +47,7 @@ class _LoginPageState extends State<LoginPage> {
       if (mounted) Navigator.pop(context);
 
       if (user != null) {
-        SessionService.currentUser = user;
+        await SessionService.saveSession(user);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
