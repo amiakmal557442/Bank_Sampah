@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'session_service.dart';
+import 'profil_petugas.dart';
+import 'riwayatpetugas.dart';
+
+
 
 // ============================================================
 // Model Data Dummy untuk Antrean Penjemputan
@@ -156,10 +160,14 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgGrey,
-      appBar: _buildAppBar(),
+      appBar: (_bottomNavIndex == 2 || _bottomNavIndex == 3) ? null : _buildAppBar(),
       body: _bottomNavIndex == 0
           ? _buildBerandaBody()
-          : _buildComingSoonBody(_bottomNavIndex),
+          : _bottomNavIndex == 2
+              ? const PetugasRiwayatScreen()
+              : _bottomNavIndex == 3
+                  ? const PetugasProfilScreen()
+                  : _buildComingSoonBody(_bottomNavIndex),
       bottomNavigationBar: _buildBottomNav(),
     );
   }
@@ -173,39 +181,42 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       elevation: 0,
       automaticallyImplyLeading: false,
       titleSpacing: 16,
-      title: Row(
-        children: [
-          const CircleAvatar(
-            backgroundColor: baseWhite,
-            radius: 18,
-            child: Icon(Icons.person_rounded, color: oldGrassGreen, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Halo, $_petugasName',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: baseWhite,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  _armada,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: baseWhite.withValues(alpha: 0.85),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+      title: GestureDetector(
+        onTap: () => setState(() => _bottomNavIndex = 3),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              backgroundColor: baseWhite,
+              radius: 18,
+              child: Icon(Icons.person_rounded, color: oldGrassGreen, size: 22),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Halo, $_petugasName',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: baseWhite,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    _armada,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: baseWhite.withValues(alpha: 0.85),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
       actions: [
         Padding(
