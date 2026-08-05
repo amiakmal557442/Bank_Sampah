@@ -508,7 +508,12 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
 
               String kategori = 'Campur';
               double berat = 0.0;
-              int estimasiPoin = tx['total_est_points'] ?? 0;
+              int estimasiPoin = 0;
+              if (tx['total_est_points'] is num) {
+                estimasiPoin = (tx['total_est_points'] as num).toInt();
+              } else if (tx['total_est_points'] is String) {
+                estimasiPoin = int.tryParse(tx['total_est_points']) ?? 0;
+              }
 
               if (items.isNotEmpty) {
                 // Mapped logic: usually waste category names are stored, or we just show a generic string since we only have IDs in items table here.
@@ -516,8 +521,12 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                     ? '1 Jenis Sampah'
                     : '${items.length} Jenis Sampah';
                 for (var item in items) {
-                  berat +=
-                      (item['estimated_weight'] as num?)?.toDouble() ?? 0.0;
+                  final w = item['estimated_weight'];
+                  if (w is num) {
+                    berat += w.toDouble();
+                  } else if (w is String) {
+                    berat += double.tryParse(w) ?? 0.0;
+                  }
                 }
               }
 
