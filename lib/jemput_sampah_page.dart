@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'transaction_service.dart';
 import 'db_helper.dart';
 import 'session_service.dart';
+import 'api_service.dart';
 
 // ============================================================================
 // 1. HALAMAN JADWAL & LOKASI PENJEMPUTAN
@@ -1022,10 +1023,13 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                       // Prepare Data for DB
                       final txId =
                           'TRX-${DateTime.now().millisecondsSinceEpoch}';
-                      final txData = {
+                      final txData = <String, dynamic>{
                         'id': txId,
-                        'nasabah_id':
-                            SessionService.userId, // using active session
+                        'nasabah_id': SessionService.userId,
+                        'full_name':
+                            SessionService.fullName, // simpan nama langsung
+                        'address':
+                            SessionService.address, // simpan alamat langsung
                         'type': 'pickup',
                         'status': 'menunggu',
                         'pickup_date':
@@ -1049,6 +1053,16 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                           )
                           .toList();
 
+                      bool ok = false;
+                      try {
+                        txData['items'] = itemsData;
+                        ok = await ApiService.instance.createTransaction(
+                          txData,
+                        );
+                      } catch (_) {}
+
+                      // Selalu simpan ke local DB (sumber data utama untuk web).
+                      // Ini memastikan transaksi tampil di Manajemen Admin.
                       await DatabaseHelper.instance.createTransaction(
                         txData,
                         itemsData,

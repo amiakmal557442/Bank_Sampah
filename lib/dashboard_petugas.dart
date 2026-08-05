@@ -4,6 +4,7 @@ import 'profil_petugas.dart';
 import 'riwayatpetugas.dart';
 import 'halaman_tugas.dart';
 import 'api_service.dart';
+import 'db_helper.dart';
 
 // ============================================================
 // Model Data Dummy untuk Antrean Penjemputan
@@ -129,21 +130,46 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           )
           .toList();
 
-      // Load Tasks
-      final tasksData = await ApiService.instance.getPendingTasks(
-        petugasId: petugasId,
-        status: 'terverifikasi',
-      );
-      final dikonfirmasiData = await ApiService.instance.getPendingTasks(
-        petugasId: petugasId,
-        status: 'dikonfirmasi',
-      );
+      // Load Tasks — coba API dulu, fallback ke local DB
+      List<Map<String, dynamic>> allTasks = [];
+      try {
+        // 'dikonfirmasi' = sudah disetujui admin, valid ENUM di MySQL
+        final dikonfirmasiData = await ApiService.instance.getPendingTasks(
+          petugasId: petugasId,
+          status: 'dikonfirmasi',
+        );
+        final menujuData = await ApiService.instance.getPendingTasks(
+          petugasId: petugasId,
+          status: 'menuju_lokasi',
+        );
+        allTasks = [...dikonfirmasiData, ...menujuData];
+      } catch (_) {}
 
-      final allTasks = [...dikonfirmasiData, ...tasksData];
+      // Fallback ke lokal jika API gagal atau kosong
+      if (allTasks.isEmpty) {
+        final localTasks = await DatabaseHelper.instance
+            .getPendingPickupTasks();
+        // Map field lokal ke format yang diharapkan
+        allTasks = localTasks.map((t) {
+          final weightStr = (t['estimasi_berat'] ?? '0 kg')
+              .toString()
+              .replaceAll(' kg', '');
+          return <String, dynamic>{
+            'id': t['id_transaksi'],
+            'nasabah_name': t['nama_nasabah'] ?? '-',
+            'nasabah_address': t['alamat'] ?? '-',
+            'pickup_time_slot': null,
+            'pickup_date': null,
+            'jenis_sampah': t['jenis_sampah'],
+            'total_est_weight': double.tryParse(weightStr) ?? 0.0,
+            'status': t['status'] ?? 'dikonfirmasi',
+          };
+        }).toList();
+      }
 
       _queue = allTasks.map((t) {
         return PickupTask(
-          wasteId: t['id'],
+          wasteId: t['id']?.toString() ?? '-',
           customerName: t['nasabah_name'] ?? 'Nasabah',
           address: t['nasabah_address'] ?? '',
           time: t['pickup_time_slot'] ?? t['pickup_date'] ?? '',
@@ -152,7 +178,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           estWeightKg: (t['total_est_weight'] is num)
               ? (t['total_est_weight'] as num).toDouble()
               : double.tryParse(t['total_est_weight'].toString()) ?? 0.0,
-          status: t['status'] == 'dikonfirmasi' ? 'tiba' : 'menuju',
+          status: t['status'] == 'menuju_lokasi' ? 'tiba' : 'menuju',
         );
       }).toList();
 
@@ -1663,15 +1689,22 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
     final totalWeight = _totalWeight;
     final totalPoints = _totalPoints;
     final customerName = widget.customerName;
+    final wasteId = widget.wasteId;
     Navigator.pop(context);
 
-    // Update API
+    // 1. Update ke API (jika ada koneksi)
     try {
-      await ApiService.instance.updateTransaction(widget.wasteId, {
+      await ApiService.instance.updateTransaction(wasteId, {
         'status': 'selesai',
         'total_actual_points': totalPoints,
       });
     } catch (_) {}
+
+    // 2. Selalu update lokal (in-memory / SQLite) — ini yang mengubah saldo poin user
+    await DatabaseHelper.instance.completeTransaction(wasteId, totalPoints);
+
+    // 3. Refresh session agar saldo poin terbaru tersedia di UI
+    await SessionService.refresh();
 
     if (!mounted) return;
 

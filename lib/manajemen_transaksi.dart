@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'db_helper.dart';
 import 'api_service.dart';
 
@@ -221,11 +222,20 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
   Future<void> _loadTransactions() async {
     setState(() => _isLoading = true);
     List<Map<String, dynamic>> txs = [];
-    try {
-      txs = await ApiService.instance.getTransactions();
-    } catch (_) {
-      // Fallback ke lokal jika gagal
+    if (kIsWeb) {
+      // Pada web, selalu gunakan database in-memory lokal agar update status
+      // langsung tercermin tanpa bergantung pada API.
       txs = await DatabaseHelper.instance.getAllTransactions();
+    } else {
+      try {
+        txs = await ApiService.instance.getTransactions();
+      } catch (_) {
+        txs = await DatabaseHelper.instance.getAllTransactions();
+      }
+      // Jika API kosong, fallback ke lokal
+      if (txs.isEmpty) {
+        txs = await DatabaseHelper.instance.getAllTransactions();
+      }
     }
 
     if (!mounted) return;
@@ -493,12 +503,22 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
             )
           else
             ..._dbTransactions.map((tx) {
-              final String statusStr = tx['status'] ?? 'menunggu';
+              final String statusStr = (tx['status'] ?? 'menunggu')
+                  .toString()
+                  .trim()
+                  .toLowerCase();
+              // Status ENUM valid di MySQL: menunggu, dikonfirmasi,
+              // menuju_lokasi, tiba, selesai, dibatalkan
               final statusEnum = statusStr == 'menunggu'
                   ? SetorStatus.menunggu
-                  : statusStr == 'terverifikasi' || statusStr == 'selesai'
+                  : (statusStr == 'dikonfirmasi' ||
+                        statusStr == 'menuju_lokasi' ||
+                        statusStr == 'tiba' ||
+                        statusStr == 'selesai')
                   ? SetorStatus.terverifikasi
-                  : SetorStatus.ditolak;
+                  : (statusStr == 'dibatalkan')
+                  ? SetorStatus.ditolak
+                  : SetorStatus.menunggu;
 
               final String jenis = tx['type'] == 'drop_in'
                   ? 'Drop-in'
@@ -508,12 +528,8 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
 
               String kategori = 'Campur';
               double berat = 0.0;
-              int estimasiPoin = 0;
-              if (tx['total_est_points'] is num) {
-                estimasiPoin = (tx['total_est_points'] as num).toInt();
-              } else if (tx['total_est_points'] is String) {
-                estimasiPoin = int.tryParse(tx['total_est_points']) ?? 0;
-              }
+              int estimasiPoin =
+                  int.tryParse(tx['total_est_points']?.toString() ?? '0') ?? 0;
 
               if (items.isNotEmpty) {
                 // Mapped logic: usually waste category names are stored, or we just show a generic string since we only have IDs in items table here.
@@ -521,12 +537,11 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                     ? '1 Jenis Sampah'
                     : '${items.length} Jenis Sampah';
                 for (var item in items) {
-                  final w = item['estimated_weight'];
-                  if (w is num) {
-                    berat += w.toDouble();
-                  } else if (w is String) {
-                    berat += double.tryParse(w) ?? 0.0;
-                  }
+                  berat +=
+                      double.tryParse(
+                        item['estimated_weight']?.toString() ?? '0',
+                      ) ??
+                      0.0;
                 }
               }
 
@@ -628,22 +643,22 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                                 _actionButton(
                                   'Setujui',
                                   onTap: () async {
-                                    bool success = false;
+                                    // 'dikonfirmasi' adalah nilai ENUM valid di MySQL
+                                    const newStatus = 'dikonfirmasi';
+                                    // Selalu update lokal (in-memory) terlebih dahulu
+                                    await DatabaseHelper.instance
+                                        .updateTransactionStatus(
+                                          tx['id'],
+                                          newStatus,
+                                        );
+                                    // Coba sync ke API (tidak diblokir jika gagal)
                                     try {
-                                      success = await ApiService.instance
+                                      await ApiService.instance
                                           .updateTransactionStatus(
                                             tx['id'],
-                                            'terverifikasi',
+                                            newStatus,
                                           );
                                     } catch (_) {}
-
-                                    if (!success) {
-                                      await DatabaseHelper.instance
-                                          .updateTransactionStatus(
-                                            tx['id'],
-                                            'terverifikasi',
-                                          );
-                                    }
                                     _loadTransactions();
                                     if (mounted) {
                                       ScaffoldMessenger.of(
@@ -651,7 +666,7 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                                       ).showSnackBar(
                                         const SnackBar(
                                           content: Text(
-                                            'Setor sampah disetujui',
+                                            'Transaksi disetujui & diteruskan ke petugas',
                                           ),
                                           backgroundColor: primaryGreen,
                                         ),
@@ -664,22 +679,20 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                                   'Tolak',
                                   primary: false,
                                   onTap: () async {
-                                    bool success = false;
+                                    // 'dibatalkan' adalah nilai ENUM valid di MySQL
+                                    const newStatus = 'dibatalkan';
+                                    await DatabaseHelper.instance
+                                        .updateTransactionStatus(
+                                          tx['id'],
+                                          newStatus,
+                                        );
                                     try {
-                                      success = await ApiService.instance
+                                      await ApiService.instance
                                           .updateTransactionStatus(
                                             tx['id'],
-                                            'ditolak',
+                                            newStatus,
                                           );
                                     } catch (_) {}
-
-                                    if (!success) {
-                                      await DatabaseHelper.instance
-                                          .updateTransactionStatus(
-                                            tx['id'],
-                                            'ditolak',
-                                          );
-                                    }
                                     _loadTransactions();
                                   },
                                 ),

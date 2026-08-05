@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'transaction_service.dart';
 import 'session_service.dart';
 import 'db_helper.dart';
+import 'api_service.dart';
 
 class DropPoint {
   final String id;
@@ -80,9 +81,11 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
     if (_currentStep == 3) {
       try {
         final txId = 'TRX-${DateTime.now().millisecondsSinceEpoch}';
-        final txData = {
+        final txData = <String, dynamic>{
           'id': txId,
           'nasabah_id': SessionService.userId,
+          'full_name': SessionService.fullName, // simpan nama langsung
+          'address': SessionService.address, // simpan alamat langsung
           'drop_point_id': _dropPoints[_selectedDropPointIndex].id,
           'type': 'drop_in',
           'status': 'menunggu',
@@ -102,6 +105,14 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
             )
             .toList();
 
+        bool ok = false;
+        try {
+          txData['items'] = itemsData;
+          ok = await ApiService.instance.createTransaction(txData);
+        } catch (_) {}
+
+        // Selalu simpan ke local DB (sumber data utama untuk web).
+        // Ini memastikan transaksi tampil di Manajemen Admin.
         await DatabaseHelper.instance.createTransaction(txData, itemsData);
 
         // Keep UI logic fallback
