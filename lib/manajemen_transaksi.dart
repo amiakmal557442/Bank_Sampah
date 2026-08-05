@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'db_helper.dart';
+import 'api_service.dart';
 
 // ============================================================================
 // Halaman Manajemen Transaksi — Admin Dashboard (Desktop/Web)
@@ -218,7 +219,15 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
   }
 
   Future<void> _loadTransactions() async {
-    final txs = await DatabaseHelper.instance.getAllTransactions();
+    setState(() => _isLoading = true);
+    List<Map<String, dynamic>> txs = [];
+    try {
+      txs = await ApiService.instance.getTransactions();
+    } catch (_) {
+      // Fallback ke lokal jika gagal
+      txs = await DatabaseHelper.instance.getAllTransactions();
+    }
+
     if (!mounted) return;
     setState(() {
       _dbTransactions = txs;
@@ -610,11 +619,22 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                                 _actionButton(
                                   'Setujui',
                                   onTap: () async {
-                                    await DatabaseHelper.instance
-                                        .updateTransactionStatus(
-                                          tx['id'],
-                                          'terverifikasi',
-                                        );
+                                    bool success = false;
+                                    try {
+                                      success = await ApiService.instance
+                                          .updateTransactionStatus(
+                                            tx['id'],
+                                            'terverifikasi',
+                                          );
+                                    } catch (_) {}
+
+                                    if (!success) {
+                                      await DatabaseHelper.instance
+                                          .updateTransactionStatus(
+                                            tx['id'],
+                                            'terverifikasi',
+                                          );
+                                    }
                                     _loadTransactions();
                                     if (mounted) {
                                       ScaffoldMessenger.of(
@@ -635,11 +655,22 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                                   'Tolak',
                                   primary: false,
                                   onTap: () async {
-                                    await DatabaseHelper.instance
-                                        .updateTransactionStatus(
-                                          tx['id'],
-                                          'ditolak',
-                                        );
+                                    bool success = false;
+                                    try {
+                                      success = await ApiService.instance
+                                          .updateTransactionStatus(
+                                            tx['id'],
+                                            'ditolak',
+                                          );
+                                    } catch (_) {}
+
+                                    if (!success) {
+                                      await DatabaseHelper.instance
+                                          .updateTransactionStatus(
+                                            tx['id'],
+                                            'ditolak',
+                                          );
+                                    }
                                     _loadTransactions();
                                   },
                                 ),

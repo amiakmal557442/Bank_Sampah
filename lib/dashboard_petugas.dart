@@ -3,6 +3,7 @@ import 'session_service.dart';
 import 'profil_petugas.dart';
 import 'riwayatpetugas.dart';
 import 'halaman_tugas.dart';
+import 'api_service.dart';
 
 // ============================================================
 // Model Data Dummy untuk Antrean Penjemputan
@@ -84,6 +85,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   static const Color bgGrey = Color(0xFFF5F6FA);
 
   // State
+  bool isLoading = true;
   bool isOnline = true;
   int _bottomNavIndex = 0;
 
@@ -96,64 +98,74 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     return match?.group(1)?.trim() ?? 'Petugas Lapangan';
   }
 
-  // Data Tugas Aktif
-  final PickupTask _currentTask = PickupTask(
-    wasteId: 'WJ-5T2N',
-    customerName: 'Siti Aminah',
-    address: 'Jl. Sudirman No. 45, Jakarta Selatan',
-    time: '13:00',
-    wasteTypes: ['Plastik', 'Kertas'],
-    estWeightKg: 5.0,
-    status: 'menuju',
-  );
-
-  // Data Antrean
-  final List<PickupTask> _queue = [
-    PickupTask(
-      wasteId: 'WJ-7R3K',
-      customerName: 'Budi Santoso',
-      address: 'Kebayoran Baru (~2.5 km)',
-      time: '14:00',
-      wasteTypes: ['Logam', 'Kardus'],
-      estWeightKg: 3.2,
-    ),
-    PickupTask(
-      wasteId: 'WJ-9A1X',
-      customerName: 'Rina Marlina',
-      address: 'Cipete Raya (~4.1 km)',
-      time: '15:30',
-      wasteTypes: ['Plastik', 'Kaca'],
-      estWeightKg: 2.8,
-    ),
-  ];
+  // Data Tugas & Antrean
+  PickupTask? _currentTask;
+  List<PickupTask> _queue = [];
 
   // Data Drop Point
-  final List<WorkerDropPoint> _dropPoints = [
-    WorkerDropPoint(
-      id: 'dp1',
-      name: 'Drop Point Margonda',
-      address: 'Jl. Margonda Raya No. 12, Depok',
-      capacityStatus: 'aman',
-    ),
-    WorkerDropPoint(
-      id: 'dp2',
-      name: 'Waste Station Beji',
-      address: 'Jl. Kartini No. 5, Beji, Depok',
-      capacityStatus: 'aman',
-    ),
-    WorkerDropPoint(
-      id: 'dp3',
-      name: 'Bank Sampah Pancoran Mas',
-      address: 'Jl. Pitara Raya No. 88, Depok',
-      capacityStatus: 'aman',
-    ),
-    WorkerDropPoint(
-      id: 'dp4',
-      name: 'Drop Point 01 - Pusat Kota',
-      address: 'Jl. MH Thamrin No. 1, Jakarta Pusat',
-      capacityStatus: 'aman',
-    ),
-  ];
+  List<WorkerDropPoint> _dropPoints = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => isLoading = true);
+    try {
+      final petugasId = SessionService.currentUser?['id'] as String?;
+
+      // Load Drop Points
+      final dps = await ApiService.instance.getDropPoints();
+      _dropPoints = dps
+          .map(
+            (e) => WorkerDropPoint(
+              id: e['id'],
+              name: e['name'],
+              address: e['address'] ?? '',
+              capacityStatus: e['capacity_status'] ?? 'aman',
+            ),
+          )
+          .toList();
+
+      // Load Tasks
+      final tasksData = await ApiService.instance.getPendingTasks(
+        petugasId: petugasId,
+        status: 'terverifikasi',
+      );
+      final dikonfirmasiData = await ApiService.instance.getPendingTasks(
+        petugasId: petugasId,
+        status: 'dikonfirmasi',
+      );
+
+      final allTasks = [...dikonfirmasiData, ...tasksData];
+
+      _queue = allTasks.map((t) {
+        return PickupTask(
+          wasteId: t['id'],
+          customerName: t['nasabah_name'] ?? 'Nasabah',
+          address: t['nasabah_address'] ?? '',
+          time: t['pickup_time_slot'] ?? t['pickup_date'] ?? '',
+          wasteTypes:
+              (t['jenis_sampah'] as String?)?.split(', ') ?? ['Lainnya'],
+          estWeightKg: (t['total_est_weight'] is num)
+              ? (t['total_est_weight'] as num).toDouble()
+              : double.tryParse(t['total_est_weight'].toString()) ?? 0.0,
+          status: t['status'] == 'dikonfirmasi' ? 'tiba' : 'menuju',
+        );
+      }).toList();
+
+      if (_queue.isNotEmpty) {
+        _currentTask = _queue.removeAt(0);
+      } else {
+        _currentTask = null;
+      }
+    } catch (e) {
+      debugPrint('Error loading dashboard petugas data: $e');
+    }
+    if (mounted) setState(() => isLoading = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -294,6 +306,12 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   // Beranda Body
   // ─────────────────────────────────────────────
   Widget _buildBerandaBody() {
+    if (isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: oldGrassGreen),
+      );
+    }
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,7 +327,23 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           // 2. Tugas Saat Ini
           _buildSectionHeader('TUGAS SAAT INI'),
           const SizedBox(height: 8),
-          _buildCurrentTaskCard(),
+          _currentTask != null
+              ? _buildCurrentTaskCard()
+              : Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: baseWhite,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Tidak ada tugas aktif saat ini.',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ),
+                ),
 
           const SizedBox(height: 20),
 
@@ -516,7 +550,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   // Kartu Tugas Aktif
   // ─────────────────────────────────────────────
   Widget _buildCurrentTaskCard() {
-    final task = _currentTask;
+    final task = _currentTask!;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
@@ -644,9 +678,9 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                     elevation: 2,
                   ),
                   onPressed: _showTibaDialogForCurrentTask,
-                  child: const Text(
-                    'Tiba di Lokasi',
-                    style: TextStyle(fontSize: 13),
+                  child: Text(
+                    task.status == 'tiba' ? 'Sudah Tiba' : 'Tiba di Lokasi',
+                    style: const TextStyle(fontSize: 13),
                   ),
                 ),
               ),
@@ -768,6 +802,13 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   //  FR-PL-07: SCAN WASTE-ID
   // ═══════════════════════════════════════════════════════════
   void _showScanWasteIdModal() {
+    if (_currentTask == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tidak ada tugas penjemputan aktif.')),
+      );
+      return;
+    }
+
     final TextEditingController controller = TextEditingController();
     showModalBottomSheet(
       context: context,
@@ -969,7 +1010,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   }
 
   void _showWasteIdResult(String id) {
-    final isMatch = id == _currentTask.wasteId;
+    if (_currentTask == null) return;
+    final isMatch = id == _currentTask!.wasteId;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -997,7 +1039,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             const SizedBox(height: 8),
             Text(
               isMatch
-                  ? 'ID $id terverifikasi untuk nasabah ${_currentTask.customerName}.'
+                  ? 'ID $id terverifikasi untuk nasabah ${_currentTask!.customerName}.'
                   : 'ID "$id" tidak cocok dengan tugas aktif. Periksa kembali.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: Colors.grey[600]),
@@ -1033,6 +1075,13 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   //  FR-PL-05: TIMBANG MANUAL
   // ═══════════════════════════════════════════════════════════
   void _showTimbangManualSheet({String? wasteId}) {
+    if (_currentTask == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tidak ada tugas penjemputan aktif.')),
+      );
+      return;
+    }
+
     final items = [
       ManualWasteItem(
         name: 'Plastik',
@@ -1075,8 +1124,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       builder: (ctx) {
         return _TimbangManualSheet(
           items: items,
-          wasteId: wasteId ?? _currentTask.wasteId,
-          customerName: _currentTask.customerName,
+          wasteId: wasteId ?? _currentTask!.wasteId,
+          customerName: _currentTask!.customerName,
           oldGrassGreen: oldGrassGreen,
           limeGreen: limeGreen,
         );
@@ -1097,10 +1146,19 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           dropPoints: _dropPoints,
           oldGrassGreen: oldGrassGreen,
           limeGreen: limeGreen,
-          onUpdate: (dp, newStatus) {
+          onUpdate: (dp, newStatus) async {
+            // Update UI dulu agar responsif
             setState(() {
               dp.capacityStatus = newStatus;
             });
+            // Update API (di latar belakang)
+            try {
+              await ApiService.instance.updateDropPoint(dp.id, {
+                'capacity_status': newStatus,
+              });
+            } catch (_) {}
+
+            if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
@@ -1164,6 +1222,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   //  FR-PL-03: Tiba di Lokasi
   // ═══════════════════════════════════════════════════════════
   void _showTibaDialogForCurrentTask() {
+    if (_currentTask == null) return;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1173,7 +1233,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'Apakah Anda sudah tiba di lokasi nasabah ${_currentTask.customerName}?\n\nStatus tugas akan diperbarui.',
+          'Apakah Anda sudah tiba di lokasi nasabah ${_currentTask!.customerName}?\n\nStatus tugas akan diperbarui.',
           style: TextStyle(color: Colors.grey[700]),
         ),
         actions: [
@@ -1189,10 +1249,23 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              setState(() => _currentTask.status = 'tiba');
-              _showTimbangManualSheet();
+
+              // Tampilkan loading saat update API
+              setState(() => isLoading = true);
+              try {
+                await ApiService.instance.updateTaskStatus(
+                  _currentTask!.wasteId,
+                  'dikonfirmasi',
+                );
+                // Refresh data setelah berhasil
+                await _loadData();
+              } catch (_) {
+                setState(() => isLoading = false);
+              }
+
+              if (mounted) _showTimbangManualSheet();
             },
             child: const Text('Ya, Tiba'),
           ),
@@ -1205,9 +1278,10 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   //  FR-PL-02: Navigasi Maps (simulasi)
   // ─────────────────────────────────────────────
   void _launchMaps() {
+    if (_currentTask == null) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Membuka Google Maps menuju ${_currentTask.address}...'),
+        content: Text('Membuka Google Maps menuju ${_currentTask!.address}...'),
         backgroundColor: oldGrassGreen,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -1585,11 +1659,22 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
     );
   }
 
-  void _konfirmasiTimbang() {
+  void _konfirmasiTimbang() async {
     final totalWeight = _totalWeight;
     final totalPoints = _totalPoints;
     final customerName = widget.customerName;
     Navigator.pop(context);
+
+    // Update API
+    try {
+      await ApiService.instance.updateTransaction(widget.wasteId, {
+        'status': 'selesai',
+        'total_actual_points': totalPoints,
+      });
+    } catch (_) {}
+
+    if (!mounted) return;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1631,7 +1716,17 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: () {
+                Navigator.pop(ctx);
+                // Refresh main dashboard setelah selesai
+                if (context.mounted) {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (_) => const WorkerDashboardScreen(),
+                    ),
+                  );
+                }
+              },
               child: const Text('Selesai'),
             ),
           ),

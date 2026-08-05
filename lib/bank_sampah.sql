@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 30, 2026 at 03:20 PM
+-- Generation Time: Aug 05, 2026 at 12:10 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -52,6 +52,14 @@ CREATE TABLE `drop_points` (
   `operating_hours` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `drop_points`
+--
+
+INSERT INTO `drop_points` (`id`, `name`, `address`, `latitude`, `longitude`, `capacity_status`, `operating_hours`) VALUES
+('DP-001', 'Drop Point Pusat', 'Jl. Merdeka No.10', -6.2, 106.816666, 'aman', '08:00 - 17:00'),
+('DP-002', 'Drop Point Cabang Utara', 'Jl. Utara Raya No.5', -6.15, 106.9, 'aman', '09:00 - 15:00');
+
 -- --------------------------------------------------------
 
 --
@@ -75,6 +83,14 @@ CREATE TABLE `transactions` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `transactions`
+--
+
+INSERT INTO `transactions` (`id`, `nasabah_id`, `petugas_id`, `drop_point_id`, `type`, `status`, `pickup_date`, `pickup_time_slot`, `pickup_lat`, `pickup_lng`, `total_est_points`, `total_actual_points`, `photo_evidence`, `created_at`) VALUES
+('TRX-0991', 'USR-003', 'USR-002', NULL, 'pickup', 'menunggu', '2026-08-05', NULL, -6.21, 106.82, 15000, 0, NULL, '2026-08-05 10:09:24'),
+('TRX-0992', 'USR-004', 'USR-002', NULL, 'pickup', 'menunggu', '2026-08-05', NULL, -6.22, 106.83, 25000, 0, NULL, '2026-08-05 10:09:24');
+
 -- --------------------------------------------------------
 
 --
@@ -89,6 +105,16 @@ CREATE TABLE `transaction_items` (
   `actual_weight` decimal(10,2) DEFAULT NULL,
   `final_points` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `transaction_items`
+--
+
+INSERT INTO `transaction_items` (`id`, `transaction_id`, `waste_category_id`, `estimated_weight`, `actual_weight`, `final_points`) VALUES
+('TI-001', 'TRX-0991', 1, 5.00, NULL, NULL),
+('TI-002', 'TRX-0991', 2, 4.00, NULL, NULL),
+('TI-003', 'TRX-0992', 4, 15.00, NULL, NULL),
+('TI-004', 'TRX-0992', 3, 6.00, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -108,6 +134,16 @@ CREATE TABLE `users` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `phone_number`, `email`, `full_name`, `role`, `address`, `default_setor_method`, `point_balance`, `created_at`) VALUES
+('USR-001', '081234567890', 'admin@banksampah.com', 'Akmal Ahsan', 'admin', 'Kantor Pusat Bank Sampah', NULL, 0, '2026-08-05 10:09:24'),
+('USR-002', '081987654321', 'tokan@banksampah.com', 'Tokan Shimada', 'petugas', 'Jl. Petugas No. 1', NULL, 0, '2026-08-05 10:09:24'),
+('USR-003', '081112223334', 'budi@gmail.com', 'Budi Santoso', 'nasabah', 'Jl. Mawar Kembar No. 12, Blok C', NULL, 15000, '2026-08-05 10:09:24'),
+('USR-004', '085556667778', 'siti@gmail.com', 'Siti Aminah', 'nasabah', 'Perumahan Hijau Daun, Kav 45', NULL, 5000, '2026-08-05 10:09:24');
+
 -- --------------------------------------------------------
 
 --
@@ -121,6 +157,16 @@ CREATE TABLE `waste_categories` (
   `icon_url` text DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `waste_categories`
+--
+
+INSERT INTO `waste_categories` (`id`, `name`, `point_per_kg`, `icon_url`, `is_active`) VALUES
+(1, 'Plastik', 2000, 'icon_plastik.png', 1),
+(2, 'Kertas & Kardus', 1500, 'icon_kertas.png', 1),
+(3, 'Besi & Logam', 3500, 'icon_besi.png', 1),
+(4, 'Elektronik Bekas', 5000, 'icon_elektronik.png', 1);
 
 -- --------------------------------------------------------
 
@@ -223,7 +269,7 @@ ALTER TABLE `worker_logs`
 -- AUTO_INCREMENT for table `waste_categories`
 --
 ALTER TABLE `waste_categories`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- Constraints for dumped tables

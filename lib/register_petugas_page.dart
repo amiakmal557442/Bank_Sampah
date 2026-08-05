@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'api_service.dart';
 import 'db_helper.dart';
 
 class PetugasRegistrationPage extends StatefulWidget {
@@ -70,12 +71,19 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      final emailExists = await DatabaseHelper.instance.isEmailRegistered(
-        email,
-      );
-      final phoneExists = await DatabaseHelper.instance.isPhoneRegistered(
-        phone,
-      );
+      // Cek email & phone di API (XAMPP) dulu
+      bool emailExists = false;
+      bool phoneExists = false;
+      try {
+        final users = await ApiService.instance.getUsers();
+        emailExists = users.any(
+          (u) => u['email'].toString().toLowerCase() == email.toLowerCase(),
+        );
+        phoneExists = users.any((u) => u['phone_number']?.toString() == phone);
+      } catch (_) {
+        emailExists = await DatabaseHelper.instance.isEmailRegistered(email);
+        phoneExists = await DatabaseHelper.instance.isPhoneRegistered(phone);
+      }
 
       if (mounted) Navigator.pop(context);
 
@@ -118,7 +126,14 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
         'point_balance': 0,
       };
 
-      final success = await DatabaseHelper.instance.registerUser(newPetugas);
+      // Simpan ke XAMPP dulu, fallback ke lokal
+      bool success = false;
+      try {
+        success = await ApiService.instance.createUser(newPetugas);
+      } catch (_) {}
+      if (!success) {
+        success = await DatabaseHelper.instance.registerUser(newPetugas);
+      }
 
       if (success) {
         if (mounted) {

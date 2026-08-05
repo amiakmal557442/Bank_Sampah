@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'api_service.dart';
 import 'db_helper.dart';
 
 // ============================================================================
@@ -390,9 +391,16 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
                         'is_active': 1,
                       };
 
-                      final ok = await DatabaseHelper.instance.registerUser(
-                        userData,
-                      );
+                      // Simpan ke XAMPP dulu, fallback ke lokal
+                      bool ok = false;
+                      try {
+                        ok = await ApiService.instance.createUser(userData);
+                      } catch (_) {}
+                      if (!ok) {
+                        ok = await DatabaseHelper.instance.registerUser(
+                          userData,
+                        );
+                      }
                       if (mounted) {
                         Navigator.pop(ctx);
                         _showSnackBar(

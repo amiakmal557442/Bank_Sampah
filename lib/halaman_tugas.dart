@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'api_service.dart';
 import 'db_helper.dart';
 import 'map_location_screen.dart';
 
@@ -27,7 +28,13 @@ class _HalamanTugasState extends State<HalamanTugas> {
       _isLoading = true;
     });
 
-    final tasks = await DatabaseHelper.instance.getPendingPickupTasks();
+    List<Map<String, dynamic>> tasks = [];
+    try {
+      tasks = await ApiService.instance.getPendingTasks();
+    } catch (_) {}
+    if (tasks.isEmpty) {
+      tasks = await DatabaseHelper.instance.getPendingPickupTasks();
+    }
 
     if (mounted) {
       setState(() {
@@ -43,10 +50,16 @@ class _HalamanTugasState extends State<HalamanTugas> {
       newStatus = 'selesai';
     }
 
-    final success = await DatabaseHelper.instance.updateTransactionStatus(
-      id,
-      newStatus,
-    );
+    bool success = false;
+    try {
+      success = await ApiService.instance.updateTaskStatus(id, newStatus);
+    } catch (_) {}
+    if (!success) {
+      success = await DatabaseHelper.instance.updateTransactionStatus(
+        id,
+        newStatus,
+      );
+    }
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

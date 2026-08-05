@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'api_service.dart';
 import 'db_helper.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -35,9 +36,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      final isRegistered = await DatabaseHelper.instance.isEmailRegistered(
-        email,
-      );
+      // Cek email di API (XAMPP) dulu, lalu lokal
+      bool isRegistered = false;
+      try {
+        final users = await ApiService.instance.getUsers();
+        isRegistered = users.any(
+          (u) => u['email'].toString().toLowerCase() == email.toLowerCase(),
+        );
+      } catch (_) {
+        isRegistered = await DatabaseHelper.instance.isEmailRegistered(email);
+      }
 
       if (mounted) Navigator.pop(context);
 
@@ -65,7 +73,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'point_balance': 0,
       };
 
-      final success = await DatabaseHelper.instance.registerUser(newUser);
+      // Simpan ke XAMPP dulu, fallback ke lokal
+      bool success = false;
+      try {
+        success = await ApiService.instance.createUser(newUser);
+      } catch (_) {}
+      if (!success) {
+        success = await DatabaseHelper.instance.registerUser(newUser);
+      }
 
       if (success) {
         if (mounted) {

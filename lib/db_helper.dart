@@ -13,83 +13,56 @@ class DatabaseHelper {
   // In-memory fallback database for Web (Chrome) & default seed users
   static final List<Map<String, dynamic>> _webUsers = [
     {
-      'id': 'budi-uuid-1234-5678',
-      'phone_number': '+62 812-3456-7890',
+      'id': 'USR-001',
+      'phone_number': '081234567890',
+      'email': 'admin@banksampah.com',
+      'full_name': 'Akmal Ahsan',
+      'password':
+          '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', // 123456
+      'role': 'admin',
+      'address': 'Kantor Pusat Bank Sampah',
+      'default_setor_method': null,
+      'point_balance': 0,
+      'is_active': 1,
+    },
+    {
+      'id': 'USR-002',
+      'phone_number': '081987654321',
+      'email': 'tokan@banksampah.com',
+      'full_name': 'Tokan Shimada',
+      'password':
+          '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', // 123456
+      'role': 'petugas',
+      'address': 'Jl. Petugas No. 1',
+      'default_setor_method': null,
+      'point_balance': 0,
+      'is_active': 1,
+    },
+    {
+      'id': 'USR-003',
+      'phone_number': '081112223334',
       'email': 'budi@gmail.com',
       'full_name': 'Budi Santoso',
       'password':
-          'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f',
+          '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', // 123456
       'role': 'nasabah',
-      'address': 'Jl. Mawar No. 12, Jakarta',
-      'default_setor_method': 'drop_in',
-      'point_balance': 4820,
+      'address': 'Jl. Mawar Kembar No. 12, Blok C',
+      'default_setor_method': null,
+      'point_balance': 15000,
       'is_active': 1,
     },
     {
-      'id': 'petugas-uuid-1234-5678',
-      'phone_number': '+62 812-9999-8888',
-      'email': 'petugas@gmail.com',
-      'full_name': 'Ahmad Petugas',
+      'id': 'USR-004',
+      'phone_number': '085556667778',
+      'email': 'siti@gmail.com',
+      'full_name': 'Siti Aminah',
       'password':
-          'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f',
-      'role': 'petugas',
-      'address':
-          'Zona: Drop Point 01 - Pusat Kota, Armada: Motor Roda 2, Plat: B 1234 ABC',
-      'default_setor_method': 'pickup',
-      'point_balance': 0,
+          '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', // 123456
+      'role': 'nasabah',
+      'address': 'Perumahan Hijau Daun, Kav 45',
+      'default_setor_method': null,
+      'point_balance': 5000,
       'is_active': 1,
-    },
-    {
-      'id': 'admin-uuid-akmal-223',
-      'phone_number': '+62 812-1111-2222',
-      'email': 'akmalahsan223@gmail.com',
-      'full_name': 'Akmal Ahsan',
-      'password':
-          '808d5293ca7453bfbaa369f8f7c581cbf37f6a0ce85f13de00e67e08feeb45e5',
-      'role': 'admin',
-      'address': 'Kantor Pusat Bank Sampah',
-      'default_setor_method': 'drop_in',
-      'point_balance': 99999,
-      'is_active': 1,
-    },
-    {
-      'id': 'admin-uuid-fanska-221',
-      'phone_number': '+62 812-3333-4444',
-      'email': 'fanskawe221@gmail.com',
-      'full_name': 'Fanska',
-      'password':
-          '32062e2d61502920f0207935c0bdd7cc27f1c024c8b49c92ced155f547d37c50',
-      'role': 'admin',
-      'address': 'Kantor Pusat Bank Sampah',
-      'default_setor_method': 'drop_in',
-      'point_balance': 99999,
-      'is_active': 1,
-    },
-    {
-      'id': 'staf-uuid-andi-001',
-      'phone_number': '+62 812-5555-6666',
-      'email': 'andi.wijaya@banksampah.id',
-      'full_name': 'Andi Wijaya',
-      'password':
-          '22875a9282a98b312c1a775aaabb4b54fca6caf2fc73762652a3370b583ef32d',
-      'role': 'staf_kantor',
-      'address': 'Kantor Pusat Bank Sampah',
-      'default_setor_method': 'drop_in',
-      'point_balance': 0,
-      'is_active': 1,
-    },
-    {
-      'id': 'staf-uuid-rina-002',
-      'phone_number': '+62 812-7777-8888',
-      'email': 'rina.m@banksampah.id',
-      'full_name': 'Rina Marlina',
-      'password':
-          '22875a9282a98b312c1a775aaabb4b54fca6caf2fc73762652a3370b583ef32d',
-      'role': 'staf_kantor',
-      'address': 'Kantor Pusat Bank Sampah',
-      'default_setor_method': 'drop_in',
-      'point_balance': 0,
-      'is_active': 0,
     },
   ];
 
@@ -119,58 +92,125 @@ class DatabaseHelper {
 
   static final List<Map<String, dynamic>> _webDropPoints = [
     {
-      'id': 'dp-1',
-      'name': 'Drop Point 01 - Pusat Kota',
-      'address': 'Jl. Merdeka No.1, Jakarta Pusat',
-      'latitude': -6.1751,
-      'longitude': 106.8272,
+      'id': 'DP-001',
+      'name': 'Drop Point Pusat',
+      'address': 'Jl. Merdeka No.10',
+      'latitude': -6.2,
+      'longitude': 106.816666,
       'capacity_status': 'aman',
       'operating_hours': '08:00 - 17:00',
     },
     {
-      'id': 'dp-2',
-      'name': 'Drop Point 02 - Margonda',
-      'address': 'Jl. Margonda Raya No. 10',
-      'latitude': -6.3732,
-      'longitude': 106.8323,
-      'capacity_status': 'kritis',
-      'operating_hours': '08:00 - 17:00',
+      'id': 'DP-002',
+      'name': 'Drop Point Cabang Utara',
+      'address': 'Jl. Utara Raya No.5',
+      'latitude': -6.15,
+      'longitude': 106.9,
+      'capacity_status': 'aman',
+      'operating_hours': '09:00 - 15:00',
     },
   ];
 
   static final List<Map<String, dynamic>> _webWasteCategories = [
     {
       'id': 1,
-      'name': 'Plastik (PET/HDPE)',
-      'point_per_kg': 2500,
-      'icon_url': 'assets/icons/plastik.png',
+      'name': 'Plastik',
+      'point_per_kg': 2000,
+      'icon_url': 'icon_plastik.png',
       'is_active': 1,
     },
     {
       'id': 2,
-      'name': 'Kertas & Karton',
+      'name': 'Kertas & Kardus',
       'point_per_kg': 1500,
-      'icon_url': 'assets/icons/kertas.png',
+      'icon_url': 'icon_kertas.png',
       'is_active': 1,
     },
     {
       'id': 3,
-      'name': 'Logam & Besi',
-      'point_per_kg': 4000,
-      'icon_url': 'assets/icons/logam.png',
+      'name': 'Besi & Logam',
+      'point_per_kg': 3500,
+      'icon_url': 'icon_besi.png',
       'is_active': 1,
     },
     {
       'id': 4,
-      'name': 'Minyak Jelantah',
-      'point_per_kg': 3500,
-      'icon_url': 'assets/icons/minyak.png',
+      'name': 'Elektronik Bekas',
+      'point_per_kg': 5000,
+      'icon_url': 'icon_elektronik.png',
       'is_active': 1,
     },
   ];
 
-  static final List<Map<String, dynamic>> _webTransactions = [];
-  static final List<Map<String, dynamic>> _webTransactionItems = [];
+  static final List<Map<String, dynamic>> _webTransactions = [
+    {
+      'id': 'TRX-0991',
+      'nasabah_id': 'USR-003',
+      'petugas_id': 'USR-002',
+      'drop_point_id': null,
+      'type': 'pickup',
+      'status': 'menunggu',
+      'pickup_date': '2026-08-05',
+      'pickup_time_slot': null,
+      'pickup_lat': -6.21,
+      'pickup_lng': 106.82,
+      'total_est_points': 15000,
+      'total_actual_points': 0,
+      'photo_evidence': null,
+      'created_at': '2026-08-05 10:09:24',
+    },
+    {
+      'id': 'TRX-0992',
+      'nasabah_id': 'USR-004',
+      'petugas_id': 'USR-002',
+      'drop_point_id': null,
+      'type': 'pickup',
+      'status': 'menunggu',
+      'pickup_date': '2026-08-05',
+      'pickup_time_slot': null,
+      'pickup_lat': -6.22,
+      'pickup_lng': 106.83,
+      'total_est_points': 25000,
+      'total_actual_points': 0,
+      'photo_evidence': null,
+      'created_at': '2026-08-05 10:09:24',
+    },
+  ];
+
+  static final List<Map<String, dynamic>> _webTransactionItems = [
+    {
+      'id': 'TI-001',
+      'transaction_id': 'TRX-0991',
+      'waste_category_id': 1,
+      'estimated_weight': 5.00,
+      'actual_weight': null,
+      'final_points': null,
+    },
+    {
+      'id': 'TI-002',
+      'transaction_id': 'TRX-0991',
+      'waste_category_id': 2,
+      'estimated_weight': 4.00,
+      'actual_weight': null,
+      'final_points': null,
+    },
+    {
+      'id': 'TI-003',
+      'transaction_id': 'TRX-0992',
+      'waste_category_id': 4,
+      'estimated_weight': 15.00,
+      'actual_weight': null,
+      'final_points': null,
+    },
+    {
+      'id': 'TI-004',
+      'transaction_id': 'TRX-0992',
+      'waste_category_id': 3,
+      'estimated_weight': 6.00,
+      'actual_weight': null,
+      'final_points': null,
+    },
+  ];
 
   DatabaseHelper._init();
 
@@ -439,6 +479,12 @@ class DatabaseHelper {
     }
     for (var wc in _webWasteCategories) {
       await db.insert('waste_categories', wc);
+    }
+    for (var trx in _webTransactions) {
+      await db.insert('transactions', trx);
+    }
+    for (var item in _webTransactionItems) {
+      await db.insert('transaction_items', item);
     }
   }
 

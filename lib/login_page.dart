@@ -5,6 +5,7 @@ import 'dashboard_user.dart';
 import 'dashboard_petugas.dart';
 import 'dashboard_admin.dart';
 import 'db_helper.dart';
+import 'api_service.dart';
 import 'session_service.dart';
 
 class LoginPage extends StatefulWidget {
@@ -42,7 +43,18 @@ class _LoginPageState extends State<LoginPage> {
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      final user = await DatabaseHelper.instance.login(email, password);
+      // Coba login via API (XAMPP) terlebih dahulu, lalu fallback ke lokal
+      Map<String, dynamic>? user;
+      try {
+        user = await ApiService.instance.login(email, password);
+      } catch (_) {
+        user = null;
+      }
+
+      // Fallback ke SQLite lokal jika API tidak tersedia
+      if (user == null) {
+        user = await DatabaseHelper.instance.login(email, password);
+      }
 
       if (mounted) Navigator.pop(context);
 

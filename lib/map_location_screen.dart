@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'api_service.dart';
 import 'db_helper.dart';
 
 class MapLocationScreen extends StatefulWidget {
@@ -41,7 +42,13 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
   }
 
   Future<void> _loadDropPoints() async {
-    final dps = await DatabaseHelper.instance.getDropPoints();
+    List<Map<String, dynamic>> dps = [];
+    try {
+      dps = await ApiService.instance.getDropPoints();
+    } catch (_) {}
+    if (dps.isEmpty) {
+      dps = await DatabaseHelper.instance.getDropPoints();
+    }
     if (!mounted) return;
     setState(() {
       _dropPoints = dps;
@@ -168,9 +175,13 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                         initialCameraPosition: CameraPosition(
                           target: _dropPoints.isNotEmpty
                               ? LatLng(
-                                  _dropPoints[0]['latitude'] as double? ??
+                                  double.tryParse(
+                                        _dropPoints[0]['latitude'].toString(),
+                                      ) ??
                                       -6.200000,
-                                  _dropPoints[0]['longitude'] as double? ??
+                                  double.tryParse(
+                                        _dropPoints[0]['longitude'].toString(),
+                                      ) ??
                                       106.816666,
                                 )
                               : _defaultCenter,
@@ -182,8 +193,10 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                           return Marker(
                             markerId: MarkerId(dp['id'].toString()),
                             position: LatLng(
-                              dp['latitude'] as double? ?? -6.2,
-                              dp['longitude'] as double? ?? 106.8,
+                              double.tryParse(dp['latitude'].toString()) ??
+                                  -6.2,
+                              double.tryParse(dp['longitude'].toString()) ??
+                                  106.8,
                             ),
                             infoWindow: InfoWindow(
                               title: dp['name'].toString(),
