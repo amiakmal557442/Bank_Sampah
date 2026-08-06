@@ -133,16 +133,11 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       // Load Tasks — coba API dulu, fallback ke local DB
       List<Map<String, dynamic>> allTasks = [];
       try {
-        // 'dikonfirmasi' = sudah disetujui admin, valid ENUM di MySQL
-        final dikonfirmasiData = await ApiService.instance.getPendingTasks(
+        // Ambil semua tugas aktif sekaligus menggunakan parameter statuses
+        allTasks = await ApiService.instance.getPendingTasks(
           petugasId: petugasId,
-          status: 'dikonfirmasi',
+          statuses: ['dikonfirmasi', 'menuju_lokasi', 'tiba'],
         );
-        final menujuData = await ApiService.instance.getPendingTasks(
-          petugasId: petugasId,
-          status: 'menuju_lokasi',
-        );
-        allTasks = [...dikonfirmasiData, ...menujuData];
       } catch (_) {}
 
       // Fallback ke lokal jika API gagal atau kosong
@@ -302,7 +297,12 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       unselectedItemColor: Colors.grey,
       selectedFontSize: 12,
       unselectedFontSize: 12,
-      onTap: (i) => setState(() => _bottomNavIndex = i),
+      onTap: (i) {
+        if (i == 0 && _bottomNavIndex != 0) {
+          _loadData();
+        }
+        setState(() => _bottomNavIndex = i);
+      },
       items: const [
         BottomNavigationBarItem(
           icon: Icon(Icons.home_outlined),
@@ -1144,6 +1144,9 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           customerName: _currentTask!.customerName,
           oldGrassGreen: oldGrassGreen,
           limeGreen: limeGreen,
+          onComplete: () {
+            if (mounted) _loadData();
+          },
         );
       },
     );
@@ -1249,7 +1252,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'Apakah Anda sudah tiba di lokasi nasabah ${_currentTask!.customerName}?\n\nStatus tugas akan diperbarui.',
+          'Apakah Anda sudah tiba di lokasi nasabah ${_currentTask!.customerName}?\n\nStatus tugas akan diperbarui ke "Tiba" dan dialog timbang akan dibuka.',
           style: TextStyle(color: Colors.grey[700]),
         ),
         actions: [
@@ -1268,22 +1271,23 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             onPressed: () async {
               Navigator.pop(ctx);
 
-              // Tampilkan loading saat update API
-              setState(() => isLoading = true);
+              // Update status ke 'tiba' (bukan 'dikonfirmasi')
               try {
                 await ApiService.instance.updateTaskStatus(
                   _currentTask!.wasteId,
-                  'dikonfirmasi',
+                  'tiba',
                 );
-                // Refresh data setelah berhasil
-                await _loadData();
               } catch (_) {
-                setState(() => isLoading = false);
+                await DatabaseHelper.instance.updateTransactionStatus(
+                  _currentTask!.wasteId,
+                  'tiba',
+                );
               }
 
+              // Langsung buka dialog timbang
               if (mounted) _showTimbangManualSheet();
             },
-            child: const Text('Ya, Tiba'),
+            child: const Text('Ya, Tiba & Timbang'),
           ),
         ],
       ),
@@ -1361,6 +1365,7 @@ class _TimbangManualSheet extends StatefulWidget {
   final String customerName;
   final Color oldGrassGreen;
   final Color limeGreen;
+  final VoidCallback onComplete;
 
   const _TimbangManualSheet({
     required this.items,
@@ -1368,6 +1373,7 @@ class _TimbangManualSheet extends StatefulWidget {
     required this.customerName,
     required this.oldGrassGreen,
     required this.limeGreen,
+    required this.onComplete,
   });
 
   @override
@@ -1741,14 +1747,8 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
               ),
               onPressed: () {
                 Navigator.pop(ctx);
-                // Refresh main dashboard setelah selesai
-                if (context.mounted) {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (_) => const WorkerDashboardScreen(),
-                    ),
-                  );
-                }
+                // Refresh main dashboard setelah selesai dengan memanggil onComplete callback
+                widget.onComplete();
               },
               child: const Text('Selesai'),
             ),

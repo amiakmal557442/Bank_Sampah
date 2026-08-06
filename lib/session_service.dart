@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'api_service.dart';
 import 'db_helper.dart';
 
 class SessionService {
@@ -35,10 +36,18 @@ class SessionService {
       final savedId = prefs.getString(_keyUserId);
       if (savedId == null || savedId.isEmpty) return false;
 
-      // Ambil data user terbaru dari database
+      // Prioritas: ambil dari XAMPP API untuk data paling baru
+      try {
+        final apiUser = await ApiService.instance.getUserById(savedId);
+        if (apiUser != null) {
+          currentUser = apiUser;
+          return true;
+        }
+      } catch (_) {}
+
+      // Fallback ke local DB
       final user = await DatabaseHelper.instance.getUserById(savedId);
       if (user == null) {
-        // User tidak ada di DB, hapus sesi yang tersimpan
         await prefs.remove(_keyUserId);
         return false;
       }
@@ -50,10 +59,21 @@ class SessionService {
     }
   }
 
-  /// Refresh data user terbaru dari database (misalnya setelah edit profil
-  /// atau setelah poin berubah).
+  /// Refresh data user terbaru — prioritas dari XAMPP API agar point_balance
+  /// selalu sinkron dengan yang ada di MySQL.
   static Future<void> refresh() async {
     if (userId.isEmpty) return;
+    try {
+      // Coba ambil dari XAMPP API dulu (poin paling akurat)
+      final apiUser = await ApiService.instance.getUserById(userId);
+      if (apiUser != null) {
+        // Gabungkan dengan currentUser agar field lokal tidak hilang
+        currentUser = {...?currentUser, ...apiUser};
+        return;
+      }
+    } catch (_) {}
+
+    // Fallback ke local DB jika API tidak tersedia
     final user = await DatabaseHelper.instance.getUserById(userId);
     if (user != null) {
       currentUser = user;

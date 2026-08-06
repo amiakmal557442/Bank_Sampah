@@ -136,6 +136,24 @@ class ApiService {
     return res['success'] == true;
   }
 
+  /// Ambil satu user berdasarkan ID dari XAMPP (termasuk point_balance terbaru)
+  Future<Map<String, dynamic>?> getUserById(String id) async {
+    try {
+      final res = await _get('users/index.php', params: {'id': id});
+      if (res['success'] == true && res['data'] != null) {
+        final data = res['data'];
+        if (data is List && data.isNotEmpty) {
+          return Map<String, dynamic>.from(data.first);
+        } else if (data is Map<String, dynamic>) {
+          return data;
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ─────────────────────────────────────────────────
   // TRANSACTIONS
   // ─────────────────────────────────────────────────
@@ -266,9 +284,11 @@ class ApiService {
 
   Future<List<Map<String, dynamic>>> getPendingTasks({
     String? petugasId,
-    String status = 'menunggu',
+    List<String> statuses = const ['dikonfirmasi', 'menuju_lokasi', 'tiba'],
   }) async {
-    final params = <String, String>{'status': status};
+    final params = <String, String>{
+      'status': statuses.join(','),
+    };
     if (petugasId != null) params['petugas_id'] = petugasId;
     final res = await _get('tasks/index.php', params: params);
     if (res['success'] == true) {

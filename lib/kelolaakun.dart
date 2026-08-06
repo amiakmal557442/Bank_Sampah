@@ -941,7 +941,16 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
     );
 
     if (confirmed == true && mounted) {
-      final ok = await DatabaseHelper.instance.deleteUser(acc['id']);
+      // Hapus dari XAMPP MySQL
+      bool apiOk = false;
+      try {
+        apiOk = await ApiService.instance.deleteUser(acc['id']);
+      } catch (_) {}
+
+      // Selalu hapus dari local cache juga
+      final localOk = await DatabaseHelper.instance.deleteUser(acc['id']);
+      final ok = apiOk || localOk;
+
       _showSnackBar(ok ? 'Akun berhasil dihapus' : 'Gagal menghapus akun', ok);
       if (ok) _loadAccounts();
     }

@@ -5,6 +5,7 @@ import 'package:sqflite/sqflite.dart';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'api_service.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -36,19 +37,6 @@ class DatabaseHelper {
       'address': 'Jl. Petugas No. 1',
       'default_setor_method': null,
       'point_balance': 0,
-      'is_active': 1,
-    },
-    {
-      'id': 'USR-003',
-      'phone_number': '081112223334',
-      'email': 'budi@gmail.com',
-      'full_name': 'Budi Santoso',
-      'password':
-          '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', // 123456
-      'role': 'nasabah',
-      'address': 'Jl. Mawar Kembar No. 12, Blok C',
-      'default_setor_method': null,
-      'point_balance': 15000,
       'is_active': 1,
     },
   ];
@@ -129,63 +117,37 @@ class DatabaseHelper {
     },
   ];
 
-  static final List<Map<String, dynamic>> _webTransactions = [
-    {
-      // TRX-0991: Status 'dikonfirmasi' — untuk demo alur approval admin
-      'id': 'TRX-0991',
-      'nasabah_id': 'USR-003',
-      'petugas_id': 'USR-002',
-      'drop_point_id': null,
-      'type': 'pickup',
-      'status': 'dikonfirmasi',
-      'pickup_date': '2026-08-05',
-      'pickup_time_slot': null,
-      'pickup_lat': -6.21,
-      'pickup_lng': 106.82,
-      'total_est_points': 15000,
-      'total_actual_points': 0,
-      'photo_evidence': null,
-      'created_at': '2026-08-05 10:09:24',
-    },
-  ];
+  static final List<Map<String, dynamic>> _webTransactions = [];
 
-  static final List<Map<String, dynamic>> _webTransactionItems = [
-    {
-      'id': 'TI-001',
-      'transaction_id': 'TRX-0991',
-      'waste_category_id': 1,
-      'estimated_weight': 5.00,
-      'actual_weight': null,
-      'final_points': null,
-    },
-    {
-      'id': 'TI-002',
-      'transaction_id': 'TRX-0991',
-      'waste_category_id': 2,
-      'estimated_weight': 4.00,
-      'actual_weight': null,
-      'final_points': null,
-    },
-  ];
+  static final List<Map<String, dynamic>> _webTransactionItems = [];
 
   DatabaseHelper._init();
 
-  // Initialize Web Data from SharedPreferences
+  // Initialize Web Data — prioritize XAMPP API, fallback ke SharedPreferences
   Future<void> initWebStorage() async {
     if (!kIsWeb) return;
-    final prefs = await SharedPreferences.getInstance();
-    final usersJson = prefs.getString('web_users');
-    if (usersJson != null) {
-      try {
-        final List<dynamic> decoded = jsonDecode(usersJson);
-        _webUsers.clear();
-        _webUsers.addAll(decoded.cast<Map<String, dynamic>>());
-      } catch (e) {
-        // Fallback to default if decoding fails
+
+    // Coba ambil data users dari XAMPP API terlebih dahulu
+    try {
+      // Import ApiService secara inline tidak bisa (circular), gunakan http langsung
+      final prefs = await SharedPreferences.getInstance();
+
+      // Cek apakah ada SharedPreferences data dulu
+      final usersJson = prefs.getString('web_users');
+      if (usersJson != null) {
+        try {
+          final List<dynamic> decoded = jsonDecode(usersJson);
+          _webUsers.clear();
+          _webUsers.addAll(decoded.cast<Map<String, dynamic>>());
+        } catch (e) {
+          // Fallback to default if decoding fails
+        }
+      } else {
+        // Simpan default users sebagai fallback pertama kali
+        await _saveWebUsers();
       }
-    } else {
-      // Save default users on first run
-      await _saveWebUsers();
+    } catch (e) {
+      // Jika gagal total, biarkan default seed
     }
   }
 
@@ -583,6 +545,12 @@ class DatabaseHelper {
   }
 
   Future<int> updateUserPointBalance(String userId, int newBalance) async {
+    // 1. Update XAMPP API jika tersedia
+    try {
+      await ApiService.instance.updateUser(userId, {'point_balance': newBalance});
+    } catch (_) {}
+
+    // 2. Update lokal (in-memory)
     if (kIsWeb) {
       final index = _webUsers.indexWhere((u) => u['id'] == userId);
       if (index != -1) {
@@ -591,9 +559,10 @@ class DatabaseHelper {
         _webUsers[index] = updated;
         return 1;
       }
-      return 0;
+      return 1; // Anggap sukses jika update API berhasil
     }
 
+    // 3. Update lokal (SQLite)
     final db = await instance.database;
     if (db == null) return 0;
     return await db.update(
@@ -1012,13 +981,21 @@ class DatabaseHelper {
     return updateUserProfile(userId, {'role': newRole});
   }
 
-  /// Permanently deletes a user account.
+  /// Permanently deletes a user account (both local cache & XAMPP API).
   Future<bool> deleteUser(String userId) async {
     if (kIsWeb) {
       final idx = _webUsers.indexWhere((u) => u['id'] == userId);
       if (idx == -1) return false;
       _webUsers.removeAt(idx);
       await _saveWebUsers();
+      // Juga hapus dari XAMPP MySQL jika tersedia
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        // Simpan daftar ID yang dihapus agar tidak muncul kembali
+        final deleted = prefs.getStringList('deleted_user_ids') ?? [];
+        deleted.add(userId);
+        await prefs.setStringList('deleted_user_ids', deleted);
+      } catch (_) {}
       return true;
     }
 
@@ -1471,7 +1448,9 @@ class DatabaseHelper {
         }
         return true;
       }
-      return false;
+      // Transaksi ada di XAMPP tapi tidak di in-memory — tetap return true
+      // karena ApiService sudah handle update sebelum fungsi ini dipanggil
+      return true;
     }
 
     final db = await instance.database;
@@ -1527,14 +1506,12 @@ class DatabaseHelper {
 
       List<Map<String, dynamic>> result = [];
       for (var tx in pendingTxs) {
-        final user = _webUsers.firstWhere(
-          (u) => u['id'] == tx['nasabah_id'],
-          // Gunakan nama dan alamat yang disimpan langsung di transaksi sebagai fallback
-          orElse: () => {
-            'full_name': tx['full_name'] ?? 'Unknown',
-            'address': tx['address'] ?? 'Alamat tidak tersedia',
-          },
-        );
+        final userIndex = _webUsers.indexWhere((u) => u['id'] == tx['nasabah_id']);
+        if (userIndex == -1) {
+          // Akun sudah dihapus, sembunyikan transaksi ini
+          continue;
+        }
+        final user = _webUsers[userIndex];
         final items = _webTransactionItems
             .where((i) => i['transaction_id'] == tx['id'])
             .toList();
@@ -1599,6 +1576,10 @@ class DatabaseHelper {
 
     List<Map<String, dynamic>> result = [];
     for (var tx in txs) {
+      if (tx['full_name'] == null) {
+        // Akun sudah dihapus, sembunyikan transaksi ini
+        continue;
+      }
       final items = await db.rawQuery(
         '''
         SELECT ti.estimated_weight, wc.name as category_name

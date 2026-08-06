@@ -28,8 +28,12 @@ class _HalamanTugasState extends State<HalamanTugas> {
 
     List<Map<String, dynamic>> tasks = [];
     try {
-      tasks = await ApiService.instance.getPendingTasks(status: 'dikonfirmasi');
+      // Ambil semua tugas yang masih aktif dari XAMPP API
+      tasks = await ApiService.instance.getPendingTasks(
+        statuses: ['dikonfirmasi', 'menuju_lokasi', 'tiba'],
+      );
     } catch (_) {}
+    // Fallback ke local DB jika API gagal
     if (tasks.isEmpty) {
       tasks = await DatabaseHelper.instance.getPendingPickupTasks();
     }
@@ -42,7 +46,7 @@ class _HalamanTugasState extends State<HalamanTugas> {
     }
   }
 
-  // Update status menuju_lokasi saja (BUKAN selesai — selesai pakai dialog timbang)
+  // Update status ke menuju_lokasi
   Future<void> _updateStatusMenuju(String id) async {
     bool success = false;
     try {
@@ -179,17 +183,17 @@ class _HalamanTugasState extends State<HalamanTugas> {
         ? Icons.store
         : Icons.local_shipping_outlined;
 
-    // Label tombol aksi utama
-    // Drop-in: selalu "Verifikasi" (langsung ke timbang)
-    // Pickup: "Jemput" → "Selesaikan"
+    // Label & warna tombol aksi utama
+    // Drop-in:  "Tiba di Lokasi" (hijau) → langsung ke timbang
+    // Pickup:   "Jemput" → "Selesaikan"
     final String mainBtnLabel = isDropIn
-        ? 'Verifikasi'
+        ? 'Tiba di Lokasi'
         : (sudahMenuju ? 'Selesaikan' : 'Jemput');
     final IconData mainBtnIcon = isDropIn
-        ? Icons.fact_check_rounded
+        ? Icons.where_to_vote_rounded
         : (sudahMenuju ? Icons.check_circle : Icons.local_shipping);
     final Color mainBtnColor = isDropIn
-        ? Colors.purple.shade700
+        ? Colors.green.shade700
         : (sudahMenuju ? Colors.green.shade700 : greenTheme);
 
     final String txId =
@@ -352,10 +356,16 @@ class _HalamanTugasState extends State<HalamanTugas> {
                 // Tombol aksi utama
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
                       if (isDropIn) {
-                        // Drop-in: Verifikasi = langsung buka dialog timbang
-                        // (nasabah sudah datang ke drop point)
+                        // Drop-in: update status ke 'tiba' dulu, lalu buka dialog timbang
+                        try {
+                          await ApiService.instance.updateTaskStatus(
+                              txId, 'tiba');
+                        } catch (_) {
+                          await DatabaseHelper.instance
+                              .updateTransactionStatus(txId, 'tiba');
+                        }
                         _showSelesaikanDialog(tugas);
                       } else if (sudahMenuju) {
                         // Pickup: sudah menuju/tiba → selesaikan dengan timbang
