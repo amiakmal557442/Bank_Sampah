@@ -163,17 +163,39 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       }
 
       _queue = allTasks.map((t) {
+        String rawDate = t['pickup_date'] ?? '';
+        if (rawDate.isEmpty || rawDate.startsWith('0000')) {
+          rawDate = t['created_at'] ?? '';
+        }
+        
+        String formattedTime = 'Hari ini';
+        if (rawDate.isNotEmpty && !rawDate.startsWith('0000')) {
+          try {
+            final dt = DateTime.parse(rawDate);
+            final months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+            final days = ['', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+            formattedTime = '${days[dt.weekday]}, ${dt.day} ${months[dt.month]} ${dt.year}';
+          } catch (_) {
+            formattedTime = rawDate;
+          }
+        }
+
+        final timeSlot = t['pickup_time_slot'] ?? '';
+        if (timeSlot.isNotEmpty) {
+          formattedTime = '$formattedTime • $timeSlot';
+        }
+
         return PickupTask(
           wasteId: t['id']?.toString() ?? '-',
           customerName: t['nasabah_name'] ?? 'Nasabah',
           address: t['nasabah_address'] ?? '',
-          time: t['pickup_time_slot'] ?? t['pickup_date'] ?? '',
+          time: formattedTime,
           wasteTypes:
               (t['jenis_sampah'] as String?)?.split(', ') ?? ['Lainnya'],
           estWeightKg: (t['total_est_weight'] is num)
               ? (t['total_est_weight'] as num).toDouble()
               : double.tryParse(t['total_est_weight'].toString()) ?? 0.0,
-          status: t['status'] == 'menuju_lokasi' ? 'tiba' : 'menuju',
+          status: t['status']?.toString() ?? 'dikonfirmasi',
         );
       }).toList();
 
@@ -611,9 +633,13 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                   color: limeGreen,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Text(
-                  '🚛  Menuju Lokasi',
-                  style: TextStyle(
+                child: Text(
+                  task.status == 'dikonfirmasi'
+                      ? '🚛  Menunggu Penjemputan'
+                      : (task.status == 'menuju_lokasi'
+                            ? '🚛  Menuju Lokasi'
+                            : '🚛  Tiba di Lokasi'),
+                  style: const TextStyle(
                     color: baseWhite,
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -706,9 +732,21 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                     ),
                     elevation: 2,
                   ),
-                  onPressed: _showTibaDialogForCurrentTask,
+                  onPressed: () {
+                    if (task.status == 'tiba') {
+                      _showTimbangManualSheet(wasteId: task.wasteId);
+                    } else if (task.status == 'menuju_lokasi') {
+                      _showTibaDialogForCurrentTask();
+                    } else {
+                      _updateStatusMenujuForCurrentTask();
+                    }
+                  },
                   child: Text(
-                    task.status == 'tiba' ? 'Sudah Tiba' : 'Tiba di Lokasi',
+                    task.status == 'tiba'
+                        ? 'Timbang'
+                        : (task.status == 'menuju_lokasi'
+                              ? 'Tiba di Lokasi'
+                              : 'Jemput'),
                     style: const TextStyle(fontSize: 13),
                   ),
                 ),
@@ -728,87 +766,87 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       onTap: () => _showTimbangManualSheet(wasteId: task.wasteId),
       child: Container(
         margin: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: baseWhite,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: baseBlack.withValues(alpha: 0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: baseWhite,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: baseBlack.withValues(alpha: 0.05),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
-            child: Icon(
-              Icons.local_shipping_rounded,
-              color: Colors.grey[500],
-              size: 22,
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.local_shipping_rounded,
+                color: Colors.grey[500],
+                size: 22,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      task.customerName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: baseBlack,
-                        fontSize: 14,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        task.customerName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: baseBlack,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.access_time_rounded,
-                          size: 12,
-                          color: Colors.grey[500],
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          task.time,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.access_time_rounded,
+                            size: 12,
+                            color: Colors.grey[500],
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  task.address,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    for (final t in task.wasteTypes) _buildMiniChip(t),
-                  ],
-                ),
-              ],
+                          const SizedBox(width: 3),
+                          Text(
+                            task.time,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    task.address,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      for (final t in task.wasteTypes) _buildMiniChip(t),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildMiniChip(String label) {
     return Container(
@@ -1235,6 +1273,34 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
         );
       },
     );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  Update Status: Menuju Lokasi
+  // ═══════════════════════════════════════════════════════════
+  Future<void> _updateStatusMenujuForCurrentTask() async {
+    if (_currentTask == null) return;
+    try {
+      await ApiService.instance.updateTaskStatus(
+        _currentTask!.wasteId,
+        'menuju_lokasi',
+      );
+    } catch (_) {
+      await DatabaseHelper.instance.updateTransactionStatus(
+        _currentTask!.wasteId,
+        'menuju_lokasi',
+      );
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Status diperbarui: Sedang Menjemput'),
+          backgroundColor: oldGrassGreen,
+        ),
+      );
+      _loadData();
+    }
   }
 
   // ═══════════════════════════════════════════════════════════

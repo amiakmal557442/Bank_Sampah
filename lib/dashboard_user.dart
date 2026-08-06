@@ -332,6 +332,7 @@ class _BerandaPageState extends State<BerandaPage> {
 
   Future<void> _refreshPoints() async {
     await SessionService.refresh();
+    await TransactionService.loadTransactions(SessionService.userId);
     if (mounted) setState(() {});
   }
 
@@ -341,9 +342,13 @@ class _BerandaPageState extends State<BerandaPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6F8),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
+      body: RefreshIndicator(
+        onRefresh: _refreshPoints,
+        color: primaryGreen,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
             // --- HEADER ATAS & KARTU POIN ---
             SizedBox(
               height: 290,
@@ -783,6 +788,7 @@ class _BerandaPageState extends State<BerandaPage> {
             const SizedBox(height: 30),
           ],
         ),
+      ),
       ),
     );
   }
@@ -1270,6 +1276,12 @@ class _RiwayatPageState extends State<RiwayatPage> {
     ),
   ];
 
+  Future<void> _refreshRiwayat() async {
+    await SessionService.refresh();
+    await TransactionService.loadTransactions(SessionService.userId);
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final filteredHariIni = TransactionService.riwayatHariIni.where((tx) {
@@ -1306,10 +1318,14 @@ class _RiwayatPageState extends State<RiwayatPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6F8),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: RefreshIndicator(
+        onRefresh: _refreshRiwayat,
+        color: primaryGreen,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // --- HEADER RIWAYAT ---
             Container(
               width: double.infinity,
@@ -1598,6 +1614,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
             const SizedBox(height: 30),
           ],
         ),
+      ),
       ),
     );
   }

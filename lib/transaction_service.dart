@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'db_helper.dart';
+import 'api_service.dart';
 
 class TransactionModel {
   final IconData icon;
@@ -77,15 +78,48 @@ class TransactionService {
     riwayatHariIni.insert(0, newRiwayatTx);
   }
 
+  static String formatDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty || dateStr.startsWith('0000')) {
+      return 'Hari ini';
+    }
+    try {
+      final dt = DateTime.parse(dateStr);
+      final months = [
+        '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+        'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'
+      ];
+      final days = [
+        '', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'
+      ];
+      final dayName = days[dt.weekday];
+      final monthName = months[dt.month];
+      return '$dayName, ${dt.day} $monthName ${dt.year}';
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
   static Future<void> loadTransactions(String nasabahId) async {
-    final txs = await DatabaseHelper.instance.getUserTransactions(nasabahId);
+    List<Map<String, dynamic>> txs = [];
+    try {
+      txs = await ApiService.instance.getTransactions(nasabahId: nasabahId);
+    } catch (_) {}
+
+    if (txs.isEmpty) {
+      txs = await DatabaseHelper.instance.getUserTransactions(nasabahId);
+    }
 
     final List<TransactionModel> newTxs = [];
 
     for (var tx in txs) {
       final type = tx['type'] == 'drop_in' ? 'Drop-in' : 'Jemput sampah';
       final status = tx['status'];
-      final dateStr = tx['pickup_date'] ?? tx['created_at'] ?? 'Hari ini';
+      
+      String rawDate = tx['pickup_date'] ?? '';
+      if (rawDate.isEmpty || rawDate.startsWith('0000')) {
+        rawDate = tx['created_at'] ?? '';
+      }
+      final dateStr = formatDate(rawDate);
 
       // Calculate points or subtitle
       final points = (tx['total_actual_points'] ?? 0) as int;
@@ -104,8 +138,10 @@ class TransactionService {
           status: status == 'menunggu'
               ? 'Proses'
               : status == 'selesai'
-              ? 'Selesai'
-              : status,
+                  ? 'Selesai'
+                  : status == 'menuju_lokasi'
+                      ? 'Sedang menjemput'
+                      : status,
         ),
       );
     }

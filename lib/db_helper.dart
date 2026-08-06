@@ -547,7 +547,9 @@ class DatabaseHelper {
   Future<int> updateUserPointBalance(String userId, int newBalance) async {
     // 1. Update XAMPP API jika tersedia
     try {
-      await ApiService.instance.updateUser(userId, {'point_balance': newBalance});
+      await ApiService.instance.updateUser(userId, {
+        'point_balance': newBalance,
+      });
     } catch (_) {}
 
     // 2. Update lokal (in-memory)
@@ -1506,7 +1508,9 @@ class DatabaseHelper {
 
       List<Map<String, dynamic>> result = [];
       for (var tx in pendingTxs) {
-        final userIndex = _webUsers.indexWhere((u) => u['id'] == tx['nasabah_id']);
+        final userIndex = _webUsers.indexWhere(
+          (u) => u['id'] == tx['nasabah_id'],
+        );
         if (userIndex == -1) {
           // Akun sudah dihapus, sembunyikan transaksi ini
           continue;

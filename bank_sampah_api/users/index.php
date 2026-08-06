@@ -5,7 +5,14 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
     $role = $_GET['role'] ?? null;
-    if ($role) {
+    $id = $_GET['id'] ?? null;
+
+    if ($id) {
+        $stmt = $conn->prepare("SELECT id, phone_number, email, full_name, role, address, default_setor_method, point_balance, is_active, created_at FROM users WHERE id = ?");
+        $stmt->bind_param("s", $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+    } elseif ($role) {
         $stmt = $conn->prepare("SELECT id, phone_number, email, full_name, role, address, default_setor_method, point_balance, is_active, created_at FROM users WHERE role = ?");
         $stmt->bind_param("s", $role);
         $stmt->execute();

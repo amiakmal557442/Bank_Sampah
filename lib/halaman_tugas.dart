@@ -197,15 +197,14 @@ class _HalamanTugasState extends State<HalamanTugas> {
         ? Icons.store
         : Icons.local_shipping_outlined;
 
-    // Label & warna tombol aksi utama
     // Drop-in:  "Tiba di Lokasi" (hijau) → langsung ke timbang
-    // Pickup:   "Jemput" → "Selesaikan"
+    // Pickup:   "Jemput" → "Tiba di Lokasi"
     final String mainBtnLabel = isDropIn
         ? 'Tiba di Lokasi'
-        : (sudahMenuju ? 'Selesaikan' : 'Jemput');
+        : (isTiba ? 'Timbang' : (isMenuju ? 'Tiba di Lokasi' : 'Jemput'));
     final IconData mainBtnIcon = isDropIn
         ? Icons.where_to_vote_rounded
-        : (sudahMenuju ? Icons.check_circle : Icons.local_shipping);
+        : (isTiba ? Icons.scale_rounded : (isMenuju ? Icons.where_to_vote_rounded : Icons.local_shipping));
     final Color mainBtnColor = isDropIn
         ? Colors.green.shade700
         : (sudahMenuju ? Colors.green.shade700 : greenTheme);
@@ -381,11 +380,19 @@ class _HalamanTugasState extends State<HalamanTugas> {
                               .updateTransactionStatus(txId, 'tiba');
                         }
                         _showSelesaikanDialog(tugas);
-                      } else if (sudahMenuju) {
-                        // Pickup: sudah menuju/tiba → selesaikan dengan timbang
+                      } else if (isTiba) {
+                        // Pickup: sudah tiba → selesaikan dengan timbang
+                        _showSelesaikanDialog(tugas);
+                      } else if (isMenuju) {
+                        // Pickup: sudah menuju → update ke tiba, lalu buka dialog timbang
+                        try {
+                          await ApiService.instance.updateTaskStatus(txId, 'tiba');
+                        } catch (_) {
+                          await DatabaseHelper.instance.updateTransactionStatus(txId, 'tiba');
+                        }
                         _showSelesaikanDialog(tugas);
                       } else {
-                        // Pickup: belum berangkat → update ke menuju_lokasi
+                        // Pickup: belum berangkat (dikonfirmasi) → update ke menuju_lokasi
                         _updateStatusMenuju(txId);
                       }
                     },

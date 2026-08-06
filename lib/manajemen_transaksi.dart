@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'db_helper.dart';
 import 'api_service.dart';
+import 'transaction_service.dart';
 
 // ============================================================================
 // Halaman Manajemen Transaksi — Admin Dashboard (Desktop/Web)
@@ -262,7 +263,11 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
         tx['nasabah_name'] ?? tx['full_name'] ?? 'Nasabah';
     final String tipeStr =
         tx['type'] == 'drop_in' ? 'Drop-in Mandiri' : 'Penjemputan';
-    final String waktuStr = tx['pickup_date'] ?? tx['created_at'] ?? '';
+    String rawDate = tx['pickup_date'] ?? '';
+    if (rawDate.isEmpty || rawDate.startsWith('0000')) {
+      rawDate = tx['created_at'] ?? '';
+    }
+    final String waktuStr = TransactionService.formatDate(rawDate);
 
     await showDialog(
       context: context,
@@ -668,7 +673,11 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
               final String jenis = tx['type'] == 'drop_in'
                   ? 'Drop-in'
                   : 'Jemput';
-              final String waktu = tx['pickup_date'] ?? tx['created_at'] ?? '';
+              String rawDate = tx['pickup_date'] ?? '';
+              if (rawDate.isEmpty || rawDate.startsWith('0000')) {
+                rawDate = tx['created_at'] ?? '';
+              }
+              final String waktu = TransactionService.formatDate(rawDate);
               final items = (tx['items'] as List?) ?? [];
 
               String kategori = 'Campur';
