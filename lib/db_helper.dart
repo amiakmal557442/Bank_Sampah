@@ -51,19 +51,6 @@ class DatabaseHelper {
       'point_balance': 15000,
       'is_active': 1,
     },
-    {
-      'id': 'USR-004',
-      'phone_number': '085556667778',
-      'email': 'siti@gmail.com',
-      'full_name': 'Siti Aminah',
-      'password':
-          '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', // 123456
-      'role': 'nasabah',
-      'address': 'Perumahan Hijau Daun, Kav 45',
-      'default_setor_method': null,
-      'point_balance': 5000,
-      'is_active': 1,
-    },
   ];
 
   // In-memory permissions for Staf Kantor (web & native fallback)
@@ -144,35 +131,18 @@ class DatabaseHelper {
 
   static final List<Map<String, dynamic>> _webTransactions = [
     {
-      // TRX-0991: Status 'menunggu' — untuk demo alur approval admin
+      // TRX-0991: Status 'dikonfirmasi' — untuk demo alur approval admin
       'id': 'TRX-0991',
       'nasabah_id': 'USR-003',
-      'petugas_id': 'USR-002',
-      'drop_point_id': null,
-      'type': 'pickup',
-      'status': 'menunggu',
-      'pickup_date': '2026-08-05',
-      'pickup_time_slot': null,
-      'pickup_lat': -6.21,
-      'pickup_lng': 106.82,
-      'total_est_points': 15000,
-      'total_actual_points': 0,
-      'photo_evidence': null,
-      'created_at': '2026-08-05 10:09:24',
-    },
-    {
-      // TRX-0992: Status 'dikonfirmasi' — langsung muncul di dashboard petugas
-      'id': 'TRX-0992',
-      'nasabah_id': 'USR-004',
       'petugas_id': 'USR-002',
       'drop_point_id': null,
       'type': 'pickup',
       'status': 'dikonfirmasi',
       'pickup_date': '2026-08-05',
       'pickup_time_slot': null,
-      'pickup_lat': -6.22,
-      'pickup_lng': 106.83,
-      'total_est_points': 25000,
+      'pickup_lat': -6.21,
+      'pickup_lng': 106.82,
+      'total_est_points': 15000,
       'total_actual_points': 0,
       'photo_evidence': null,
       'created_at': '2026-08-05 10:09:24',
@@ -193,22 +163,6 @@ class DatabaseHelper {
       'transaction_id': 'TRX-0991',
       'waste_category_id': 2,
       'estimated_weight': 4.00,
-      'actual_weight': null,
-      'final_points': null,
-    },
-    {
-      'id': 'TI-003',
-      'transaction_id': 'TRX-0992',
-      'waste_category_id': 4,
-      'estimated_weight': 15.00,
-      'actual_weight': null,
-      'final_points': null,
-    },
-    {
-      'id': 'TI-004',
-      'transaction_id': 'TRX-0992',
-      'waste_category_id': 3,
-      'estimated_weight': 6.00,
       'actual_weight': null,
       'final_points': null,
     },
@@ -1161,53 +1115,7 @@ class DatabaseHelper {
 
   // ── AUDIT LOGS ────────────────────────────────────────────────────────────
 
-  static final List<Map<String, dynamic>> _webAuditLogs = [
-    {
-      'time': '04 Aug 2026 - 10:42',
-      'user_name': 'Akmal Ahsan',
-      'role': 'Administrator',
-      'module': 'Konfigurasi Sistem',
-      'action': 'Mengubah Rasio Poin dari Rp 1 ke Rp 1.2/Poin',
-      'ip_address': '192.168.1.10',
-      'status': 'SUKSES',
-    },
-    {
-      'time': '04 Aug 2026 - 10:15',
-      'user_name': 'Budi Santoso',
-      'role': 'Staf Kantor',
-      'module': 'Master Data',
-      'action': 'Menambahkan Harga Sampah Kategori Plastic PET',
-      'ip_address': '192.168.1.15',
-      'status': 'SUKSES',
-    },
-    {
-      'time': '04 Aug 2026 - 09:50',
-      'user_name': 'System Auto',
-      'role': 'System',
-      'module': 'Operasional',
-      'action': 'Penugasan Otomatis Driver (Driver ID: #DRV-09)',
-      'ip_address': '127.0.0.1',
-      'status': 'SUKSES',
-    },
-    {
-      'time': '04 Aug 2026 - 08:30',
-      'user_name': 'Unknown User',
-      'role': 'Guest',
-      'module': 'Authentication',
-      'action': 'Percobaan Login Gagal (Salah Password 3x)',
-      'ip_address': '180.252.10.4',
-      'status': 'GAGAL',
-    },
-    {
-      'time': '04 Aug 2026 - 08:00',
-      'user_name': 'Siti Aminah',
-      'role': 'Staf Kantor',
-      'module': 'Manajemen Transaksi',
-      'action': 'Menyetujui Pencairan Poin Rp 50.000 (#TX-8821)',
-      'ip_address': '192.168.1.18',
-      'status': 'SUKSES',
-    },
-  ];
+  static final List<Map<String, dynamic>> _webAuditLogs = [];
 
   Future<List<Map<String, dynamic>>> getAuditLogs({
     String? modul,
@@ -1559,6 +1467,7 @@ class DatabaseHelper {
           final currentPts =
               (_webUsers[userIdx]['point_balance'] as num?)?.toInt() ?? 0;
           _webUsers[userIdx]['point_balance'] = currentPts + earnedPoints;
+          await _saveWebUsers();
         }
         return true;
       }

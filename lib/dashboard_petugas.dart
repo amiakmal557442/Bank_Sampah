@@ -1086,9 +1086,9 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(ctx);
-                _showTimbangManualSheet(wasteId: id);
+                await _showTimbangManualSheet(wasteId: id);
               },
               child: const Text('Lanjut Timbang'),
             ),
@@ -1100,7 +1100,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   // ═══════════════════════════════════════════════════════════
   //  FR-PL-05: TIMBANG MANUAL
   // ═══════════════════════════════════════════════════════════
-  void _showTimbangManualSheet({String? wasteId}) {
+  Future<void> _showTimbangManualSheet({String? wasteId}) async {
     if (_currentTask == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tidak ada tugas penjemputan aktif.')),
@@ -1108,40 +1108,24 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       return;
     }
 
-    final items = [
-      ManualWasteItem(
-        name: 'Plastik',
-        pointsPerKg: 100,
-        icon: Icons.local_drink_outlined,
-        isSelected: true,
-        weightKg: 1.0,
-      ),
-      ManualWasteItem(
-        name: 'Kertas',
-        pointsPerKg: 80,
-        icon: Icons.description_outlined,
-      ),
-      ManualWasteItem(
-        name: 'Kardus',
-        pointsPerKg: 70,
-        icon: Icons.inventory_2_outlined,
-      ),
-      ManualWasteItem(
-        name: 'Logam',
-        pointsPerKg: 250,
-        icon: Icons.build_outlined,
-      ),
-      ManualWasteItem(
-        name: 'Kaca',
-        pointsPerKg: 60,
-        icon: Icons.wine_bar_outlined,
-      ),
-      ManualWasteItem(
-        name: 'Minyak Jelantah',
-        pointsPerKg: 150,
-        icon: Icons.opacity_outlined,
-      ),
-    ];
+    final categories = await DatabaseHelper.instance.getWasteCategories();
+    final items = categories
+        .map(
+          (c) => ManualWasteItem(
+            name: c['name'],
+            pointsPerKg: (c['point_per_kg'] as num).toInt(),
+            icon: Icons.recycling_outlined,
+            isSelected: false,
+            weightKg: 1.0,
+          ),
+        )
+        .toList();
+
+    if (items.isNotEmpty) {
+      items[0].isSelected = true;
+    }
+
+    if (!mounted) return;
 
     showModalBottomSheet(
       context: context,

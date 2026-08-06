@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'db_helper.dart';
 import 'api_service.dart';
+import 'session_service.dart';
 
 // ============================================================================
 // Halaman Manajemen Transaksi — Admin Dashboard (Desktop/Web)
@@ -210,6 +211,8 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
   ];
 
   List<Map<String, dynamic>> _dbTransactions = [];
+  Map<int, String> _categoryNamesMap = {};
+  Map<int, int> _categoryPointsMap = {};
   bool _isLoading = true;
 
   @override
@@ -221,6 +224,14 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
 
   Future<void> _loadTransactions() async {
     setState(() => _isLoading = true);
+
+    final dbCategories = await DatabaseHelper.instance.getWasteCategories();
+    for (var c in dbCategories) {
+      final id = (c['id'] as num).toInt();
+      _categoryNamesMap[id] = c['name'].toString();
+      _categoryPointsMap[id] = (c['point_per_kg'] as num).toInt();
+    }
+
     List<Map<String, dynamic>> txs = [];
     try {
       txs = await ApiService.instance.getTransactions();
@@ -249,15 +260,58 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
     BuildContext context,
     Map<String, dynamic> tx,
   ) async {
-    final items = List<Map<String, dynamic>>.from(tx['items'] ?? []);
-    final Map<int, TextEditingController> controllers = {};
-    final Map<int, int> pointsMap = {
-      1: 2000, // Plastik
-      2: 1500, // Kertas
-      3: 3500, // Besi
-      4: 5000, // Elektronik
-    };
+    final dbCategories = await DatabaseHelper.instance.getWasteCategories();
+    final Map<int, int> pointsMap = {};
+    final Map<int, String> namesMap = {};
+    for (var c in dbCategories) {
+      final id = (c['id'] as num).toInt();
+      pointsMap[id] = (c['point_per_kg'] as num).toInt();
+      namesMap[id] = c['name'].toString();
+    }
 
+    List<Map<String, dynamic>> rawItems = List<Map<String, dynamic>>.from(
+      tx['items'] ?? [],
+    );
+
+    if (rawItems.isEmpty) {
+      final dbTxs = await DatabaseHelper.instance.getAllTransactions();
+      final localTx = dbTxs.firstWhere(
+        (t) => t['id'] == tx['id'],
+        orElse: () => {},
+      );
+      if (localTx['items'] != null && (localTx['items'] as List).isNotEmpty) {
+        rawItems = List<Map<String, dynamic>>.from(localTx['items']);
+      }
+    }
+
+    List<Map<String, dynamic>> items = [];
+
+    if (rawItems.isEmpty) {
+      items = dbCategories
+          .map(
+            (c) => {
+              'id': 'TI-${c['id']}',
+              'waste_category_id': c['id'],
+              'category_name': c['name'],
+              'point_per_kg': c['point_per_kg'],
+              'estimated_weight': 0.0,
+            },
+          )
+          .toList();
+    } else {
+      items = rawItems.map((i) {
+        final catId =
+            int.tryParse(i['waste_category_id']?.toString() ?? '1') ?? 1;
+        return {
+          ...i,
+          'category_name':
+              i['category_name'] ?? namesMap[catId] ?? 'Kategori Sampah',
+          'point_per_kg': i['point_per_kg'] ?? pointsMap[catId] ?? 2000,
+        };
+      }).toList();
+    }
+
+    final Map<int, TextEditingController> controllers = {};
     for (int i = 0; i < items.length; i++) {
       double curWeight =
           double.tryParse(items[i]['estimated_weight']?.toString() ?? '0') ??
@@ -282,7 +336,10 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                     items[i]['waste_category_id']?.toString() ?? '1',
                   ) ??
                   1;
-              final rate = pointsMap[catId] ?? 2000;
+              final rate =
+                  pointsMap[catId] ??
+                  (items[i]['point_per_kg'] as num?)?.toInt() ??
+                  2000;
               totalWeight += w;
               totalCalculatedPoints += (w * rate).round();
             }
@@ -357,7 +414,10 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                                   '1',
                             ) ??
                             1;
-                        final rate = pointsMap[catId] ?? 2000;
+                        final rate =
+                            pointsMap[catId] ??
+                            (items[index]['point_per_kg'] as num?)?.toInt() ??
+                            2000;
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12.0),
@@ -468,17 +528,19 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
 
                     try {
                       await ApiService.instance.updateTransaction(tx['id'], {
-                        'status': 'dikonfirmasi',
+                        'status': 'selesai',
                         'total_est_points': totalCalculatedPoints,
                         'total_actual_points': totalCalculatedPoints,
                         'items': updatedItems,
                       });
                     } catch (_) {}
 
-                    await DatabaseHelper.instance.updateTransactionStatus(
+                    await DatabaseHelper.instance.completeTransaction(
                       tx['id'],
-                      'dikonfirmasi',
+                      totalCalculatedPoints,
                     );
+
+                    await SessionService.refresh();
 
                     _loadTransactions();
 
@@ -784,10 +846,32 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                   int.tryParse(tx['total_est_points']?.toString() ?? '0') ?? 0;
 
               if (items.isNotEmpty) {
-                // Mapped logic: usually waste category names are stored, or we just show a generic string since we only have IDs in items table here.
-                kategori = items.length == 1
-                    ? '1 Jenis Sampah'
-                    : '${items.length} Jenis Sampah';
+                final catNames = items
+                    .map((i) {
+                      final cid =
+                          int.tryParse(
+                            i['waste_category_id']?.toString() ?? '0',
+                          ) ??
+                          0;
+                      return _categoryNamesMap[cid] ??
+                          i['category_name']?.toString() ??
+                          '';
+                    })
+                    .where((n) => n.isNotEmpty)
+                    .toList();
+
+                if (catNames.isNotEmpty) {
+                  if (catNames.length <= 2) {
+                    kategori = catNames.join(', ');
+                  } else {
+                    kategori = 'Campur';
+                  }
+                } else {
+                  kategori = items.length == 1
+                      ? '1 Jenis Sampah'
+                      : '${items.length} Jenis Sampah';
+                }
+
                 for (var item in items) {
                   berat +=
                       double.tryParse(

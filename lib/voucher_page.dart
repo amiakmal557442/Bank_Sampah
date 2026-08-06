@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'transaction_service.dart';
+import 'session_service.dart';
+import 'db_helper.dart';
 
 class VoucherItem {
   final String id;
@@ -35,7 +37,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
   @override
   void initState() {
     super.initState();
-    currentPoints = TransactionService.userPoints;
+    currentPoints = SessionService.pointBalance;
   }
 
   final List<VoucherItem> vouchers = const [
@@ -205,19 +207,28 @@ class _VoucherScreenState extends State<VoucherScreen> {
                   borderRadius: BorderRadius.circular(8.0),
                 ),
               ),
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(context).pop();
-                setState(() {
-                  currentPoints -= voucher.points;
-                  TransactionService.userPoints = currentPoints;
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Voucher berhasil ditukar!'),
-                    backgroundColor: Color(0xFF268B07),
-                    behavior: SnackBarBehavior.floating,
-                  ),
+
+                int newPoints = currentPoints - voucher.points;
+                await DatabaseHelper.instance.updateUserPointBalance(
+                  SessionService.userId,
+                  newPoints,
                 );
+                await SessionService.refresh();
+
+                if (mounted) {
+                  setState(() {
+                    currentPoints = newPoints;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Voucher berhasil ditukar!'),
+                      backgroundColor: Color(0xFF268B07),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
               },
               child: const Text(
                 'Ya, Tukar',

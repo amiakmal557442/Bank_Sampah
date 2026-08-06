@@ -68,57 +68,31 @@ class _HalamanTugasState extends State<HalamanTugas> {
   }
 
   // Dialog timbang untuk menyelesaikan tugas dan menambah poin nasabah
-  void _showSelesaikanDialog(Map<String, dynamic> tugas) {
+  Future<void> _showSelesaikanDialog(Map<String, dynamic> tugas) async {
     final txId = (tugas['id_transaksi'] ?? tugas['id'])?.toString() ?? '';
     final namaNasabah =
         (tugas['nama_nasabah'] ?? tugas['nasabah_name'] ?? 'Nasabah')
             .toString();
 
-    // Daftar jenis sampah & poin per kg
-    final List<Map<String, dynamic>> wasteItems = [
-      {
-        'name': 'Plastik',
-        'poin_per_kg': 100,
-        'icon': Icons.local_drink_outlined,
-        'selected': true,
-        'berat': 1.0,
-      },
-      {
-        'name': 'Kertas',
-        'poin_per_kg': 80,
-        'icon': Icons.description_outlined,
-        'selected': false,
-        'berat': 0.5,
-      },
-      {
-        'name': 'Kardus',
-        'poin_per_kg': 70,
-        'icon': Icons.inventory_2_outlined,
-        'selected': false,
-        'berat': 0.5,
-      },
-      {
-        'name': 'Logam',
-        'poin_per_kg': 250,
-        'icon': Icons.build_outlined,
-        'selected': false,
-        'berat': 0.5,
-      },
-      {
-        'name': 'Kaca',
-        'poin_per_kg': 60,
-        'icon': Icons.wine_bar_outlined,
-        'selected': false,
-        'berat': 0.5,
-      },
-      {
-        'name': 'Minyak Jelantah',
-        'poin_per_kg': 150,
-        'icon': Icons.opacity_outlined,
-        'selected': false,
-        'berat': 0.5,
-      },
-    ];
+    // Daftar jenis sampah & poin per kg dari database
+    final categories = await DatabaseHelper.instance.getWasteCategories();
+    final List<Map<String, dynamic>> wasteItems = categories
+        .map(
+          (c) => {
+            'name': c['name'],
+            'poin_per_kg': (c['point_per_kg'] as num).toInt(),
+            'icon': Icons.recycling_outlined,
+            'selected': false,
+            'berat': 1.0,
+          },
+        )
+        .toList();
+
+    if (wasteItems.isNotEmpty) {
+      wasteItems[0]['selected'] = true;
+    }
+
+    if (!mounted) return;
 
     showModalBottomSheet(
       context: context,

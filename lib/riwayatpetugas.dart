@@ -48,56 +48,7 @@ class RiwayatTugasItem {
 }
 
 // Sample data — dikelompokkan per tanggal untuk tampilan harian
-final Map<String, List<RiwayatTugasItem>> sampleRiwayatHarian = {
-  'Hari ini, 1 Agu': [
-    RiwayatTugasItem(
-      namaUser: 'Siti Aminah',
-      jenis: TugasJenis.jemput,
-      kategori: 'Plastik, Kertas',
-      beratAktual: 4.8,
-      poinDihasilkan: 460,
-      waktu: '09.15',
-      status: TugasStatus.selesai,
-    ),
-    RiwayatTugasItem(
-      namaUser: 'Rina Wulandari',
-      jenis: TugasJenis.verifikasiDropIn,
-      kategori: 'Plastik',
-      beratAktual: 1.4,
-      poinDihasilkan: 140,
-      waktu: '08.30',
-      status: TugasStatus.selesai,
-    ),
-  ],
-  'Kemarin, 31 Jul': [
-    RiwayatTugasItem(
-      namaUser: 'Hendra Gunawan',
-      jenis: TugasJenis.jemput,
-      kategori: '-',
-      waktu: '14.00',
-      status: TugasStatus.dibatalkan,
-      alasanBatal: 'Lokasi tidak ditemukan',
-    ),
-    RiwayatTugasItem(
-      namaUser: 'Budi Santoso',
-      jenis: TugasJenis.jemput,
-      kategori: 'Logam',
-      beratAktual: 0.9,
-      poinDihasilkan: 225,
-      waktu: '11.20',
-      status: TugasStatus.selesai,
-    ),
-    RiwayatTugasItem(
-      namaUser: 'Dewi Lestari',
-      jenis: TugasJenis.verifikasiDropIn,
-      kategori: 'Kardus, Kertas',
-      beratAktual: 3.2,
-      poinDihasilkan: 240,
-      waktu: '09.55',
-      status: TugasStatus.selesai,
-    ),
-  ],
-};
+final Map<String, List<RiwayatTugasItem>> sampleRiwayatHarian = {};
 
 class PetugasRiwayatScreen extends StatefulWidget {
   const PetugasRiwayatScreen({super.key});
@@ -273,7 +224,8 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
     );
   }
 
-  Widget _verticalDivider() => Container(width: 0.5, height: 36, color: borderColor);
+  Widget _verticalDivider() =>
+      Container(width: 0.5, height: 36, color: borderColor);
 
   Widget _summaryItem(String value, String label, IconData icon) {
     return Column(
@@ -339,7 +291,9 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
 
   Widget _riwayatCard(RiwayatTugasItem item) {
     final isSelesai = item.status == TugasStatus.selesai;
-    final jenisLabel = item.jenis == TugasJenis.jemput ? 'Jemput' : 'Verifikasi Drop-in';
+    final jenisLabel = item.jenis == TugasJenis.jemput
+        ? 'Jemput'
+        : 'Verifikasi Drop-in';
     final jenisIcon = item.jenis == TugasJenis.jemput
         ? Icons.local_shipping_rounded
         : Icons.qr_code_scanner_rounded;
@@ -358,7 +312,9 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: isSelesai ? const Color(0xFFE8F8E8) : const Color(0xFFF1EFE8),
+              color: isSelesai
+                  ? const Color(0xFFE8F8E8)
+                  : const Color(0xFFF1EFE8),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -411,7 +367,10 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
                 if (!isSelesai && item.alasanBatal != null) ...[
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF1EFE8),
                       borderRadius: BorderRadius.circular(6),
@@ -448,7 +407,9 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isSelesai ? const Color(0xFFE8F8E8) : const Color(0xFFF1EFE8),
+                  color: isSelesai
+                      ? const Color(0xFFE8F8E8)
+                      : const Color(0xFFF1EFE8),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(

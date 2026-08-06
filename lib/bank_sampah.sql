@@ -141,8 +141,7 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`id`, `phone_number`, `email`, `full_name`, `role`, `address`, `default_setor_method`, `point_balance`, `created_at`) VALUES
 ('USR-001', '081234567890', 'admin@banksampah.com', 'Akmal Ahsan', 'admin', 'Kantor Pusat Bank Sampah', NULL, 0, '2026-08-05 10:09:24'),
 ('USR-002', '081987654321', 'tokan@banksampah.com', 'Tokan Shimada', 'petugas', 'Jl. Petugas No. 1', NULL, 0, '2026-08-05 10:09:24'),
-('USR-003', '081112223334', 'budi@gmail.com', 'Budi Santoso', 'nasabah', 'Jl. Mawar Kembar No. 12, Blok C', NULL, 15000, '2026-08-05 10:09:24'),
-('USR-004', '085556667778', 'siti@gmail.com', 'Siti Aminah', 'nasabah', 'Perumahan Hijau Daun, Kav 45', NULL, 5000, '2026-08-05 10:09:24');
+('USR-003', '081112223334', 'budi@gmail.com', 'Budi Santoso', 'nasabah', 'Jl. Mawar Kembar No. 12, Blok C', NULL, 15000, '2026-08-05 10:09:24');
 
 -- --------------------------------------------------------
 

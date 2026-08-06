@@ -610,6 +610,7 @@ class _PickupWasteScreenState extends State<PickupWasteScreen> {
                       items.add({
                         'name': cat['name'],
                         'rate': '${cat['point_per_kg']} poin/kg',
+                        'id': cat['id'],
                       });
                     }
                     Navigator.push(
@@ -1044,8 +1045,7 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                               'id':
                                   'ITI-${DateTime.now().microsecondsSinceEpoch}',
                               'transaction_id': txId,
-                              'waste_category_id':
-                                  0, // Using 0 as mock ID for text categories, normally map this correctly
+                              'waste_category_id': item['id'] ?? 0,
                               'estimated_weight': 0.0,
                               'actual_weight': 0.0,
                               'final_points': 0,

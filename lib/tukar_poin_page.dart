@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'transaction_service.dart';
+import 'session_service.dart';
+import 'db_helper.dart';
 
 // ============================================================================
 // Halaman Tukar Poin ke Saldo
@@ -134,7 +136,7 @@ class TukarPoinScreen extends StatefulWidget {
 }
 
 class _TukarPoinScreenState extends State<TukarPoinScreen> {
-  int get userPoints => TransactionService.userPoints;
+  int get userPoints => SessionService.pointBalance;
   final int minWithdrawalPoints = 1000;
 
   WithdrawalDestination? selectedDestination;
@@ -913,21 +915,28 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      TransactionService.userPoints -= inputPoints;
-                    });
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text(
-                          'Permintaan penukaran poin berhasil diajukan',
-                          style: TextStyle(fontFamily: 'PlusJakartaSans'),
-                        ),
-                        backgroundColor: primaryGreen,
-                        duration: const Duration(seconds: 2),
-                      ),
+                  onTap: () async {
+                    int newPoints = SessionService.pointBalance - inputPoints;
+                    await DatabaseHelper.instance.updateUserPointBalance(
+                      SessionService.userId,
+                      newPoints,
                     );
+                    await SessionService.refresh();
+
+                    if (mounted) {
+                      setState(() {});
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Permintaan penukaran poin berhasil diajukan',
+                            style: TextStyle(fontFamily: 'PlusJakartaSans'),
+                          ),
+                          backgroundColor: primaryGreen,
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),

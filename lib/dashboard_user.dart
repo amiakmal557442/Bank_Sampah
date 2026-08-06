@@ -487,7 +487,7 @@ class _BerandaPageState extends State<BerandaPage> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '≈ Rp ${(TransactionService.userPoints * 10).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} · Min. tarik: 1.000 poin',
+                            '≈ Rp ${(SessionService.pointBalance * 10).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} · Min. tarik: 1.000 poin',
                             style: const TextStyle(
                               fontSize: 12,
                               color: Color(0xFF94A3B8),
