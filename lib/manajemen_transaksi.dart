@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'db_helper.dart';
 import 'api_service.dart';
-import 'session_service.dart';
 
 // ============================================================================
 // Halaman Manajemen Transaksi — Admin Dashboard (Desktop/Web)
@@ -256,310 +254,143 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
     super.dispose();
   }
 
-  Future<void> _showWeighingDialog(
+  Future<void> _showVerifyDialog(
     BuildContext context,
     Map<String, dynamic> tx,
   ) async {
-    final dbCategories = await DatabaseHelper.instance.getWasteCategories();
-    final Map<int, int> pointsMap = {};
-    final Map<int, String> namesMap = {};
-    for (var c in dbCategories) {
-      final id = (c['id'] as num).toInt();
-      pointsMap[id] = (c['point_per_kg'] as num).toInt();
-      namesMap[id] = c['name'].toString();
-    }
-
-    List<Map<String, dynamic>> rawItems = List<Map<String, dynamic>>.from(
-      tx['items'] ?? [],
-    );
-
-    if (rawItems.isEmpty) {
-      final dbTxs = await DatabaseHelper.instance.getAllTransactions();
-      final localTx = dbTxs.firstWhere(
-        (t) => t['id'] == tx['id'],
-        orElse: () => {},
-      );
-      if (localTx['items'] != null && (localTx['items'] as List).isNotEmpty) {
-        rawItems = List<Map<String, dynamic>>.from(localTx['items']);
-      }
-    }
-
-    List<Map<String, dynamic>> items = [];
-
-    if (rawItems.isEmpty) {
-      items = dbCategories
-          .map(
-            (c) => {
-              'id': 'TI-${c['id']}',
-              'waste_category_id': c['id'],
-              'category_name': c['name'],
-              'point_per_kg': c['point_per_kg'],
-              'estimated_weight': 0.0,
-            },
-          )
-          .toList();
-    } else {
-      items = rawItems.map((i) {
-        final catId =
-            int.tryParse(i['waste_category_id']?.toString() ?? '1') ?? 1;
-        return {
-          ...i,
-          'category_name':
-              i['category_name'] ?? namesMap[catId] ?? 'Kategori Sampah',
-          'point_per_kg': i['point_per_kg'] ?? pointsMap[catId] ?? 2000,
-        };
-      }).toList();
-    }
-
-    final Map<int, TextEditingController> controllers = {};
-    for (int i = 0; i < items.length; i++) {
-      double curWeight =
-          double.tryParse(items[i]['estimated_weight']?.toString() ?? '0') ??
-          0.0;
-      controllers[i] = TextEditingController(
-        text: curWeight > 0 ? curWeight.toString() : '',
-      );
-    }
+    final String nasabahName =
+        tx['nasabah_name'] ?? tx['full_name'] ?? 'Nasabah';
+    final String tipeStr =
+        tx['type'] == 'drop_in' ? 'Drop-in Mandiri' : 'Penjemputan';
+    final String waktuStr = tx['pickup_date'] ?? tx['created_at'] ?? '';
 
     await showDialog(
       context: context,
       builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            int totalCalculatedPoints = 0;
-            double totalWeight = 0.0;
-
-            for (int i = 0; i < items.length; i++) {
-              final w = double.tryParse(controllers[i]!.text) ?? 0.0;
-              final catId =
-                  int.tryParse(
-                    items[i]['waste_category_id']?.toString() ?? '1',
-                  ) ??
-                  1;
-              final rate =
-                  pointsMap[catId] ??
-                  (items[i]['point_per_kg'] as num?)?.toInt() ??
-                  2000;
-              totalWeight += w;
-              totalCalculatedPoints += (w * rate).round();
-            }
-
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.verified_user_rounded, color: primaryGreen),
+              SizedBox(width: 10),
+              Text(
+                'Verifikasi Request Setor',
+                style: TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              title: const Row(
-                children: [
-                  Icon(Icons.scale, color: primaryGreen),
-                  SizedBox(width: 10),
-                  Text(
-                    'Input Berat & Verifikasi Setor',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+            ],
+          ),
+          content: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF4F9F4),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
-              ),
-              content: SizedBox(
-                width: 450,
-                child: SingleChildScrollView(
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF4F9F4),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Nasabah: ${tx['nasabah_name'] ?? 'Mulyadi'}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                            Text(
-                              'Tipe: ${tx['type'] == 'drop_in' ? 'Drop-in' : 'Jemput'}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: subtleText,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Masukkan Berat Sampah Hasil Penimbangan (kg):',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: darkText,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      ...List.generate(items.length, (index) {
-                        final catName =
-                            items[index]['category_name'] ?? 'Kategori Sampah';
-                        final catId =
-                            int.tryParse(
-                              items[index]['waste_category_id']?.toString() ??
-                                  '1',
-                            ) ??
-                            1;
-                        final rate =
-                            pointsMap[catId] ??
-                            (items[index]['point_per_kg'] as num?)?.toInt() ??
-                            2000;
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12.0),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      catName,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Poin: $rate / kg',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: subtleText,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                flex: 2,
-                                child: TextField(
-                                  controller: controllers[index],
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
-                                      ),
-                                  decoration: InputDecoration(
-                                    labelText: 'Berat (kg)',
-                                    suffixText: 'kg',
-                                    isDense: true,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  onChanged: (_) {
-                                    setDialogState(() {});
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                      const Divider(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Total Berat: ${totalWeight.toStringAsFixed(1)} kg',
+                            'Nasabah: $nasabahName',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
                           ),
                           Text(
-                            'Total Poin: $totalCalculatedPoints Poin',
+                            'Tipe: $tipeStr',
                             style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: primaryGreen,
+                              fontSize: 12,
+                              color: subtleText,
                             ),
                           ),
                         ],
                       ),
+                      if (waktuStr.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'Waktu: $waktuStr',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: mutedText,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text(
-                    'Batal',
-                    style: TextStyle(color: subtleText),
+                const SizedBox(height: 16),
+                const Text(
+                  'Apakah Anda yakin ingin memverifikasi request ini?\n\n'
+                  'Setelah diverifikasi, request akan diteruskan ke Pekerja/Petugas untuk proses penimbangan berat sampah dan penginputan poin nasabah.',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: darkText,
+                    height: 1.4,
                   ),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryGreen,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  onPressed: () async {
-                    final updatedItems = <Map<String, dynamic>>[];
-                    for (int i = 0; i < items.length; i++) {
-                      final w = double.tryParse(controllers[i]!.text) ?? 0.0;
-                      updatedItems.add({
-                        'id': items[i]['id'],
-                        'waste_category_id': items[i]['waste_category_id'],
-                        'estimated_weight': w,
-                        'actual_weight': w,
-                      });
-                    }
-
-                    Navigator.pop(ctx);
-
-                    try {
-                      await ApiService.instance.updateTransaction(tx['id'], {
-                        'status': 'selesai',
-                        'total_est_points': totalCalculatedPoints,
-                        'total_actual_points': totalCalculatedPoints,
-                        'items': updatedItems,
-                      });
-                    } catch (_) {}
-
-                    await DatabaseHelper.instance.completeTransaction(
-                      tx['id'],
-                      totalCalculatedPoints,
-                    );
-
-                    await SessionService.refresh();
-
-                    _loadTransactions();
-
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Penyetoran ${tx['nasabah_name'] ?? 'Mulyadi'} disetujui! +$totalCalculatedPoints Poin berhasil ditambahkan.',
-                          ),
-                          backgroundColor: primaryGreen,
-                        ),
-                      );
-                    }
-                  },
-                  child: const Text('Simpan & Setujui'),
                 ),
               ],
-            );
-          },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: subtleText),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryGreen,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                const newStatus = 'dikonfirmasi';
+                await DatabaseHelper.instance.updateTransactionStatus(
+                  tx['id'],
+                  newStatus,
+                );
+                try {
+                  await ApiService.instance.updateTransactionStatus(
+                    tx['id'],
+                    newStatus,
+                  );
+                } catch (_) {}
+
+                _loadTransactions();
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Request setor $nasabahName berhasil diverifikasi! Diteruskan ke Pekerja.',
+                      ),
+                      backgroundColor: primaryGreen,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Verifikasi & Setujui'),
+            ),
+          ],
         );
       },
     );
@@ -979,7 +810,7 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                                 _actionButton(
                                   'Setujui',
                                   onTap: () {
-                                    _showWeighingDialog(context, tx);
+                                    _showVerifyDialog(context, tx);
                                   },
                                 ),
                                 const SizedBox(width: 6),

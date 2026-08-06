@@ -376,12 +376,15 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           // 3. Antrean Penjemputan
           _buildSectionHeader(
             'ANTREAN PENJEMPUTAN',
-            trailing: Text(
-              'Lihat Semua',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: oldGrassGreen,
+            trailing: GestureDetector(
+              onTap: () => setState(() => _bottomNavIndex = 1),
+              child: Text(
+                'Lihat Semua',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: oldGrassGreen,
+                ),
               ),
             ),
           ),
@@ -721,8 +724,10 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   // Kartu Antrean
   // ─────────────────────────────────────────────
   Widget _buildQueueTaskCard(PickupTask task) {
-    return Container(
-      margin: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+    return GestureDetector(
+      onTap: () => _showTimbangManualSheet(wasteId: task.wasteId),
+      child: Container(
+        margin: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: baseWhite,
@@ -801,8 +806,9 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildMiniChip(String label) {
     return Container(

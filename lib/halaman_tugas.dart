@@ -293,7 +293,11 @@ class _HalamanTugasState extends State<HalamanTugas> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    '${tugas['alamat'] ?? tugas['nasabah_address'] ?? '-'}',
+                    isDropIn
+                        ? (tugas['drop_point_name'] != null
+                            ? '${tugas['drop_point_name']} — ${tugas['drop_point_address'] ?? ''}'
+                            : (tugas['alamat'] ?? tugas['nasabah_address'] ?? 'Drop Point'))
+                        : (tugas['alamat'] ?? tugas['nasabah_address'] ?? '-'),
                     style: TextStyle(color: Colors.grey.shade700, height: 1.4),
                   ),
                 ),

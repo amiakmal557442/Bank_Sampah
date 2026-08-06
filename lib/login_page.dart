@@ -47,12 +47,16 @@ class _LoginPageState extends State<LoginPage> {
       Map<String, dynamic>? user;
       try {
         user = await ApiService.instance.login(email, password);
-      } catch (_) {
+      } catch (e) {
+        // ignore: avoid_print
+        print('[API Login Error]: $e');
         user = null;
       }
 
       // Fallback ke SQLite lokal jika API tidak tersedia
       if (user == null) {
+        // ignore: avoid_print
+        print('[Login Info]: Menggunakan fallback DatabaseHelper lokal');
         user = await DatabaseHelper.instance.login(email, password);
       }
 
