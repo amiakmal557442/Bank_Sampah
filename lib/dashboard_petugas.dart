@@ -133,17 +133,18 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       // Load Tasks — coba API dulu, fallback ke local DB
       List<Map<String, dynamic>> allTasks = [];
       try {
-        // Ambil semua tugas aktif sekaligus menggunakan parameter statuses
+        // Ambil hanya tugas penjemputan (pickup) untuk Beranda
         allTasks = await ApiService.instance.getPendingTasks(
           petugasId: petugasId,
           statuses: ['dikonfirmasi', 'menuju_lokasi', 'tiba'],
+          type: 'pickup',
         );
       } catch (_) {}
 
       // Fallback ke lokal jika API gagal atau kosong
       if (allTasks.isEmpty) {
         final localTasks = await DatabaseHelper.instance
-            .getPendingPickupTasks();
+            .getPendingPickupTasks(type: 'pickup');
         // Map field lokal ke format yang diharapkan
         allTasks = localTasks.map((t) {
           final weightStr = (t['estimasi_berat'] ?? '0 kg')
@@ -158,9 +159,16 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             'jenis_sampah': t['jenis_sampah'],
             'total_est_weight': double.tryParse(weightStr) ?? 0.0,
             'status': t['status'] ?? 'dikonfirmasi',
+            'type': t['type'] ?? 'pickup',
           };
         }).toList();
       }
+
+      // Pastikan hanya request bertipe 'pickup' yang muncul di Beranda (penjemputan)
+      allTasks = allTasks.where((t) {
+        final type = (t['type'] ?? t['tipe_tugas'] ?? '').toString().toLowerCase();
+        return type == 'pickup' || type == 'jemput';
+      }).toList();
 
       _queue = allTasks.map((t) {
         String rawDate = t['pickup_date'] ?? '';

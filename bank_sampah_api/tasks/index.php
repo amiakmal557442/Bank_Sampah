@@ -6,14 +6,28 @@ $method = $_SERVER['REQUEST_METHOD'];
 if ($method === 'GET') {
     $petugasId = $_GET['petugas_id'] ?? null;
     $statusParam = $_GET['status'] ?? 'dikonfirmasi';
+    $typeParam = $_GET['type'] ?? null;
+
+    $whereClauses = ["FIND_IN_SET(t.status, ?) > 0"];
+    $types = "s";
+    $params = [$statusParam];
 
     if ($petugasId) {
-        $stmt = $conn->prepare("SELECT t.*, u.full_name as nasabah_name, u.phone_number, u.address as nasabah_address, dp.name as drop_point_name, dp.address as drop_point_address, GROUP_CONCAT(DISTINCT wc.name SEPARATOR ', ') as jenis_sampah FROM transactions t JOIN users u ON t.nasabah_id = u.id LEFT JOIN drop_points dp ON t.drop_point_id = dp.id LEFT JOIN transaction_items ti ON t.id = ti.transaction_id LEFT JOIN waste_categories wc ON ti.waste_category_id = wc.id WHERE FIND_IN_SET(t.status, ?) > 0 AND (t.petugas_id = ? OR t.petugas_id IS NULL OR t.petugas_id = '') GROUP BY t.id ORDER BY t.created_at DESC");
-        $stmt->bind_param("ss", $statusParam, $petugasId);
-    } else {
-        $stmt = $conn->prepare("SELECT t.*, u.full_name as nasabah_name, u.phone_number, u.address as nasabah_address, dp.name as drop_point_name, dp.address as drop_point_address, GROUP_CONCAT(DISTINCT wc.name SEPARATOR ', ') as jenis_sampah FROM transactions t JOIN users u ON t.nasabah_id = u.id LEFT JOIN drop_points dp ON t.drop_point_id = dp.id LEFT JOIN transaction_items ti ON t.id = ti.transaction_id LEFT JOIN waste_categories wc ON ti.waste_category_id = wc.id WHERE FIND_IN_SET(t.status, ?) > 0 GROUP BY t.id ORDER BY t.created_at DESC");
-        $stmt->bind_param("s", $statusParam);
+        $whereClauses[] = "(t.petugas_id = ? OR t.petugas_id IS NULL OR t.petugas_id = '')";
+        $types .= "s";
+        $params[] = $petugasId;
     }
+
+    if ($typeParam) {
+        $whereClauses[] = "t.type = ?";
+        $types .= "s";
+        $params[] = $typeParam;
+    }
+
+    $whereSql = implode(" AND ", $whereClauses);
+
+    $stmt = $conn->prepare("SELECT t.*, u.full_name as nasabah_name, u.phone_number, u.address as nasabah_address, dp.name as drop_point_name, dp.address as drop_point_address, GROUP_CONCAT(DISTINCT wc.name SEPARATOR ', ') as jenis_sampah FROM transactions t JOIN users u ON t.nasabah_id = u.id LEFT JOIN drop_points dp ON t.drop_point_id = dp.id LEFT JOIN transaction_items ti ON t.id = ti.transaction_id LEFT JOIN waste_categories wc ON ti.waste_category_id = wc.id WHERE $whereSql GROUP BY t.id ORDER BY t.created_at DESC");
+    $stmt->bind_param($types, ...$params);
 
     $stmt->execute();
     $result = $stmt->get_result();

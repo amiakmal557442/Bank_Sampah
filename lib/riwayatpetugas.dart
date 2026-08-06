@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
+import 'api_service.dart';
+import 'db_helper.dart';
 import 'session_service.dart';
 
 // ============================================================================
-// Halaman Riwayat — Aplikasi Mobile Petugas/Pekerja Lapangan
-// Berdasarkan SRS:
-//   FR-PL-04 — Menampilkan riwayat tugas harian & mingguan petugas.
-//   FR-PL-03 — Status tugas: diterima → menuju lokasi → tiba →
-//              selesai/dibatalkan (dua status akhir yang muncul di riwayat)
-//
-// Asumsi platform: mobile (Android/iOS), konsisten dengan
-// petugas_profil_page.dart yang sudah dibuat sebelumnya.
+// Halaman Riwayat — Mobile Dashboard Petugas / Pekerja Lapangan
+// Menampilkan rincian riwayat tugas yang sudah diterima dan diselesaikan
+// (Drop-in Mandiri maupun Jemput Sampah) beserta rincian user, jenis sampah,
+// berat aktual, dan poin yang dihasilkan.
 // ============================================================================
 
 const Color primaryGreen = Color(0xFF268B07);
@@ -19,36 +17,6 @@ const Color darkText = Color(0xFF0F172A);
 const Color subtleText = Color(0xFF64748B);
 const Color mutedText = Color(0xFF94A3B8);
 const Color borderColor = Color(0xFFE2E8F0);
-const Color secondaryDarkText = Color(0xFF334155);
-
-enum TugasJenis { jemput, verifikasiDropIn }
-
-enum TugasStatus { selesai, dibatalkan }
-
-class RiwayatTugasItem {
-  final String namaUser;
-  final TugasJenis jenis;
-  final String kategori;
-  final double? beratAktual;
-  final int? poinDihasilkan;
-  final String waktu;
-  final TugasStatus status;
-  final String? alasanBatal;
-
-  RiwayatTugasItem({
-    required this.namaUser,
-    required this.jenis,
-    required this.kategori,
-    this.beratAktual,
-    this.poinDihasilkan,
-    required this.waktu,
-    required this.status,
-    this.alasanBatal,
-  });
-}
-
-// Sample data — dikelompokkan per tanggal untuk tampilan harian
-final Map<String, List<RiwayatTugasItem>> sampleRiwayatHarian = {};
 
 class PetugasRiwayatScreen extends StatefulWidget {
   const PetugasRiwayatScreen({super.key});
@@ -59,20 +27,99 @@ class PetugasRiwayatScreen extends StatefulWidget {
 
 class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
   bool isMingguan = false; // false = Harian, true = Mingguan
+  bool _isLoading = true;
+
+  List<Map<String, dynamic>> _allTransactions = [];
+  Map<int, String> _categoryMap = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+
+    // 1. Ambil kategori sampah untuk mapping ID -> Nama Kategori
+    try {
+      final cats = await DatabaseHelper.instance.getWasteCategories();
+      final Map<int, String> map = {};
+      for (var c in cats) {
+        final catId = (c['id'] as num).toInt();
+        map[catId] = c['name'].toString();
+      }
+      _categoryMap = map;
+    } catch (_) {}
+
+    // 2. Ambil riwayat dari API
+    List<Map<String, dynamic>> list = [];
+    try {
+      final petugasId = SessionService.currentUser?['id'] as String?;
+      list = await ApiService.instance.getTransactions(
+        status: 'selesai,dibatalkan,terverifikasi',
+        petugasId: petugasId,
+      );
+    } catch (_) {}
+
+    // 3. Fallback ke database lokal jika API kosong
+    if (list.isEmpty) {
+      try {
+        final allLocal = await DatabaseHelper.instance.getAllTransactions();
+        list = allLocal.where((tx) {
+          final s = (tx['status'] ?? '').toString().toLowerCase();
+          return s == 'selesai' || s == 'dibatalkan' || s == 'terverifikasi';
+        }).toList();
+      } catch (_) {}
+    }
+
+    if (mounted) {
+      setState(() {
+        _allTransactions = list;
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Filter transaksi berdasarkan periode terpilih (Harian = Hari Ini, Mingguan = 7 hari terakhir)
+  List<Map<String, dynamic>> get _filteredTransactions {
+    final now = DateTime.now();
+    final list = _allTransactions.where((tx) {
+      final dateStr = (tx['created_at'] ?? tx['pickup_date'] ?? '').toString();
+      DateTime dt = DateTime.now();
+      if (dateStr.isNotEmpty && !dateStr.startsWith('0000')) {
+        try {
+          dt = DateTime.parse(dateStr);
+        } catch (_) {}
+      }
+
+      if (isMingguan) {
+        final diff = now.difference(dt).inDays;
+        return diff >= 0 && diff <= 7;
+      } else {
+        return dt.year == now.year && dt.month == now.month && dt.day == now.day;
+      }
+    }).toList();
+
+    // Jika filter spesifik kosong tetapi ada riwayat transaksi, fallback tampilkan semua agar tidak kosong
+    if (list.isEmpty && _allTransactions.isNotEmpty) {
+      return _allTransactions;
+    }
+
+    return list;
+  }
 
   int get _totalSelesai {
-    int count = 0;
-    for (var list in sampleRiwayatHarian.values) {
-      count += list.where((t) => t.status == TugasStatus.selesai).length;
-    }
-    return count;
+    return _filteredTransactions
+        .where((t) => (t['status'] ?? '').toString().toLowerCase() == 'selesai')
+        .length;
   }
 
   double get _totalBerat {
     double total = 0;
-    for (var list in sampleRiwayatHarian.values) {
-      for (var t in list) {
-        if (t.beratAktual != null) total += t.beratAktual!;
+    for (var tx in _filteredTransactions) {
+      if ((tx['status'] ?? '').toString().toLowerCase() == 'selesai') {
+        total += _extractTotalWeight(tx);
       }
     }
     return total;
@@ -80,22 +127,102 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
 
   int get _totalPoin {
     int total = 0;
-    for (var list in sampleRiwayatHarian.values) {
-      for (var t in list) {
-        if (t.poinDihasilkan != null) total += t.poinDihasilkan!;
+    for (var tx in _filteredTransactions) {
+      if ((tx['status'] ?? '').toString().toLowerCase() == 'selesai') {
+        final pts = (tx['total_actual_points'] ?? tx['total_est_points'] ?? 0) as num;
+        total += pts.toInt();
       }
     }
     return total;
   }
 
+  double _extractTotalWeight(Map<String, dynamic> tx) {
+    final items = List<Map<String, dynamic>>.from(tx['items'] ?? []);
+    double sum = 0.0;
+    for (var item in items) {
+      final w = double.tryParse(
+            (item['actual_weight'] ?? item['estimated_weight'] ?? '0')
+                .toString(),
+          ) ??
+          0.0;
+      sum += w;
+    }
+    if (sum == 0.0) {
+      final estStr = (tx['estimasi_berat'] ?? tx['total_est_weight'] ?? '0')
+          .toString()
+          .replaceAll(' kg', '');
+      sum = double.tryParse(estStr) ?? 0.0;
+    }
+    return sum;
+  }
+
+  String _extractCategoryString(Map<String, dynamic> tx) {
+    final items = List<Map<String, dynamic>>.from(tx['items'] ?? []);
+    List<String> names = [];
+    for (var item in items) {
+      String? catName = item['category_name']?.toString() ?? item['name']?.toString();
+      if (catName == null || catName.isEmpty) {
+        final catId = int.tryParse(
+          (item['waste_category_id'] ?? item['id'] ?? '0').toString(),
+        );
+        if (catId != null && _categoryMap.containsKey(catId)) {
+          catName = _categoryMap[catId];
+        }
+      }
+      if (catName != null && catName.isNotEmpty && !names.contains(catName)) {
+        names.add(catName);
+      }
+    }
+
+    if (names.isEmpty && tx['jenis_sampah'] != null && tx['jenis_sampah'].toString().isNotEmpty) {
+      return tx['jenis_sampah'].toString();
+    }
+    return names.isNotEmpty ? names.join(', ') : 'Sampah Daur Ulang';
+  }
+
+  String _formatDateTime(dynamic dateStr) {
+    if (dateStr == null) return 'Hari ini';
+    final str = dateStr.toString().trim();
+    if (str.isEmpty || str.startsWith('0000')) return 'Hari ini';
+    try {
+      final dt = DateTime.parse(str);
+      final now = DateTime.now();
+      final isToday = dt.year == now.year && dt.month == now.month && dt.day == now.day;
+      final months = [
+        '',
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'Mei',
+        'Jun',
+        'Jul',
+        'Agt',
+        'Sep',
+        'Okt',
+        'Nov',
+        'Des'
+      ];
+      final days = ['', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+      final timeStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+
+      if (isToday) {
+        return 'Hari ini • $timeStr';
+      }
+      return '${days[dt.weekday]}, ${dt.day} ${months[dt.month]} ${dt.year} • $timeStr';
+    } catch (_) {
+      return str;
+    }
+  }
+
   // ------------------------------------------------------------------------
-  // HEADER (konsisten dengan halaman Profil petugas)
+  // HEADER
   // ------------------------------------------------------------------------
 
   Widget _buildHeader() {
     final String petugasName = SessionService.fullName.isNotEmpty
         ? SessionService.fullName
-        : 'Dedi Kurniawan';
+        : 'Petugas Lapangan';
 
     return Container(
       width: double.infinity,
@@ -113,19 +240,16 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
           const Text(
             'Riwayat Tugas',
             style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
           const SizedBox(height: 2),
           Text(
-            '$petugasName · ID PL-2201',
+            '$petugasName · Petugas Lapangan',
             style: const TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 11.5,
-              fontWeight: FontWeight.w400,
+              fontSize: 12,
               color: Colors.white70,
             ),
           ),
@@ -162,8 +286,7 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
         child: Text(
           label,
           style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 12.5,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
             color: active ? primaryGreen : Colors.white,
           ),
@@ -173,12 +296,12 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
   }
 
   // ------------------------------------------------------------------------
-  // SUMMARY STATS (periode terpilih)
+  // SUMMARY STATS
   // ------------------------------------------------------------------------
 
   Widget _buildSummaryStats() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
@@ -230,14 +353,13 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
   Widget _summaryItem(String value, String label, IconData icon) {
     return Column(
       children: [
-        Icon(icon, size: 16, color: primaryGreen),
+        Icon(icon, size: 18, color: primaryGreen),
         const SizedBox(height: 6),
         Text(
           value,
           style: const TextStyle(
-            fontFamily: 'PlusJakartaSans',
             fontSize: 14,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.bold,
             color: darkText,
           ),
         ),
@@ -245,8 +367,7 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
         Text(
           label,
           style: const TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 9.5,
+            fontSize: 10,
             fontWeight: FontWeight.w500,
             color: mutedText,
           ),
@@ -257,174 +378,239 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
   }
 
   // ------------------------------------------------------------------------
-  // LIST RIWAYAT (dikelompokkan per tanggal)
+  // LIST RIWAYAT CARD
   // ------------------------------------------------------------------------
 
   Widget _buildRiwayatList() {
-    return Column(
-      children: sampleRiwayatHarian.entries.map((entry) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    final list = _filteredTransactions;
+    if (list.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor),
+        ),
+        child: Center(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 2, bottom: 8, top: 8),
-                child: Text(
-                  entry.key.toUpperCase(),
-                  style: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                    color: subtleText,
-                    letterSpacing: 0.4,
-                  ),
+              Icon(Icons.history_toggle_off_rounded, size: 48, color: Colors.grey[400]),
+              const SizedBox(height: 12),
+              const Text(
+                'Belum Ada Riwayat Tugas',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: darkText,
                 ),
               ),
-              ...entry.value.map((item) => _riwayatCard(item)),
+              const SizedBox(height: 4),
+              Text(
+                'Tugas yang selesai atau dibatalkan akan muncul di sini.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
             ],
           ),
-        );
-      }).toList(),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: list.length,
+      itemBuilder: (context, index) {
+        return _buildRiwayatCard(list[index]);
+      },
     );
   }
 
-  Widget _riwayatCard(RiwayatTugasItem item) {
-    final isSelesai = item.status == TugasStatus.selesai;
-    final jenisLabel = item.jenis == TugasJenis.jemput
-        ? 'Jemput'
-        : 'Verifikasi Drop-in';
-    final jenisIcon = item.jenis == TugasJenis.jemput
-        ? Icons.local_shipping_rounded
-        : Icons.qr_code_scanner_rounded;
+  Widget _buildRiwayatCard(Map<String, dynamic> tx) {
+    final String typeRaw = (tx['type'] ?? tx['tipe_tugas'] ?? '').toString().toLowerCase();
+    final bool isDropIn = typeRaw == 'drop_in' || typeRaw == 'drop-in';
+    final String tipeLabel = isDropIn ? 'Drop-in Mandiri' : 'Jemput Sampah';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor, width: 0.5),
+    final Color badgeBg = isDropIn ? const Color(0xFFF3E8FF) : const Color(0xFFE8F5E9);
+    final Color badgeTextColor = isDropIn ? const Color(0xFF7E22CE) : primaryGreen;
+    final IconData tipeIcon = isDropIn ? Icons.store_rounded : Icons.local_shipping_rounded;
+
+    final String statusStr = (tx['status'] ?? 'selesai').toString().toLowerCase();
+    final bool isSelesai = statusStr == 'selesai' || statusStr == 'terverifikasi';
+
+    final String namaUser = (tx['nasabah_name'] ?? tx['full_name'] ?? 'Nasabah').toString();
+    final String kategoriStr = _extractCategoryString(tx);
+    final double beratKg = _extractTotalWeight(tx);
+    final int poin = ((tx['total_actual_points'] ?? tx['total_est_points'] ?? 0) as num).toInt();
+    final String waktuStr = _formatDateTime(tx['created_at'] ?? tx['pickup_date']);
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: borderColor, width: 0.8),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: isSelesai
-                  ? const Color(0xFFE8F8E8)
-                  : const Color(0xFFF1EFE8),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              jenisIcon,
-              size: 17,
-              color: isSelesai ? primaryGreen : const Color(0xFF5F5E5A),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Baris Header: Tipe Request + Badge & Waktu
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        item.namaUser,
-                        style: const TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          color: darkText,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: badgeBg,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(tipeIcon, size: 14, color: badgeTextColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        tipeLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: badgeTextColor,
                         ),
                       ),
-                    ),
-                    Text(
-                      item.waktu,
-                      style: const TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w400,
-                        color: mutedText,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 3),
                 Text(
-                  isSelesai
-                      ? '$jenisLabel · ${item.kategori} · ${item.beratAktual} kg'
-                      : '$jenisLabel · Dibatalkan',
+                  waktuStr,
                   style: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
                     fontSize: 11,
-                    fontWeight: FontWeight.w400,
-                    color: subtleText,
+                    color: mutedText,
                   ),
                 ),
-                if (!isSelesai && item.alasanBatal != null) ...[
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1EFE8),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      item.alasanBatal!,
-                      style: const TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF5F5E5A),
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (isSelesai && item.poinDihasilkan != null)
+
+            const SizedBox(height: 10),
+
+            // Baris User Siapa Yang Melakukan Request
+            Row(
+              children: [
+                const Icon(Icons.person_outline_rounded, size: 16, color: subtleText),
+                const SizedBox(width: 6),
                 Text(
-                  '+${item.poinDihasilkan} poin',
-                  style: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                    color: primaryGreen,
+                  'User: ',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                Expanded(
+                  child: Text(
+                    namaUser,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: darkText,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: isSelesai
-                      ? const Color(0xFFE8F8E8)
-                      : const Color(0xFFF1EFE8),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  isSelesai ? 'Selesai' : 'Dibatalkan',
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w600,
-                    color: isSelesai ? primaryGreen : const Color(0xFF5F5E5A),
-                  ),
-                ),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            // Container Rincian Sampah (Jenis + Berat + Poin)
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: pageBackground,
+                borderRadius: BorderRadius.circular(10),
               ),
-            ],
-          ),
-        ],
+              child: Row(
+                children: [
+                  const Icon(Icons.recycling_rounded, size: 20, color: primaryGreen),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          kategoriStr,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: darkText,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Berat: ${beratKg.toStringAsFixed(1)} kg',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: subtleText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (isSelesai) ...[
+                        Text(
+                          '+$poin poin',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: primaryGreen,
+                          ),
+                        ),
+                      ] else ...[
+                        const Text(
+                          '0 poin',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: mutedText,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // Baris Status Pengerjaan (Selesai / Dibatalkan)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'ID: ${tx['id'] ?? '-'}',
+                  style: const TextStyle(fontSize: 11, color: mutedText),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isSelesai ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    isSelesai ? 'Selesai' : 'Dibatalkan',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: isSelesai ? primaryGreen : Colors.red.shade700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -433,20 +619,24 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: pageBackground,
-      body: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              _buildSummaryStats(),
-              _buildRiwayatList(),
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: primaryGreen))
+          : RefreshIndicator(
+              onRefresh: _loadData,
+              color: primaryGreen,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(),
+                    _buildSummaryStats(),
+                    _buildRiwayatList(),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 }

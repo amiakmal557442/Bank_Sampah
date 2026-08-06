@@ -285,11 +285,13 @@ class ApiService {
   Future<List<Map<String, dynamic>>> getPendingTasks({
     String? petugasId,
     List<String> statuses = const ['dikonfirmasi', 'menuju_lokasi', 'tiba'],
+    String? type,
   }) async {
     final params = <String, String>{
       'status': statuses.join(','),
     };
     if (petugasId != null) params['petugas_id'] = petugasId;
+    if (type != null && type.isNotEmpty) params['type'] = type;
     final res = await _get('tasks/index.php', params: params);
     if (res['success'] == true) {
       return List<Map<String, dynamic>>.from(res['data'] ?? []);

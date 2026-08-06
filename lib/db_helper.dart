@@ -1493,13 +1493,15 @@ class DatabaseHelper {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getPendingPickupTasks() async {
+  Future<List<Map<String, dynamic>>> getPendingPickupTasks({String? type}) async {
     if (kIsWeb) {
-      // Tampilkan tugas pickup DAN drop_in yang sudah dikonfirmasi admin
+      // Tampilkan tugas pickup DAN/atau drop_in yang sudah dikonfirmasi admin
       final pendingTxs = _webTransactions
           .where(
             (tx) =>
-                (tx['type'] == 'pickup' || tx['type'] == 'drop_in') &&
+                (type != null
+                    ? tx['type'] == type
+                    : (tx['type'] == 'pickup' || tx['type'] == 'drop_in')) &&
                 (tx['status'] == 'dikonfirmasi' ||
                     tx['status'] == 'menuju_lokasi' ||
                     tx['status'] == 'tiba'),
@@ -1554,6 +1556,7 @@ class DatabaseHelper {
               ? 'Belum diisi'
               : categories.join(', '),
           'status': tx['status'],
+          'type': tx['type'],
           'tipe_tugas': tx['type'] == 'drop_in' ? 'Drop-in' : 'Jemput',
           'jarak': tx['type'] == 'drop_in' ? 'Di drop point' : 'Menghitung...',
         });
@@ -1564,7 +1567,8 @@ class DatabaseHelper {
     final db = await instance.database;
     if (db == null) return [];
 
-    // Ambil tugas pickup DAN drop_in yang sudah dikonfirmasi admin
+    // Ambil tugas pickup DAN/atau drop_in yang sudah dikonfirmasi admin
+    final String typeClause = type != null ? "t.type = '$type'" : "t.type IN ('pickup', 'drop_in')";
     final List<Map<String, dynamic>> txs = await db.rawQuery('''
       SELECT 
         t.id, t.type, t.status,
@@ -1573,7 +1577,7 @@ class DatabaseHelper {
       FROM transactions t 
       LEFT JOIN users u ON t.nasabah_id = u.id
       LEFT JOIN drop_points dp ON t.drop_point_id = dp.id
-      WHERE t.type IN ('pickup', 'drop_in')
+      WHERE $typeClause
         AND t.status IN ('dikonfirmasi', 'menuju_lokasi', 'tiba')
       ORDER BY t.created_at DESC
     ''');
@@ -1619,6 +1623,7 @@ class DatabaseHelper {
             ? 'Belum diisi'
             : categories.join(', '),
         'status': tx['status'],
+        'type': tx['type'],
         'tipe_tugas': isDropIn ? 'Drop-in' : 'Jemput',
         'jarak': isDropIn ? 'Di drop point' : 'Menghitung...',
       });

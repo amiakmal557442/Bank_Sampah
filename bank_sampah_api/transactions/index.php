@@ -32,7 +32,11 @@ if ($method === 'GET') {
     $types = '';
 
     if ($status) {
-        $where[] = "t.status = ?";
+        if (strpos($status, ',') !== false) {
+            $where[] = "FIND_IN_SET(t.status, ?) > 0";
+        } else {
+            $where[] = "t.status = ?";
+        }
         $types .= 's';
         $params[] = $status;
     }
@@ -42,7 +46,7 @@ if ($method === 'GET') {
         $params[] = $nasabahId;
     }
     if ($petugasId) {
-        $where[] = "t.petugas_id = ?";
+        $where[] = "(t.petugas_id = ? OR t.petugas_id IS NULL OR t.petugas_id = '')";
         $types .= 's';
         $params[] = $petugasId;
     }
