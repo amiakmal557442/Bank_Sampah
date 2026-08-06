@@ -78,21 +78,35 @@ class _HalamanTugasState extends State<HalamanTugas> {
         (tugas['nama_nasabah'] ?? tugas['nasabah_name'] ?? 'Nasabah')
             .toString();
 
+    // Extract kategori yang dipilih nasabah dari API/database
+    final String selectedJenis = (tugas['jenis_sampah'] ?? '').toString();
+    final List<Map<String, dynamic>> rawItems =
+        List<Map<String, dynamic>>.from(tugas['items'] ?? []);
+    final Set<int> selectedCategoryIds = rawItems
+        .map(
+          (i) => int.tryParse(i['waste_category_id']?.toString() ?? '0') ?? 0,
+        )
+        .where((id) => id > 0)
+        .toSet();
+
     // Daftar jenis sampah & poin per kg dari database
     final categories = await DatabaseHelper.instance.getWasteCategories();
-    final List<Map<String, dynamic>> wasteItems = categories
-        .map(
-          (c) => {
-            'name': c['name'],
-            'poin_per_kg': (c['point_per_kg'] as num).toInt(),
-            'icon': Icons.recycling_outlined,
-            'selected': false,
-            'berat': 1.0,
-          },
-        )
-        .toList();
+    final List<Map<String, dynamic>> wasteItems = categories.map((c) {
+      final catId = (c['id'] as num).toInt();
+      final catName = c['name'].toString();
+      final bool isSelectedByUser = selectedCategoryIds.contains(catId) ||
+          selectedJenis.toLowerCase().contains(catName.toLowerCase());
 
-    if (wasteItems.isNotEmpty) {
+      return {
+        'name': catName,
+        'poin_per_kg': (c['point_per_kg'] as num).toInt(),
+        'icon': Icons.recycling_outlined,
+        'selected': isSelectedByUser,
+        'berat': 1.0,
+      };
+    }).toList();
+
+    if (!wasteItems.any((e) => e['selected'] == true) && wasteItems.isNotEmpty) {
       wasteItems[0]['selected'] = true;
     }
 
