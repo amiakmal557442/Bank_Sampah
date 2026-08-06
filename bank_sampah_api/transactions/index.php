@@ -154,6 +154,11 @@ if ($method === 'PUT') {
         $types .= 'i';
         $values[] = (int)$data['total_actual_points'];
     }
+    if (isset($data['total_est_points'])) {
+        $updates[] = "total_est_points = ?";
+        $types .= 'i';
+        $values[] = (int)$data['total_est_points'];
+    }
 
     if (!empty($updates)) {
         $sql = "UPDATE transactions SET " . implode(', ', $updates) . " WHERE id = ?";
@@ -163,6 +168,45 @@ if ($method === 'PUT') {
         $stmt = $conn->prepare($sql);
         $stmt->bind_param($types, ...$values);
         $stmt->execute();
+    }
+
+    // Process items & weight updates
+    if (!empty($data['items']) && is_array($data['items'])) {
+        $calculatedPoints = 0;
+        foreach ($data['items'] as $item) {
+            $itemId = $item['id'] ?? null;
+            $weight = (float)($item['estimated_weight'] ?? $item['actual_weight'] ?? 0);
+            $catId = (int)($item['waste_category_id'] ?? 1);
+
+            $catRes = $conn->query("SELECT point_per_kg FROM waste_categories WHERE id = $catId");
+            $pointPerKg = 2000;
+            if ($catRow = $catRes->fetch_assoc()) {
+                $pointPerKg = (int)$catRow['point_per_kg'];
+            }
+            $itemPoints = (int)round($weight * $pointPerKg);
+            $calculatedPoints += $itemPoints;
+
+            if ($itemId) {
+                $itemStmt = $conn->prepare("UPDATE transaction_items SET estimated_weight = ?, actual_weight = ?, final_points = ? WHERE id = ?");
+                $itemStmt->bind_param("ddis", $weight, $weight, $itemPoints, $itemId);
+                $itemStmt->execute();
+            }
+        }
+        if ($calculatedPoints > 0) {
+            $conn->query("UPDATE transactions SET total_est_points = $calculatedPoints, total_actual_points = $calculatedPoints WHERE id = '$id'");
+        }
+    }
+
+    // Update user point_balance if status becomes dikonfirmasi/terverifikasi/selesai
+    if (isset($data['status']) && in_array($data['status'], ['dikonfirmasi', 'selesai', 'terverifikasi'])) {
+        $txRes = $conn->query("SELECT nasabah_id, total_est_points, total_actual_points FROM transactions WHERE id = '$id'");
+        if ($txRow = $txRes->fetch_assoc()) {
+            $points = $txRow['total_actual_points'] > 0 ? (int)$txRow['total_actual_points'] : (int)$txRow['total_est_points'];
+            $nasabahId = $txRow['nasabah_id'];
+            if ($points > 0 && !empty($nasabahId)) {
+                $conn->query("UPDATE users SET point_balance = point_balance + $points WHERE id = '$nasabahId'");
+            }
+        }
     }
 
     echo json_encode(['success' => true, 'message' => 'Transaksi berhasil diperbarui']);

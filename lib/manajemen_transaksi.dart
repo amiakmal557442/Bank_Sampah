@@ -222,20 +222,14 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
   Future<void> _loadTransactions() async {
     setState(() => _isLoading = true);
     List<Map<String, dynamic>> txs = [];
-    if (kIsWeb) {
-      // Pada web, selalu gunakan database in-memory lokal agar update status
-      // langsung tercermin tanpa bergantung pada API.
+    try {
+      txs = await ApiService.instance.getTransactions();
+    } catch (_) {
+      txs = [];
+    }
+    // Jika API gagal/kosong, fallback ke database lokal
+    if (txs.isEmpty) {
       txs = await DatabaseHelper.instance.getAllTransactions();
-    } else {
-      try {
-        txs = await ApiService.instance.getTransactions();
-      } catch (_) {
-        txs = await DatabaseHelper.instance.getAllTransactions();
-      }
-      // Jika API kosong, fallback ke lokal
-      if (txs.isEmpty) {
-        txs = await DatabaseHelper.instance.getAllTransactions();
-      }
     }
 
     if (!mounted) return;
@@ -249,6 +243,264 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _showWeighingDialog(
+    BuildContext context,
+    Map<String, dynamic> tx,
+  ) async {
+    final items = List<Map<String, dynamic>>.from(tx['items'] ?? []);
+    final Map<int, TextEditingController> controllers = {};
+    final Map<int, int> pointsMap = {
+      1: 2000, // Plastik
+      2: 1500, // Kertas
+      3: 3500, // Besi
+      4: 5000, // Elektronik
+    };
+
+    for (int i = 0; i < items.length; i++) {
+      double curWeight =
+          double.tryParse(items[i]['estimated_weight']?.toString() ?? '0') ??
+          0.0;
+      controllers[i] = TextEditingController(
+        text: curWeight > 0 ? curWeight.toString() : '',
+      );
+    }
+
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            int totalCalculatedPoints = 0;
+            double totalWeight = 0.0;
+
+            for (int i = 0; i < items.length; i++) {
+              final w = double.tryParse(controllers[i]!.text) ?? 0.0;
+              final catId =
+                  int.tryParse(
+                    items[i]['waste_category_id']?.toString() ?? '1',
+                  ) ??
+                  1;
+              final rate = pointsMap[catId] ?? 2000;
+              totalWeight += w;
+              totalCalculatedPoints += (w * rate).round();
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Row(
+                children: [
+                  Icon(Icons.scale, color: primaryGreen),
+                  SizedBox(width: 10),
+                  Text(
+                    'Input Berat & Verifikasi Setor',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 450,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF4F9F4),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Nasabah: ${tx['nasabah_name'] ?? 'Mulyadi'}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              'Tipe: ${tx['type'] == 'drop_in' ? 'Drop-in' : 'Jemput'}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: subtleText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Masukkan Berat Sampah Hasil Penimbangan (kg):',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: darkText,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      ...List.generate(items.length, (index) {
+                        final catName =
+                            items[index]['category_name'] ?? 'Kategori Sampah';
+                        final catId =
+                            int.tryParse(
+                              items[index]['waste_category_id']?.toString() ??
+                                  '1',
+                            ) ??
+                            1;
+                        final rate = pointsMap[catId] ?? 2000;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      catName,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Poin: $rate / kg',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: subtleText,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 2,
+                                child: TextField(
+                                  controller: controllers[index],
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                      ),
+                                  decoration: InputDecoration(
+                                    labelText: 'Berat (kg)',
+                                    suffixText: 'kg',
+                                    isDense: true,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  onChanged: (_) {
+                                    setDialogState(() {});
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                      const Divider(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Total Berat: ${totalWeight.toStringAsFixed(1)} kg',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Text(
+                            'Total Poin: $totalCalculatedPoints Poin',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: primaryGreen,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text(
+                    'Batal',
+                    style: TextStyle(color: subtleText),
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryGreen,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: () async {
+                    final updatedItems = <Map<String, dynamic>>[];
+                    for (int i = 0; i < items.length; i++) {
+                      final w = double.tryParse(controllers[i]!.text) ?? 0.0;
+                      updatedItems.add({
+                        'id': items[i]['id'],
+                        'waste_category_id': items[i]['waste_category_id'],
+                        'estimated_weight': w,
+                        'actual_weight': w,
+                      });
+                    }
+
+                    Navigator.pop(ctx);
+
+                    try {
+                      await ApiService.instance.updateTransaction(tx['id'], {
+                        'status': 'dikonfirmasi',
+                        'total_est_points': totalCalculatedPoints,
+                        'total_actual_points': totalCalculatedPoints,
+                        'items': updatedItems,
+                      });
+                    } catch (_) {}
+
+                    await DatabaseHelper.instance.updateTransactionStatus(
+                      tx['id'],
+                      'dikonfirmasi',
+                    );
+
+                    _loadTransactions();
+
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Penyetoran ${tx['nasabah_name'] ?? 'Mulyadi'} disetujui! +$totalCalculatedPoints Poin berhasil ditambahkan.',
+                          ),
+                          backgroundColor: primaryGreen,
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Simpan & Setujui'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   // ------------------------------------------------------------------------
@@ -642,36 +894,8 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                               children: [
                                 _actionButton(
                                   'Setujui',
-                                  onTap: () async {
-                                    // 'dikonfirmasi' adalah nilai ENUM valid di MySQL
-                                    const newStatus = 'dikonfirmasi';
-                                    // Selalu update lokal (in-memory) terlebih dahulu
-                                    await DatabaseHelper.instance
-                                        .updateTransactionStatus(
-                                          tx['id'],
-                                          newStatus,
-                                        );
-                                    // Coba sync ke API (tidak diblokir jika gagal)
-                                    try {
-                                      await ApiService.instance
-                                          .updateTransactionStatus(
-                                            tx['id'],
-                                            newStatus,
-                                          );
-                                    } catch (_) {}
-                                    _loadTransactions();
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Transaksi disetujui & diteruskan ke petugas',
-                                          ),
-                                          backgroundColor: primaryGreen,
-                                        ),
-                                      );
-                                    }
+                                  onTap: () {
+                                    _showWeighingDialog(context, tx);
                                   },
                                 ),
                                 const SizedBox(width: 6),
