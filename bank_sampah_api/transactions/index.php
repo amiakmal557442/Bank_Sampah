@@ -180,7 +180,7 @@ if ($method === 'PUT') {
         $calculatedPoints = 0;
         foreach ($data['items'] as $item) {
             $itemId = $item['id'] ?? null;
-            $weight = (float)($item['estimated_weight'] ?? $item['actual_weight'] ?? 0);
+            $weight = (float)($item['actual_weight'] ?? $item['estimated_weight'] ?? 0);
             $catId = (int)($item['waste_category_id'] ?? 1);
 
             $catRes = $conn->query("SELECT point_per_kg FROM waste_categories WHERE id = $catId");
