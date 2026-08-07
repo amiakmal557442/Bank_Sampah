@@ -17,6 +17,7 @@ class PickupTask {
   final List<String> wasteTypes;
   final double estWeightKg;
   String status; // 'menuju', 'tiba', 'selesai'
+  final String type;
 
   PickupTask({
     required this.wasteId,
@@ -26,6 +27,7 @@ class PickupTask {
     required this.wasteTypes,
     required this.estWeightKg,
     this.status = 'menuju',
+    this.type = 'pickup',
   });
 }
 
@@ -50,6 +52,7 @@ class WorkerDropPoint {
 // Model Kategori Sampah (untuk Timbang Manual)
 // ============================================================
 class ManualWasteItem {
+  final int id;
   final String name;
   final int pointsPerKg;
   final IconData icon;
@@ -57,6 +60,7 @@ class ManualWasteItem {
   double weightKg;
 
   ManualWasteItem({
+    required this.id,
     required this.name,
     required this.pointsPerKg,
     required this.icon,
@@ -137,14 +141,13 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
         allTasks = await ApiService.instance.getPendingTasks(
           petugasId: petugasId,
           statuses: ['dikonfirmasi', 'menuju_lokasi', 'tiba'],
-          type: 'pickup',
         );
       } catch (_) {}
 
       // Fallback ke lokal jika API gagal atau kosong
       if (allTasks.isEmpty) {
         final localTasks = await DatabaseHelper.instance
-            .getPendingPickupTasks(type: 'pickup');
+            .getPendingPickupTasks();
         // Map field lokal ke format yang diharapkan
         allTasks = localTasks.map((t) {
           final weightStr = (t['estimasi_berat'] ?? '0 kg')
@@ -164,25 +167,36 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
         }).toList();
       }
 
-      // Pastikan hanya request bertipe 'pickup' yang muncul di Beranda (penjemputan)
-      allTasks = allTasks.where((t) {
-        final type = (t['type'] ?? t['tipe_tugas'] ?? '').toString().toLowerCase();
-        return type == 'pickup' || type == 'jemput';
-      }).toList();
+      // Hapus filter pickup agar tugas drop_in juga muncul
 
       _queue = allTasks.map((t) {
         String rawDate = t['pickup_date'] ?? '';
         if (rawDate.isEmpty || rawDate.startsWith('0000')) {
           rawDate = t['created_at'] ?? '';
         }
-        
+
         String formattedTime = 'Hari ini';
         if (rawDate.isNotEmpty && !rawDate.startsWith('0000')) {
           try {
             final dt = DateTime.parse(rawDate);
-            final months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+            final months = [
+              '',
+              'Jan',
+              'Feb',
+              'Mar',
+              'Apr',
+              'Mei',
+              'Jun',
+              'Jul',
+              'Agt',
+              'Sep',
+              'Okt',
+              'Nov',
+              'Des',
+            ];
             final days = ['', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-            formattedTime = '${days[dt.weekday]}, ${dt.day} ${months[dt.month]} ${dt.year}';
+            formattedTime =
+                '${days[dt.weekday]}, ${dt.day} ${months[dt.month]} ${dt.year}';
           } catch (_) {
             formattedTime = rawDate;
           }
@@ -204,6 +218,9 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
               ? (t['total_est_weight'] as num).toDouble()
               : double.tryParse(t['total_est_weight'].toString()) ?? 0.0,
           status: t['status']?.toString() ?? 'dikonfirmasi',
+          type: (t['type'] ?? t['tipe_tugas'] ?? 'pickup')
+              .toString()
+              .toLowerCase(),
         );
       }).toList();
 
@@ -718,52 +735,77 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           // Tombol aksi
           Row(
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: oldGrassGreen,
-                    side: const BorderSide(color: oldGrassGreen),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+              if (task.type == 'drop_in' || task.type == 'drop-in')
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: oldGrassGreen,
+                      foregroundColor: baseWhite,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 2,
+                    ),
+                    onPressed: () =>
+                        _showTimbangManualSheet(wasteId: task.wasteId),
+                    child: const Text(
+                      'Terima & Timbang',
+                      style: TextStyle(fontSize: 13),
                     ),
                   ),
-                  onPressed: _launchMaps,
-                  icon: const Icon(Icons.map_rounded, size: 16),
-                  label: const Text('Arahkan', style: TextStyle(fontSize: 13)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: oldGrassGreen,
-                    foregroundColor: baseWhite,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                )
+              else ...[
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: oldGrassGreen,
+                      side: const BorderSide(color: oldGrassGreen),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
-                    elevation: 2,
-                  ),
-                  onPressed: () {
-                    if (task.status == 'tiba') {
-                      _showTimbangManualSheet(wasteId: task.wasteId);
-                    } else if (task.status == 'menuju_lokasi') {
-                      _showTibaDialogForCurrentTask();
-                    } else {
-                      _updateStatusMenujuForCurrentTask();
-                    }
-                  },
-                  child: Text(
-                    task.status == 'tiba'
-                        ? 'Timbang'
-                        : (task.status == 'menuju_lokasi'
-                              ? 'Tiba di Lokasi'
-                              : 'Jemput'),
-                    style: const TextStyle(fontSize: 13),
+                    onPressed: _launchMaps,
+                    icon: const Icon(Icons.map_rounded, size: 16),
+                    label: const Text(
+                      'Arahkan',
+                      style: TextStyle(fontSize: 13),
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: oldGrassGreen,
+                      foregroundColor: baseWhite,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 2,
+                    ),
+                    onPressed: () {
+                      if (task.status == 'tiba') {
+                        _showTimbangManualSheet(wasteId: task.wasteId);
+                      } else if (task.status == 'menuju_lokasi') {
+                        _showTibaDialogForCurrentTask();
+                      } else {
+                        _updateStatusMenujuForCurrentTask();
+                      }
+                    },
+                    child: Text(
+                      task.status == 'tiba'
+                          ? 'Timbang'
+                          : (task.status == 'menuju_lokasi'
+                                ? 'Tiba di Lokasi'
+                                : 'Jemput'),
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ],
@@ -1173,6 +1215,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     final items = categories
         .map(
           (c) => ManualWasteItem(
+            id: c['id'] as int? ?? 0,
             name: c['name'],
             pointsPerKg: (c['point_per_kg'] as num).toInt(),
             icon: Icons.recycling_outlined,
@@ -1769,6 +1812,21 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
     final totalPoints = _totalPoints;
     final customerName = widget.customerName;
     final wasteId = widget.wasteId;
+
+    int _counter = 0;
+    final selectedItems = _items.where((e) => e.isSelected).map((e) {
+      _counter++;
+      return {
+        'id': 'ITI-${DateTime.now().microsecondsSinceEpoch}-$_counter',
+        'transaction_id': wasteId,
+        'waste_category_id': e.id,
+        'name': e.name,
+        'estimated_weight': 0.0,
+        'actual_weight': e.weightKg,
+        'final_points': (e.weightKg * e.pointsPerKg).toInt(),
+      };
+    }).toList();
+
     Navigator.pop(context);
 
     // 1. Update ke API (jika ada koneksi)
@@ -1776,11 +1834,16 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
       await ApiService.instance.updateTransaction(wasteId, {
         'status': 'selesai',
         'total_actual_points': totalPoints,
+        'items': selectedItems,
       });
     } catch (_) {}
 
     // 2. Selalu update lokal (in-memory / SQLite) — ini yang mengubah saldo poin user
-    await DatabaseHelper.instance.completeTransaction(wasteId, totalPoints);
+    await DatabaseHelper.instance.completeTransaction(
+      wasteId,
+      totalPoints,
+      items: selectedItems,
+    );
 
     // 3. Refresh session agar saldo poin terbaru tersedia di UI
     await SessionService.refresh();

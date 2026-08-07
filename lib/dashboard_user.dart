@@ -349,446 +349,441 @@ class _BerandaPageState extends State<BerandaPage> {
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             children: [
-            // --- HEADER ATAS & KARTU POIN ---
-            SizedBox(
-              height: 290,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // Background Hijau dengan Lengkungan Atas
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.only(
-                      top: 50,
-                      left: 20,
-                      right: 20,
-                      bottom: 70,
-                    ),
-                    decoration: BoxDecoration(
-                      color: primaryGreen,
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(28),
-                        bottomRight: Radius.circular(28),
+              // --- HEADER ATAS & KARTU POIN ---
+              SizedBox(
+                height: 290,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Background Hijau dengan Lengkungan Atas
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.only(
+                        top: 50,
+                        left: 20,
+                        right: 20,
+                        bottom: 70,
                       ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Selamat pagi,',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              SessionService.fullName,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        // Tombol Notifikasi
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              const Icon(
-                                Icons.notifications_none_rounded,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                              Positioned(
-                                top: 10,
-                                right: 11,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFFFD600),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Kartu Poin Saya
-                  Positioned(
-                    left: 20,
-                    right: 20,
-                    top: 115,
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                        color: primaryGreen,
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(28),
+                          bottomRight: Radius.circular(28),
+                        ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          const Text(
-                            'Poin saya',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF64748B),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                SessionService.pointBalance
-                                    .toString()
-                                    .replaceAllMapped(
-                                      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                                      (Match m) => '${m[1]}.',
-                                    ),
-                                style: const TextStyle(
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
                               const Text(
-                                'poin',
+                                'Selamat pagi,',
                                 style: TextStyle(
+                                  color: Colors.white70,
                                   fontSize: 14,
-                                  color: Color(0xFF64748B),
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
+                              const SizedBox(height: 2),
+                              Text(
+                                SessionService.fullName,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ],
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '≈ Rp ${(SessionService.pointBalance * 10).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} · Min. tarik: 1.000 poin',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF94A3B8),
+                          // Tombol Notifikasi
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              shape: BoxShape.circle,
                             ),
-                          ),
-                          const SizedBox(height: 18),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () async {
-                                    await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const TukarPoinScreen(),
-                                      ),
-                                    );
-                                    setState(() {});
-                                  },
-                                  icon: const Icon(
-                                    Icons.swap_horiz_rounded,
-                                    size: 18,
-                                    color: Colors.white,
-                                  ),
-                                  label: const Text(
-                                    'Tukar poin',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: primaryGreen,
-                                    elevation: 0,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.notifications_none_rounded,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                                Positioned(
+                                  top: 10,
+                                  right: 11,
+                                  child: Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFFFD600),
+                                      shape: BoxShape.circle,
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () async {
-                                    await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const VoucherScreen(),
-                                      ),
-                                    );
-                                    setState(() {});
-                                  },
-                                  icon: Icon(
-                                    Icons.card_giftcard_outlined,
-                                    size: 18,
-                                    color: const Color(0xFF334155),
-                                  ),
-                                  label: const Text(
-                                    'Voucher',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: Color(0xFF334155),
-                                    ),
-                                  ),
-                                  style: OutlinedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    side: const BorderSide(
-                                      color: Color(0xFFE2E8F0),
-                                      width: 1.5,
-                                    ),
-                                    elevation: 0,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
 
-            const SizedBox(height: 140),
-
-            // --- SEKSI 1: SETOR SAMPAH ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'SETOR SAMPAH',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.8,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      // Card 1: Drop-in Mandiri
-                      Expanded(
-                        child: _buildActionCard(
-                          icon: Icons.add_location_alt_outlined,
-                          title: 'Drop-in mandiri',
-                          description: 'Cari & antar ke drop point terdekat',
-                          onTap: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const DropInMandiriScreen(),
-                              ),
-                            );
-                            setState(() {});
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      // Card 2: Jemput Sampah
-                      Expanded(
-                        child: _buildActionCard(
-                          icon: Icons.local_shipping_outlined,
-                          title: 'Jemput sampah',
-                          description: 'Request ke rumah atau kantor',
-                          onTap: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const PickupScheduleScreen(),
-                              ),
-                            );
-                            setState(() {});
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 28),
-
-            // --- SEKSI 2: TRANSAKSI TERAKHIR ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'TRANSAKSI TERAKHIR',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.8,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SemuaTransaksiPage(),
+                    // Kartu Poin Saya
+                    Positioned(
+                      left: 20,
+                      right: 20,
+                      top: 115,
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.06),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
                             ),
-                          );
-                        },
-                        child: Text(
-                          'Lihat semua',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: primaryGreen,
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Poin saya',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF64748B),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(
+                                  SessionService.pointBalance
+                                      .toString()
+                                      .replaceAllMapped(
+                                        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+                                        (Match m) => '${m[1]}.',
+                                      ),
+                                  style: const TextStyle(
+                                    fontSize: 30,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Text(
+                                  'poin',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF64748B),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '≈ Rp ${(SessionService.pointBalance * 10).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} · Min. tarik: 1.000 poin',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF94A3B8),
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () async {
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const TukarPoinScreen(),
+                                        ),
+                                      );
+                                      setState(() {});
+                                    },
+                                    icon: const Icon(
+                                      Icons.swap_horiz_rounded,
+                                      size: 18,
+                                      color: Colors.white,
+                                    ),
+                                    label: const Text(
+                                      'Tukar poin',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: primaryGreen,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () async {
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const VoucherScreen(),
+                                        ),
+                                      );
+                                      setState(() {});
+                                    },
+                                    icon: Icon(
+                                      Icons.card_giftcard_outlined,
+                                      size: 18,
+                                      color: const Color(0xFF334155),
+                                    ),
+                                    label: const Text(
+                                      'Voucher',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: Color(0xFF334155),
+                                      ),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      side: const BorderSide(
+                                        color: Color(0xFFE2E8F0),
+                                        width: 1.5,
+                                      ),
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 140),
+
+              // --- SEKSI 1: SETOR SAMPAH ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'SETOR SAMPAH',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        // Card 1: Drop-in Mandiri
+                        Expanded(
+                          child: _buildActionCard(
+                            icon: Icons.add_location_alt_outlined,
+                            title: 'Drop-in mandiri',
+                            description: 'Cari & antar ke drop point terdekat',
+                            onTap: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const DropInMandiriScreen(),
+                                ),
+                              );
+                              setState(() {});
+                            },
                           ),
                         ),
+                        const SizedBox(width: 14),
+                        // Card 2: Jemput Sampah
+                        Expanded(
+                          child: _buildActionCard(
+                            icon: Icons.local_shipping_outlined,
+                            title: 'Jemput sampah',
+                            description: 'Request ke rumah atau kantor',
+                            onTap: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const PickupScheduleScreen(),
+                                ),
+                              );
+                              setState(() {});
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // --- SEKSI 2: TRANSAKSI TERAKHIR ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'TRANSAKSI TERAKHIR',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.8,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const SemuaTransaksiPage(),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            'Lihat semua',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: primaryGreen,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    ...TransactionService.transactions.map((tx) {
+                      return Column(
+                        children: [
+                          _buildTransactionItem(context: context, tx: tx),
+                          const SizedBox(height: 10),
+                        ],
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // --- SEKSI 3: DAMPAK LINGKUNGAN SAYA ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'DAMPAK LINGKUNGAN SAYA',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                        color: Color(0xFF64748B),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  ...TransactionService.transactions.map((tx) {
-                    return Column(
-                      children: [
-                        _buildTransactionItem(
-                          icon: tx.icon,
-                          title: tx.title,
-                          subtitle: tx.subtitle,
-                          points: tx.points,
-                          status: tx.status,
-                        ),
-                        const SizedBox(height: 10),
-                      ],
-                    );
-                  }).toList(),
-                ],
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildImpactMetric(
+                            value: TransactionService.totalWasteKg
+                                .toStringAsFixed(1)
+                                .replaceAll('.', ','),
+                            unit: 'kg',
+                            label: 'Total sampah\ndisetor',
+                          ),
+                          Container(
+                            height: 40,
+                            width: 1,
+                            color: const Color(0xFFE2E8F0),
+                          ),
+                          _buildImpactMetric(
+                            value: TransactionService.co2Reduced
+                                .toStringAsFixed(1)
+                                .replaceAll('.', ','),
+                            unit: 'kg CO₂',
+                            label: 'Emisi dikurangi',
+                          ),
+                          Container(
+                            height: 40,
+                            width: 1,
+                            color: const Color(0xFFE2E8F0),
+                          ),
+                          _buildImpactMetric(
+                            value: TransactionService.treesSaved.toString(),
+                            unit: 'pohon',
+                            label: 'Setara pohon\nterselamatkan',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
 
-            const SizedBox(height: 28),
-
-            // --- SEKSI 3: DAMPAK LINGKUNGAN SAYA ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'DAMPAK LINGKUNGAN SAYA',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.8,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 20,
-                      horizontal: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildImpactMetric(
-                          value: TransactionService.totalWasteKg
-                              .toStringAsFixed(1)
-                              .replaceAll('.', ','),
-                          unit: 'kg',
-                          label: 'Total sampah\ndisetor',
-                        ),
-                        Container(
-                          height: 40,
-                          width: 1,
-                          color: const Color(0xFFE2E8F0),
-                        ),
-                        _buildImpactMetric(
-                          value: TransactionService.co2Reduced
-                              .toStringAsFixed(1)
-                              .replaceAll('.', ','),
-                          unit: 'kg CO₂',
-                          label: 'Emisi dikurangi',
-                        ),
-                        Container(
-                          height: 40,
-                          width: 1,
-                          color: const Color(0xFFE2E8F0),
-                        ),
-                        _buildImpactMetric(
-                          value: TransactionService.treesSaved.toString(),
-                          unit: 'pohon',
-                          label: 'Setara pohon\nterselamatkan',
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 30),
-          ],
+              const SizedBox(height: 30),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -858,93 +853,198 @@ class _BerandaPageState extends State<BerandaPage> {
 
   // Widget Pembantu Item Transaksi
   Widget _buildTransactionItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String points,
-    required String status,
+    required BuildContext context,
+    required TransactionModel tx,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F5E9),
-              borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: () {
+        // Show dialog with transaction details
+        showDialog(
+          context: context,
+          builder: (ctx) {
+            String jenisSampah = 'N/A';
+            if (tx.rawItems.isNotEmpty) {
+              jenisSampah = tx.rawItems
+                  .map((e) {
+                    String? n =
+                        (e['category_name'] ?? e['name'] ?? e['waste_name'])
+                            as String?;
+                    if (n == null || n.isEmpty) {
+                      final catId = e['waste_category_id']?.toString();
+                      if (catId == '1')
+                        n = 'Plastik';
+                      else if (catId == '2')
+                        n = 'Kertas & Kardus';
+                      else if (catId == '3')
+                        n = 'Besi & Logam';
+                      else if (catId == '4')
+                        n = 'Elektronik Bekas';
+                      else
+                        n = 'Sampah';
+                    }
+                    return n;
+                  })
+                  .join(', ');
+            } else if (tx.title.contains('-')) {
+              // Extract from title if rawItems is somehow empty but title has it
+              final parts = tx.title.split('-');
+              if (parts.length > 1) {
+                jenisSampah = parts.last.trim();
+              }
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text(
+                'Detail Transaksi',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _detailRow('Jenis sampah', jenisSampah),
+                  const SizedBox(height: 8),
+                  _detailRow(
+                    'Jumlah berat sampah',
+                    '${tx.totalBerat.toStringAsFixed(1).replaceAll('.', ',')} kg',
+                  ),
+                  const SizedBox(height: 8),
+                  _detailRow('Jumlah poin', tx.points),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text(
+                    'Tutup',
+                    style: TextStyle(
+                      color: Color(0xFF268B07),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
-            child: Icon(icon, color: const Color(0xFF268B07), size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F5E9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(tx.icon, color: const Color(0xFF268B07), size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tx.title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    tx.subtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  title,
+                  tx.points,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A),
+                    color: Color(0xFF268B07),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF64748B),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    tx.status,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF166534),
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                points,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF268B07),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  status,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF166534),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 140,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+          ),
+        ),
+        const Text(
+          ': ',
+          style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1093,87 +1193,193 @@ class _SemuaTransaksiPageState extends State<SemuaTransaksiPage> {
         ? const Color(0xFFDC2626)
         : const Color(0xFF166534);
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: iconBg,
-              borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (ctx) {
+            String jenisSampah = 'N/A';
+            if (tx.rawItems.isNotEmpty) {
+              jenisSampah = tx.rawItems
+                  .map((e) {
+                    String? n =
+                        (e['category_name'] ?? e['name'] ?? e['waste_name'])
+                            as String?;
+                    if (n == null || n.isEmpty) {
+                      final catId = e['waste_category_id']?.toString();
+                      if (catId == '1')
+                        n = 'Plastik';
+                      else if (catId == '2')
+                        n = 'Kertas & Kardus';
+                      else if (catId == '3')
+                        n = 'Besi & Logam';
+                      else if (catId == '4')
+                        n = 'Elektronik Bekas';
+                      else
+                        n = 'Sampah';
+                    }
+                    return n;
+                  })
+                  .join(', ');
+            } else if (tx.title.contains('-')) {
+              final parts = tx.title.split('-');
+              if (parts.length > 1) {
+                jenisSampah = parts.last.trim();
+              }
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text(
+                'Detail Transaksi',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _detailRow('Jenis sampah', jenisSampah),
+                  const SizedBox(height: 8),
+                  _detailRow(
+                    'Jumlah berat sampah',
+                    '${tx.totalBerat.toStringAsFixed(1).replaceAll('.', ',')} kg',
+                  ),
+                  const SizedBox(height: 8),
+                  _detailRow('Jumlah poin', tx.points),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text(
+                    'Tutup',
+                    style: TextStyle(
+                      color: Color(0xFF268B07),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            child: Icon(tx.icon, color: iconColor, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(tx.icon, color: iconColor, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tx.title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    tx.subtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  tx.title,
-                  style: const TextStyle(
-                    fontSize: 14,
+                  tx.points,
+                  style: TextStyle(
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A),
+                    color: pointsColor,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  tx.subtitle,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF64748B),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: badgeBg,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    tx.status,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: badgeText,
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                tx.points,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: pointsColor,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: badgeBg,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  tx.status,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: badgeText,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 140,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+          ),
+        ),
+        const Text(
+          ': ',
+          style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1326,295 +1532,277 @@ class _RiwayatPageState extends State<RiwayatPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            // --- HEADER RIWAYAT ---
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.only(
-                top: 50,
-                left: 20,
-                right: 20,
-                bottom: 20,
-              ),
-              decoration: BoxDecoration(
-                color: primaryGreen,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
+              // --- HEADER RIWAYAT ---
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.only(
+                  top: 50,
+                  left: 20,
+                  right: 20,
+                  bottom: 20,
                 ),
-              ),
-              child: const Text(
-                'Riwayat',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // --- FILTER 1: JENIS TRANSAKSI ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'JENIS TRANSAKSI',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.8,
-                      color: Color(0xFF64748B),
-                    ),
+                decoration: BoxDecoration(
+                  color: primaryGreen,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(24),
+                    bottomRight: Radius.circular(24),
                   ),
-                  const SizedBox(height: 8),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
+                ),
+                child: const Text(
+                  'Riwayat',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // --- FILTER 1: JENIS TRANSAKSI ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'JENIS TRANSAKSI',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildFilterChip(
+                            label: 'Semua',
+                            isSelected: _selectedJenis == 'Semua',
+                            onTap: () =>
+                                setState(() => _selectedJenis = 'Semua'),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildFilterChip(
+                            label: 'Setor sampah',
+                            isSelected: _selectedJenis == 'Setor sampah',
+                            onTap: () => setState(() {
+                              _selectedJenis =
+                                  (_selectedJenis == 'Setor sampah')
+                                  ? 'Semua'
+                                  : 'Setor sampah';
+                            }),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildFilterChip(
+                            label: 'Poin dan saldo',
+                            isSelected: _selectedJenis == 'Poin dan saldo',
+                            onTap: () => setState(() {
+                              _selectedJenis =
+                                  (_selectedJenis == 'Poin dan saldo')
+                                  ? 'Semua'
+                                  : 'Poin dan saldo';
+                            }),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // --- FILTER 2: STATUS ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'STATUS',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
                       children: [
                         _buildFilterChip(
                           label: 'Semua',
-                          isSelected: _selectedJenis == 'Semua',
-                          onTap: () => setState(() => _selectedJenis = 'Semua'),
+                          isSelected: _selectedStatus == 'Semua',
+                          onTap: () =>
+                              setState(() => _selectedStatus = 'Semua'),
                         ),
                         const SizedBox(width: 8),
                         _buildFilterChip(
-                          label: 'Setor sampah',
-                          isSelected: _selectedJenis == 'Setor sampah',
+                          label: 'Selesai',
+                          isSelected: _selectedStatus == 'Selesai',
                           onTap: () => setState(() {
-                            _selectedJenis = (_selectedJenis == 'Setor sampah')
+                            _selectedStatus = (_selectedStatus == 'Selesai')
                                 ? 'Semua'
-                                : 'Setor sampah';
+                                : 'Selesai';
                           }),
                         ),
                         const SizedBox(width: 8),
                         _buildFilterChip(
-                          label: 'Poin dan saldo',
-                          isSelected: _selectedJenis == 'Poin dan saldo',
+                          label: 'Gagal',
+                          isSelected: _selectedStatus == 'Gagal',
                           onTap: () => setState(() {
-                            _selectedJenis =
-                                (_selectedJenis == 'Poin dan saldo')
+                            _selectedStatus = (_selectedStatus == 'Gagal')
                                 ? 'Semua'
-                                : 'Poin dan saldo';
+                                : 'Gagal';
                           }),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-            // --- FILTER 2: STATUS ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'STATUS',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.8,
-                      color: Color(0xFF64748B),
+              if (isAllEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 40,
+                    horizontal: 20,
+                  ),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.search_off_rounded,
+                          size: 60,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Tidak ada riwayat transaksi',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tidak ditemukan transaksi dengan filter yang dipilih',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _buildFilterChip(
-                        label: 'Semua',
-                        isSelected: _selectedStatus == 'Semua',
-                        onTap: () => setState(() => _selectedStatus = 'Semua'),
-                      ),
-                      const SizedBox(width: 8),
-                      _buildFilterChip(
-                        label: 'Selesai',
-                        isSelected: _selectedStatus == 'Selesai',
-                        onTap: () => setState(() {
-                          _selectedStatus = (_selectedStatus == 'Selesai')
-                              ? 'Semua'
-                              : 'Selesai';
-                        }),
-                      ),
-                      const SizedBox(width: 8),
-                      _buildFilterChip(
-                        label: 'Gagal',
-                        isSelected: _selectedStatus == 'Gagal',
-                        onTap: () => setState(() {
-                          _selectedStatus = (_selectedStatus == 'Gagal')
-                              ? 'Semua'
-                              : 'Gagal';
-                        }),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            if (isAllEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 40,
-                  horizontal: 20,
                 ),
-                child: Center(
+
+              // --- SEKSI: HARI INI ---
+              if (filteredHariIni.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.search_off_rounded,
-                        size: 60,
-                        color: Colors.grey.shade400,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Tidak ada riwayat transaksi',
+                      const Text(
+                        'HARI INI',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: Colors.grey.shade600,
+                          letterSpacing: 0.8,
+                          color: Color(0xFF64748B),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Tidak ditemukan transaksi dengan filter yang dipilih',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade500,
-                        ),
-                      ),
+                      const SizedBox(height: 10),
+                      ...filteredHariIni.map((tx) {
+                        return Column(
+                          children: [
+                            _buildRiwayatItem(context: context, tx: tx),
+                            const SizedBox(height: 10),
+                          ],
+                        );
+                      }),
                     ],
                   ),
                 ),
-              ),
 
-            // --- SEKSI: HARI INI ---
-            if (filteredHariIni.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'HARI INI',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.8,
-                        color: Color(0xFF64748B),
+              if (filteredHariIni.isNotEmpty &&
+                  (filteredKemarin.isNotEmpty || filtered22Juli.isNotEmpty))
+                const SizedBox(height: 20),
+
+              // --- SEKSI: KEMARIN ---
+              if (filteredKemarin.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'KEMARIN',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                          color: Color(0xFF64748B),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    ...filteredHariIni.map((tx) {
-                      return Column(
-                        children: [
-                          _buildRiwayatItem(
-                            icon: tx.icon,
-                            title: tx.title,
-                            subtitle: tx.subtitle,
-                            valueText: tx.points,
-                            statusText: tx.status,
-                            isFailed: tx.isFailed,
-                          ),
-                          const SizedBox(height: 10),
-                        ],
-                      );
-                    }),
-                  ],
+                      const SizedBox(height: 10),
+                      ...filteredKemarin.map((tx) {
+                        return Column(
+                          children: [
+                            _buildRiwayatItem(context: context, tx: tx),
+                            const SizedBox(height: 10),
+                          ],
+                        );
+                      }),
+                    ],
+                  ),
                 ),
-              ),
 
-            if (filteredHariIni.isNotEmpty &&
-                (filteredKemarin.isNotEmpty || filtered22Juli.isNotEmpty))
-              const SizedBox(height: 20),
+              if (filteredKemarin.isNotEmpty && filtered22Juli.isNotEmpty)
+                const SizedBox(height: 20),
 
-            // --- SEKSI: KEMARIN ---
-            if (filteredKemarin.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'KEMARIN',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.8,
-                        color: Color(0xFF64748B),
+              // --- SEKSI: 22 JULI 2026 ---
+              if (filtered22Juli.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '22 JULI 2026',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                          color: Color(0xFF64748B),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    ...filteredKemarin.map((tx) {
-                      return Column(
-                        children: [
-                          _buildRiwayatItem(
-                            icon: tx.icon,
-                            title: tx.title,
-                            subtitle: tx.subtitle,
-                            valueText: tx.points,
-                            statusText: tx.status,
-                            isFailed: tx.isFailed,
-                          ),
-                          const SizedBox(height: 10),
-                        ],
-                      );
-                    }),
-                  ],
+                      const SizedBox(height: 10),
+                      ...filtered22Juli.map((tx) {
+                        return Column(
+                          children: [
+                            _buildRiwayatItem(context: context, tx: tx),
+                            const SizedBox(height: 10),
+                          ],
+                        );
+                      }),
+                    ],
+                  ),
                 ),
-              ),
 
-            if (filteredKemarin.isNotEmpty && filtered22Juli.isNotEmpty)
-              const SizedBox(height: 20),
-
-            // --- SEKSI: 22 JULI 2026 ---
-            if (filtered22Juli.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '22 JULI 2026',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.8,
-                        color: Color(0xFF64748B),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    ...filtered22Juli.map((tx) {
-                      return Column(
-                        children: [
-                          _buildRiwayatItem(
-                            icon: tx.icon,
-                            title: tx.title,
-                            subtitle: tx.subtitle,
-                            valueText: tx.points,
-                            statusText: tx.status,
-                            isFailed: tx.isFailed,
-                          ),
-                          const SizedBox(height: 10),
-                        ],
-                      );
-                    }),
-                  ],
-                ),
-              ),
-
-            const SizedBox(height: 30),
-          ],
+              const SizedBox(height: 30),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -1651,106 +1839,209 @@ class _RiwayatPageState extends State<RiwayatPage> {
 
   // Widget Pembantu Item Riwayat Transaksi
   Widget _buildRiwayatItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String valueText,
-    required String statusText,
-    required bool isFailed,
+    required BuildContext context,
+    required TransactionModel tx,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: isFailed
-                  ? const Color(0xFFF1F5F9)
-                  : const Color(0xFFE8F5E9),
-              borderRadius: BorderRadius.circular(12),
+    final isFailed = tx.isFailed;
+    return GestureDetector(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (ctx) {
+            String jenisSampah = 'N/A';
+            if (tx.rawItems.isNotEmpty) {
+              jenisSampah = tx.rawItems
+                  .map((e) {
+                    String? n =
+                        (e['category_name'] ?? e['name'] ?? e['waste_name'])
+                            as String?;
+                    if (n == null || n.isEmpty) {
+                      final catId = e['waste_category_id']?.toString();
+                      if (catId == '1')
+                        n = 'Plastik';
+                      else if (catId == '2')
+                        n = 'Kertas & Kardus';
+                      else if (catId == '3')
+                        n = 'Besi & Logam';
+                      else if (catId == '4')
+                        n = 'Elektronik Bekas';
+                      else
+                        n = 'Sampah';
+                    }
+                    return n;
+                  })
+                  .join(', ');
+            } else if (tx.title.contains('-')) {
+              final parts = tx.title.split('-');
+              if (parts.length > 1) {
+                jenisSampah = parts.last.trim();
+              }
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text(
+                'Detail Transaksi',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _detailRow('Jenis sampah', jenisSampah),
+                  const SizedBox(height: 8),
+                  _detailRow(
+                    'Jumlah berat sampah',
+                    '${tx.totalBerat.toStringAsFixed(1).replaceAll('.', ',')} kg',
+                  ),
+                  const SizedBox(height: 8),
+                  _detailRow('Jumlah poin', tx.points),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text(
+                    'Tutup',
+                    style: TextStyle(
+                      color: Color(0xFF268B07),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
-            child: Icon(
-              icon,
-              color: isFailed ? const Color(0xFF64748B) : primaryGreen,
-              size: 22,
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isFailed
+                    ? const Color(0xFFF1F5F9)
+                    : const Color(0xFFE8F5E9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                tx.icon,
+                color: isFailed ? const Color(0xFF64748B) : primaryGreen,
+                size: 22,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tx.title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    tx.subtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
+                  tx.points,
+                  style: TextStyle(
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A),
+                    color: isFailed ? const Color(0xFF475569) : primaryGreen,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF64748B),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  decoration: BoxDecoration(
+                    color: isFailed
+                        ? const Color(0xFFF1F5F9)
+                        : const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    tx.status,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: isFailed
+                          ? const Color(0xFF475569)
+                          : const Color(0xFF166534),
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                valueText,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: isFailed ? const Color(0xFF475569) : primaryGreen,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isFailed
-                      ? const Color(0xFFF1F5F9)
-                      : const Color(0xFFDCFCE7),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  statusText,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: isFailed
-                        ? const Color(0xFF475569)
-                        : const Color(0xFF166534),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 140,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+          ),
+        ),
+        const Text(
+          ': ',
+          style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

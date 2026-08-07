@@ -33,7 +33,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/// Widget ini menentukan halaman pertama berdasarkan sesi yang tersimpan.
+/// Widget ini menentukan halaman pertama berdasarrkan sesi yang tersimpan.
 class SplashRouter extends StatefulWidget {
   const SplashRouter({super.key});
 

@@ -9,6 +9,9 @@ class TransactionModel {
   final String points;
   final String status;
   final bool isFailed;
+  final List<dynamic> rawItems;
+  final double totalBerat;
+  final int totalPoin;
 
   TransactionModel({
     required this.icon,
@@ -17,6 +20,9 @@ class TransactionModel {
     required this.points,
     required this.status,
     this.isFailed = false,
+    this.rawItems = const [],
+    this.totalBerat = 0.0,
+    this.totalPoin = 0,
   });
 }
 
@@ -58,6 +64,8 @@ class TransactionService {
       subtitle: subtitle,
       points: pointsText,
       status: 'Proses',
+      totalBerat: weight,
+      totalPoin: points,
     );
 
     // Insert at front of beranda transactions list
@@ -85,12 +93,21 @@ class TransactionService {
     try {
       final dt = DateTime.parse(dateStr);
       final months = [
-        '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-        'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'
+        '',
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'Mei',
+        'Jun',
+        'Jul',
+        'Agt',
+        'Sep',
+        'Okt',
+        'Nov',
+        'Des',
       ];
-      final days = [
-        '', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'
-      ];
+      final days = ['', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
       final dayName = days[dt.weekday];
       final monthName = months[dt.month];
       return '$dayName, ${dt.day} $monthName ${dt.year}';
@@ -114,7 +131,36 @@ class TransactionService {
     for (var tx in txs) {
       final type = tx['type'] == 'drop_in' ? 'Drop-in' : 'Jemput sampah';
       final status = tx['status'];
-      
+
+      String title = type;
+      final items = tx['items'] as List<dynamic>?;
+      if (items != null && items.isNotEmpty) {
+        final itemNames = items
+            .map((e) {
+              String? n =
+                  (e['category_name'] ?? e['name'] ?? e['waste_name'])
+                      as String?;
+              if (n == null || n.isEmpty) {
+                final catId = e['waste_category_id']?.toString();
+                if (catId == '1')
+                  n = 'Plastik';
+                else if (catId == '2')
+                  n = 'Kertas & Kardus';
+                else if (catId == '3')
+                  n = 'Besi & Logam';
+                else if (catId == '4')
+                  n = 'Elektronik Bekas';
+                else
+                  n = 'Sampah';
+              }
+              return n;
+            })
+            .join(', ');
+        title = '$type - $itemNames';
+      } else if (status != 'selesai') {
+        title = '$type — (Belum ditimbang)';
+      }
+
       String rawDate = tx['pickup_date'] ?? '';
       if (rawDate.isEmpty || rawDate.startsWith('0000')) {
         rawDate = tx['created_at'] ?? '';
@@ -132,16 +178,23 @@ class TransactionService {
           icon: tx['type'] == 'drop_in'
               ? Icons.recycling_rounded
               : Icons.local_shipping_rounded,
-          title: type,
+          title: title,
           subtitle: dateStr,
           points: pointsText,
           status: status == 'menunggu'
               ? 'Proses'
               : status == 'selesai'
-                  ? 'Selesai'
-                  : status == 'menuju_lokasi'
-                      ? 'Sedang menjemput'
-                      : status,
+              ? 'Selesai'
+              : status == 'menuju_lokasi'
+              ? 'Sedang menjemput'
+              : status,
+          rawItems: items ?? [],
+          totalBerat: items?.fold<double>(
+                0.0,
+                (sum, e) => sum + ((e['actual_weight'] ?? e['estimated_weight'] ?? 0.0) as num).toDouble(),
+              ) ??
+              0.0,
+          totalPoin: points,
         ),
       );
     }

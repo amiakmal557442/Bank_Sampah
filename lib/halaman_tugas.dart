@@ -80,8 +80,9 @@ class _HalamanTugasState extends State<HalamanTugas> {
 
     // Extract kategori yang dipilih nasabah dari API/database
     final String selectedJenis = (tugas['jenis_sampah'] ?? '').toString();
-    final List<Map<String, dynamic>> rawItems =
-        List<Map<String, dynamic>>.from(tugas['items'] ?? []);
+    final List<Map<String, dynamic>> rawItems = List<Map<String, dynamic>>.from(
+      tugas['items'] ?? [],
+    );
     final Set<int> selectedCategoryIds = rawItems
         .map(
           (i) => int.tryParse(i['waste_category_id']?.toString() ?? '0') ?? 0,
@@ -94,10 +95,12 @@ class _HalamanTugasState extends State<HalamanTugas> {
     final List<Map<String, dynamic>> wasteItems = categories.map((c) {
       final catId = (c['id'] as num).toInt();
       final catName = c['name'].toString();
-      final bool isSelectedByUser = selectedCategoryIds.contains(catId) ||
+      final bool isSelectedByUser =
+          selectedCategoryIds.contains(catId) ||
           selectedJenis.toLowerCase().contains(catName.toLowerCase());
 
       return {
+        'id': catId,
         'name': catName,
         'poin_per_kg': (c['point_per_kg'] as num).toInt(),
         'icon': Icons.recycling_outlined,
@@ -106,7 +109,8 @@ class _HalamanTugasState extends State<HalamanTugas> {
       };
     }).toList();
 
-    if (!wasteItems.any((e) => e['selected'] == true) && wasteItems.isNotEmpty) {
+    if (!wasteItems.any((e) => e['selected'] == true) &&
+        wasteItems.isNotEmpty) {
       wasteItems[0]['selected'] = true;
     }
 
@@ -121,40 +125,50 @@ class _HalamanTugasState extends State<HalamanTugas> {
         namaNasabah: namaNasabah,
         wasteItems: wasteItems,
         greenTheme: greenTheme,
-        onSelesai: (int totalPoin, double totalBerat) async {
-          // 1. Update API
-          try {
-            await ApiService.instance.updateTransaction(txId, {
-              'status': 'selesai',
-              'total_actual_points': totalPoin,
-            });
-          } catch (_) {}
+        onSelesai:
+            (
+              int totalPoin,
+              double totalBerat,
+              List<Map<String, dynamic>> itemsToSend,
+            ) async {
+              // 1. Update API
+              try {
+                await ApiService.instance.updateTransaction(txId, {
+                  'status': 'selesai',
+                  'total_actual_points': totalPoin,
+                  'items': itemsToSend,
+                });
+              } catch (_) {}
 
-          // 2. Selalu update lokal — ini yang menambah saldo poin nasabah
-          await DatabaseHelper.instance.completeTransaction(txId, totalPoin);
-
-          // 3. Refresh session petugas (kalau petugas juga punya poin)
-          await SessionService.refresh();
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  '✅ Tugas selesai! $namaNasabah mendapat $totalPoin poin dari ${totalBerat.toStringAsFixed(1)} kg sampah.',
-                ),
-                backgroundColor: greenTheme,
-                behavior: SnackBarBehavior.floating,
-                duration: const Duration(seconds: 4),
-              ),
-            );
-            // Hapus tugas dari list (langsung, tanpa nunggu reload)
-            setState(() {
-              _daftarTugas.removeWhere(
-                (t) => (t['id_transaksi'] ?? t['id'])?.toString() == txId,
+              // 2. Selalu update lokal — ini yang menambah saldo poin nasabah
+              await DatabaseHelper.instance.completeTransaction(
+                txId,
+                totalPoin,
+                items: itemsToSend,
               );
-            });
-          }
-        },
+
+              // 3. Refresh session petugas (kalau petugas juga punya poin)
+              await SessionService.refresh();
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '✅ Tugas selesai! $namaNasabah mendapat $totalPoin poin dari ${totalBerat.toStringAsFixed(1)} kg sampah.',
+                    ),
+                    backgroundColor: greenTheme,
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 4),
+                  ),
+                );
+                // Hapus tugas dari list (langsung, tanpa nunggu reload)
+                setState(() {
+                  _daftarTugas.removeWhere(
+                    (t) => (t['id_transaksi'] ?? t['id'])?.toString() == txId,
+                  );
+                });
+              }
+            },
       ),
     );
   }
@@ -197,14 +211,18 @@ class _HalamanTugasState extends State<HalamanTugas> {
         ? Icons.store
         : Icons.local_shipping_outlined;
 
-    // Drop-in:  "Tiba di Lokasi" (hijau) → langsung ke timbang
-    // Pickup:   "Jemput" → "Tiba di Lokasi"
+    // Drop-in:  Langsung "Terima & Timbang"
+    // Pickup:   "Jemput" → "Tiba di Lokasi" → "Timbang"
     final String mainBtnLabel = isDropIn
-        ? 'Tiba di Lokasi'
+        ? 'Terima & Timbang'
         : (isTiba ? 'Timbang' : (isMenuju ? 'Tiba di Lokasi' : 'Jemput'));
     final IconData mainBtnIcon = isDropIn
-        ? Icons.where_to_vote_rounded
-        : (isTiba ? Icons.scale_rounded : (isMenuju ? Icons.where_to_vote_rounded : Icons.local_shipping));
+        ? Icons.scale_rounded
+        : (isTiba
+              ? Icons.scale_rounded
+              : (isMenuju
+                    ? Icons.where_to_vote_rounded
+                    : Icons.local_shipping));
     final Color mainBtnColor = isDropIn
         ? Colors.green.shade700
         : (sudahMenuju ? Colors.green.shade700 : greenTheme);
@@ -318,8 +336,10 @@ class _HalamanTugasState extends State<HalamanTugas> {
                   child: Text(
                     isDropIn
                         ? (tugas['drop_point_name'] != null
-                            ? '${tugas['drop_point_name']} — ${tugas['drop_point_address'] ?? ''}'
-                            : (tugas['alamat'] ?? tugas['nasabah_address'] ?? 'Drop Point'))
+                              ? '${tugas['drop_point_name']} — ${tugas['drop_point_address'] ?? ''}'
+                              : (tugas['alamat'] ??
+                                    tugas['nasabah_address'] ??
+                                    'Drop Point'))
                         : (tugas['alamat'] ?? tugas['nasabah_address'] ?? '-'),
                     style: TextStyle(color: Colors.grey.shade700, height: 1.4),
                   ),
@@ -347,31 +367,37 @@ class _HalamanTugasState extends State<HalamanTugas> {
             // Tombol aksi
             Row(
               children: [
-                // Tombol Peta
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              const MapLocationScreen(showBottomNav: false),
+                if (!isDropIn) ...[
+                  // Tombol Peta
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const MapLocationScreen(showBottomNav: false),
+                          ),
+                        );
+                      },
+                      icon: Icon(
+                        Icons.map_outlined,
+                        color: greenTheme,
+                        size: 18,
+                      ),
+                      label: const Text('Lokasi'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: greenTheme,
+                        side: BorderSide(color: greenTheme),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                      );
-                    },
-                    icon: Icon(Icons.map_outlined, color: greenTheme, size: 18),
-                    label: const Text('Lokasi'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: greenTheme,
-                      side: BorderSide(color: greenTheme),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
+                  const SizedBox(width: 12),
+                ],
                 // Tombol aksi utama
                 Expanded(
                   child: ElevatedButton.icon(
@@ -380,10 +406,14 @@ class _HalamanTugasState extends State<HalamanTugas> {
                         // Drop-in: update status ke 'tiba' dulu, lalu buka dialog timbang
                         try {
                           await ApiService.instance.updateTaskStatus(
-                              txId, 'tiba');
+                            txId,
+                            'tiba',
+                          );
                         } catch (_) {
-                          await DatabaseHelper.instance
-                              .updateTransactionStatus(txId, 'tiba');
+                          await DatabaseHelper.instance.updateTransactionStatus(
+                            txId,
+                            'tiba',
+                          );
                         }
                         _showSelesaikanDialog(tugas);
                       } else if (isTiba) {
@@ -392,9 +422,15 @@ class _HalamanTugasState extends State<HalamanTugas> {
                       } else if (isMenuju) {
                         // Pickup: sudah menuju → update ke tiba, lalu buka dialog timbang
                         try {
-                          await ApiService.instance.updateTaskStatus(txId, 'tiba');
+                          await ApiService.instance.updateTaskStatus(
+                            txId,
+                            'tiba',
+                          );
                         } catch (_) {
-                          await DatabaseHelper.instance.updateTransactionStatus(txId, 'tiba');
+                          await DatabaseHelper.instance.updateTransactionStatus(
+                            txId,
+                            'tiba',
+                          );
                         }
                         _showSelesaikanDialog(tugas);
                       } else {
@@ -466,7 +502,12 @@ class _TimbangSheet extends StatefulWidget {
   final String namaNasabah;
   final List<Map<String, dynamic>> wasteItems;
   final Color greenTheme;
-  final Future<void> Function(int totalPoin, double totalBerat) onSelesai;
+  final Future<void> Function(
+    int totalPoin,
+    double totalBerat,
+    List<Map<String, dynamic>> items,
+  )
+  onSelesai;
 
   const _TimbangSheet({
     required this.txId,
@@ -664,7 +705,28 @@ class _TimbangSheetState extends State<_TimbangSheet> {
                               final poin = _totalPoin;
                               final berat = _totalBerat;
                               Navigator.pop(context); // tutup sheet
-                              await widget.onSelesai(poin, berat);
+                              final itemsToSend = _items
+                                  .where((e) => e['selected'] == true)
+                                  .map(
+                                    (e) => {
+                                      'id':
+                                          'ITI-${DateTime.now().microsecondsSinceEpoch}',
+                                      'transaction_id': widget.txId,
+                                      'waste_category_id': e['id'] ?? 0,
+                                      'name': e['name'],
+                                      'estimated_weight': 0.0,
+                                      'actual_weight': e['berat'] ?? 0.0,
+                                      'final_points':
+                                          (((e['berat'] as num?)?.toDouble() ??
+                                                      0.0) *
+                                                  ((e['poin_per_kg'] as num?)
+                                                          ?.toDouble() ??
+                                                      0.0))
+                                              .round(),
+                                    },
+                                  )
+                                  .toList();
+                              await widget.onSelesai(poin, berat, itemsToSend);
                             }
                           : null,
                       icon: _isLoading

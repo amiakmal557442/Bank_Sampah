@@ -1377,6 +1377,15 @@ class DatabaseHelper {
           ...tx,
           'items': _webTransactionItems
               .where((i) => i['transaction_id'] == tx['id'])
+              .map((item) {
+                // Find category name from _webWasteCategories
+                final catId = item['waste_category_id'];
+                final cat = _webWasteCategories.firstWhere(
+                  (c) => c['id'] == catId,
+                  orElse: () => {'name': 'Sampah'},
+                );
+                return {...item, 'category_name': cat['name']};
+              })
               .toList(),
         };
       }).toList();
@@ -1394,10 +1403,14 @@ class DatabaseHelper {
 
     List<Map<String, dynamic>> result = [];
     for (var tx in txs) {
-      final items = await db.query(
-        'transaction_items',
-        where: 'transaction_id = ?',
-        whereArgs: [tx['id']],
+      final items = await db.rawQuery(
+        '''
+        SELECT ti.*, wc.name as name
+        FROM transaction_items ti
+        LEFT JOIN waste_categories wc ON ti.waste_category_id = wc.id
+        WHERE ti.transaction_id = ?
+        ''',
+        [tx['id']],
       );
       Map<String, dynamic> txMap = Map<String, dynamic>.from(tx);
       txMap['items'] = items;
@@ -1432,12 +1445,29 @@ class DatabaseHelper {
     }
   }
 
-  Future<bool> completeTransaction(String id, int earnedPoints) async {
+  Future<bool> completeTransaction(
+    String id,
+    int earnedPoints, {
+    List<Map<String, dynamic>> items = const [],
+  }) async {
     if (kIsWeb) {
       final txIdx = _webTransactions.indexWhere((tx) => tx['id'] == id);
       if (txIdx != -1) {
         _webTransactions[txIdx]['status'] = 'selesai';
         _webTransactions[txIdx]['total_actual_points'] = earnedPoints;
+        if (items.isNotEmpty) {
+          _webTransactions[txIdx]['items'] = items;
+
+          // Hapus item lama jika ada
+          _webTransactionItems.removeWhere((i) => i['transaction_id'] == id);
+
+          // Tambahkan item baru ke _webTransactionItems
+          for (var item in items) {
+            final dbItem = Map<String, dynamic>.from(item);
+            dbItem.remove('name');
+            _webTransactionItems.add(dbItem);
+          }
+        }
 
         // Tambah poin ke user di in-memory list
         final userId = _webTransactions[txIdx]['nasabah_id'];
@@ -1468,6 +1498,19 @@ class DatabaseHelper {
           whereArgs: [id],
         );
 
+        if (items.isNotEmpty) {
+          await txn.delete(
+            'transaction_items',
+            where: 'transaction_id = ?',
+            whereArgs: [id],
+          );
+          for (var item in items) {
+            final dbItem = Map<String, dynamic>.from(item);
+            dbItem.remove('name');
+            await txn.insert('transaction_items', dbItem);
+          }
+        }
+
         // Get user ID
         final txRes = await txn.query(
           'transactions',
@@ -1493,7 +1536,9 @@ class DatabaseHelper {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getPendingPickupTasks({String? type}) async {
+  Future<List<Map<String, dynamic>>> getPendingPickupTasks({
+    String? type,
+  }) async {
     if (kIsWeb) {
       // Tampilkan tugas pickup DAN/atau drop_in yang sudah dikonfirmasi admin
       final pendingTxs = _webTransactions
@@ -1568,7 +1613,9 @@ class DatabaseHelper {
     if (db == null) return [];
 
     // Ambil tugas pickup DAN/atau drop_in yang sudah dikonfirmasi admin
-    final String typeClause = type != null ? "t.type = '$type'" : "t.type IN ('pickup', 'drop_in')";
+    final String typeClause = type != null
+        ? "t.type = '$type'"
+        : "t.type IN ('pickup', 'drop_in')";
     final List<Map<String, dynamic>> txs = await db.rawQuery('''
       SELECT 
         t.id, t.type, t.status,

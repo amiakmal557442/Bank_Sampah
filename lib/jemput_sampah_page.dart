@@ -302,7 +302,7 @@ class _PickupScheduleScreenState extends State<PickupScheduleScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => PickupWasteScreen(
+                    builder: (context) => PickupConfirmationScreen(
                       selectedDay: _dates[selectedDateIndex]['day']!,
                       selectedDate: _dates[selectedDateIndex]['date']!,
                       selectedTime: _times[selectedTimeIndex],
@@ -392,336 +392,13 @@ class _PickupScheduleScreenState extends State<PickupScheduleScreen> {
 }
 
 // ============================================================================
-// 2. HALAMAN JENIS & ESTIMASI SAMPAH
-// ============================================================================
-class PickupWasteScreen extends StatefulWidget {
-  final String selectedDay;
-  final String selectedDate;
-  final String selectedTime;
-  final String note;
-
-  const PickupWasteScreen({
-    super.key,
-    required this.selectedDay,
-    required this.selectedDate,
-    required this.selectedTime,
-    required this.note,
-  });
-
-  @override
-  _PickupWasteScreenState createState() => _PickupWasteScreenState();
-}
-
-class _PickupWasteScreenState extends State<PickupWasteScreen> {
-  List<Map<String, dynamic>> _wasteCategories = [];
-  final Set<int> _selectedIndices = {};
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCategories();
-  }
-
-  Future<void> _loadCategories() async {
-    final cats = await DatabaseHelper.instance.getWasteCategories();
-    if (!mounted) return;
-    setState(() {
-      _wasteCategories = cats
-          .where((c) => (c['is_active'] as int?) == 1)
-          .toList();
-      // Default: first category selected
-      if (_wasteCategories.isNotEmpty) _selectedIndices.add(0);
-      _isLoading = false;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final Color primaryGreen = const Color(0xFF268B07);
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F8),
-      appBar: AppBar(
-        backgroundColor: primaryGreen,
-        title: const Text(
-          'Jenis Sampah Dijemput',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(4.0),
-          child: LinearProgressIndicator(
-            value: 0.66,
-            backgroundColor: const Color(0xFF1a6305),
-            valueColor: const AlwaysStoppedAnimation<Color>(
-              Colors.lightGreenAccent,
-            ),
-          ),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: primaryGreen.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: primaryGreen.withOpacity(0.2)),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.calendar_today_rounded,
-                  color: primaryGreen,
-                  size: 18,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    '${widget.selectedDay}, ${widget.selectedDate} Jul • ${widget.selectedTime} • Jl. Kartini No. 8',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Text(
-                    'Ubah',
-                    style: TextStyle(
-                      color: primaryGreen,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'PILIH JENIS SAMPAH',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Pilih kategori sampah — penimbangan dilakukan petugas di lokasi',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-          const SizedBox(height: 16),
-          if (_isLoading)
-            const Center(
-              child: CircularProgressIndicator(color: Color(0xFF268B07)),
-            )
-          else
-            ..._wasteCategories.asMap().entries.map((entry) {
-              final i = entry.key;
-              final cat = entry.value;
-              final isSelected = _selectedIndices.contains(i);
-              return _buildWasteCard(
-                title: cat['name'] as String,
-                subtitle: '${cat['point_per_kg']} poin/kg',
-                icon: Icons.recycling_rounded,
-                isSelected: isSelected,
-                primaryGreen: const Color(0xFF268B07),
-                onToggle: () => setState(() {
-                  if (isSelected) {
-                    _selectedIndices.remove(i);
-                  } else {
-                    _selectedIndices.add(i);
-                  }
-                }),
-              );
-            }),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          padding: const EdgeInsets.all(16.0),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 6,
-                offset: Offset(0, -2),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: primaryGreen.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: primaryGreen.withOpacity(0.2)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, size: 18, color: primaryGreen),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Berat & poin final ditentukan petugas saat penimbangan di lokasi',
-                        style: TextStyle(
-                          color: primaryGreen,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                    side: const BorderSide(
-                      color: Color(0xFFCBD5E1),
-                      width: 1.5,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 0,
-                  ),
-                  onPressed: () {
-                    // Build selected waste items list
-                    final List<Map<String, dynamic>> items = [];
-                    for (final i in _selectedIndices) {
-                      final cat = _wasteCategories[i];
-                      items.add({
-                        'name': cat['name'],
-                        'rate': '${cat['point_per_kg']} poin/kg',
-                        'id': cat['id'],
-                      });
-                    }
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PickupConfirmationScreen(
-                          selectedDay: widget.selectedDay,
-                          selectedDate: widget.selectedDate,
-                          selectedTime: widget.selectedTime,
-                          note: widget.note,
-                          wasteItems: items,
-                        ),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    'Lanjut',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWasteCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required bool isSelected,
-    required Color primaryGreen,
-    required VoidCallback onToggle,
-  }) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: isSelected ? primaryGreen : Colors.grey.shade300,
-          width: 1.5,
-        ),
-        borderRadius: BorderRadius.circular(14),
-        color: isSelected ? primaryGreen.withOpacity(0.05) : Colors.white,
-      ),
-      child: GestureDetector(
-        onTap: onToggle,
-        child: Row(
-          children: [
-            Icon(
-              isSelected
-                  ? Icons.check_box_rounded
-                  : Icons.check_box_outline_blank_rounded,
-              color: isSelected ? primaryGreen : Colors.grey,
-            ),
-            const SizedBox(width: 12),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? primaryGreen.withOpacity(0.1)
-                    : Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                icon,
-                color: isSelected ? primaryGreen : Colors.grey,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
-            ),
-            Text(
-              subtitle,
-              style: TextStyle(
-                color: primaryGreen,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// 3. HALAMAN KONFIRMASI & RINGKASAN
-// ============================================================================
-// ============================================================================
-// 3. HALAMAN KONFIRMASI & RINGKASAN
+// 2. HALAMAN KONFIRMASI JEMPUT
 // ============================================================================
 class PickupConfirmationScreen extends StatefulWidget {
   final String selectedDay;
   final String selectedDate;
   final String selectedTime;
   final String note;
-  final List<Map<String, dynamic>> wasteItems;
 
   const PickupConfirmationScreen({
     super.key,
@@ -729,7 +406,6 @@ class PickupConfirmationScreen extends StatefulWidget {
     required this.selectedDate,
     required this.selectedTime,
     required this.note,
-    required this.wasteItems,
   });
 
   @override
@@ -743,7 +419,10 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
   bool _isSubmitting = false;
 
   Future<void> _pickImage(ImageSource source) async {
-    final XFile? image = await _picker.pickImage(source: source, imageQuality: 70);
+    final XFile? image = await _picker.pickImage(
+      source: source,
+      imageQuality: 70,
+    );
     if (image != null) {
       setState(() {
         _photoPath = image.path;
@@ -770,7 +449,10 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library, color: Color(0xFF268B07)),
+                leading: const Icon(
+                  Icons.photo_library,
+                  color: Color(0xFF268B07),
+                ),
                 title: const Text('Galeri'),
                 onTap: () {
                   Navigator.pop(context);
@@ -878,27 +560,7 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          _buildSectionCard(
-            title: 'JENIS SAMPAH',
-            context: context,
-            content: Column(
-              children: widget.wasteItems
-                  .asMap()
-                  .entries
-                  .map(
-                    (entry) => Column(
-                      children: [
-                        if (entry.key > 0) const Divider(),
-                        _buildWasteRow(
-                          entry.value['name'],
-                          entry.value['rate'] ?? '',
-                        ),
-                      ],
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
+
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(16),
@@ -913,7 +575,7 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Poin final ditentukan setelah petugas menimbang berat aktual di lokasi.',
+                    'Jenis sampah dan poin final akan ditentukan setelah petugas melakukan penimbangan di lokasi.',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -977,11 +639,13 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                                 )
                               : null,
                         ),
-                        child: _photoPath == null ? const Icon(
-                          Icons.image,
-                          size: 40,
-                          color: Colors.grey,
-                        ) : null,
+                        child: _photoPath == null
+                            ? const Icon(
+                                Icons.image,
+                                size: 40,
+                                color: Colors.grey,
+                              )
+                            : null,
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -1084,23 +748,8 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                         'photo_evidence': _photoPath,
                       };
 
-                      final itemsData = widget.wasteItems
-                          .map(
-                            (item) => {
-                              'id':
-                                  'ITI-${DateTime.now().microsecondsSinceEpoch}',
-                              'transaction_id': txId,
-                              'waste_category_id': item['id'] ?? 0,
-                              'estimated_weight': 0.0,
-                              'actual_weight': 0.0,
-                              'final_points': 0,
-                            },
-                          )
-                          .toList();
-
                       bool ok = false;
                       try {
-                        txData['items'] = itemsData;
                         ok = await ApiService.instance.createTransaction(
                           txData,
                         );
@@ -1110,15 +759,11 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                       // Ini memastikan transaksi tampil di Manajemen Admin.
                       await DatabaseHelper.instance.createTransaction(
                         txData,
-                        itemsData,
+                        [],
                       );
 
-                      // Keep the UI logic for transaction history (if any remains)
-                      final names = widget.wasteItems
-                          .map((e) => e['name'] as String)
-                          .join(' dan ');
                       TransactionService.addTransaction(
-                        title: names,
+                        title: 'Sampah (Belum ditimbang)',
                         type: 'Jemput',
                       );
 
@@ -1318,10 +963,28 @@ class PickupSuccessScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(child: _buildStatusStep('Menunggu', true, primaryGreen, 1)),
-                Expanded(child: _buildStatusStep('Dikonfirmasi', false, primaryGreen, 2)),
-                Expanded(child: _buildStatusStep('Menuju\nlokasi', false, primaryGreen, 3)),
-                Expanded(child: _buildStatusStep('Selesai', false, primaryGreen, 4)),
+                Expanded(
+                  child: _buildStatusStep('Menunggu', true, primaryGreen, 1),
+                ),
+                Expanded(
+                  child: _buildStatusStep(
+                    'Dikonfirmasi',
+                    false,
+                    primaryGreen,
+                    2,
+                  ),
+                ),
+                Expanded(
+                  child: _buildStatusStep(
+                    'Menuju\nlokasi',
+                    false,
+                    primaryGreen,
+                    3,
+                  ),
+                ),
+                Expanded(
+                  child: _buildStatusStep('Selesai', false, primaryGreen, 4),
+                ),
               ],
             ),
             const SizedBox(height: 28),

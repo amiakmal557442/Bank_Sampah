@@ -138,6 +138,7 @@ if ($method === 'PUT') {
         echo json_encode(['success' => false, 'message' => 'ID Transaksi wajib diisi']);
         exit();
     }
+    file_put_contents('put_log.txt', print_r($data, true) . PHP_EOL, FILE_APPEND);
 
     $updates = [];
     $types = '';
@@ -191,9 +192,19 @@ if ($method === 'PUT') {
             $calculatedPoints += $itemPoints;
 
             if ($itemId) {
-                $itemStmt = $conn->prepare("UPDATE transaction_items SET estimated_weight = ?, actual_weight = ?, final_points = ? WHERE id = ?");
-                $itemStmt->bind_param("ddis", $weight, $weight, $itemPoints, $itemId);
-                $itemStmt->execute();
+                $itemStmt = $conn->prepare("UPDATE transaction_items SET estimated_weight = ?, actual_weight = ?, final_points = ?, waste_category_id = ? WHERE id = ?");
+                $itemStmt->bind_param("ddiis", $weight, $weight, $itemPoints, $catId, $itemId);
+                if (!$itemStmt->execute()) {
+                    file_put_contents('put_log.txt', "UPDATE ERROR: " . $itemStmt->error . PHP_EOL, FILE_APPEND);
+                }
+
+                if ($itemStmt->affected_rows === 0) {
+                    $insertStmt = $conn->prepare("INSERT INTO transaction_items (id, transaction_id, waste_category_id, estimated_weight, actual_weight, final_points) VALUES (?, ?, ?, ?, ?, ?)");
+                    $insertStmt->bind_param("ssiddi", $itemId, $id, $catId, $weight, $weight, $itemPoints);
+                    if (!$insertStmt->execute()) {
+                        file_put_contents('put_log.txt', "INSERT ERROR: " . $insertStmt->error . PHP_EOL, FILE_APPEND);
+                    }
+                }
             }
         }
         if ($calculatedPoints > 0) {

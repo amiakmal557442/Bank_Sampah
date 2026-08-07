@@ -72,7 +72,10 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _pickImage(ImageSource source) async {
-    final XFile? image = await _picker.pickImage(source: source, imageQuality: 70);
+    final XFile? image = await _picker.pickImage(
+      source: source,
+      imageQuality: 70,
+    );
     if (image != null) {
       setState(() {
         _uploadedPhotos.add(image.path);
@@ -119,56 +122,29 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
       _showToast('Silakan pilih drop point terlebih dahulu');
       return;
     }
-    if (_currentStep == 1 && _wasteCategories.every((e) => !e.isSelected)) {
-      _showToast('Pilih setidaknya 1 jenis sampah');
-      return;
-    }
     bool success = true;
-    if (_currentStep == 3) {
+    if (_currentStep == 2) {
       try {
         final txId = 'TRX-${DateTime.now().millisecondsSinceEpoch}';
         final txData = <String, dynamic>{
           'id': txId,
           'nasabah_id': SessionService.userId,
-          'full_name': SessionService.fullName, // simpan nama langsung
-          'address': SessionService.address, // simpan alamat langsung
+          'full_name': SessionService.fullName,
+          'address': SessionService.address,
           'drop_point_id': _dropPoints[_selectedDropPointIndex].id,
           'type': 'drop_in',
           'status': 'menunggu',
         };
 
-        final itemsData = _wasteCategories
-            .where((e) => e.isSelected)
-            .map(
-              (item) => {
-                'id': 'ITI-${DateTime.now().microsecondsSinceEpoch}',
-                'transaction_id': txId,
-                'waste_category_id': int.tryParse(item.id) ?? 0,
-                'estimated_weight': 0.0,
-                'actual_weight': 0.0,
-                'final_points': 0,
-              },
-            )
-            .toList();
-
         bool ok = false;
         try {
-          txData['items'] = itemsData;
           ok = await ApiService.instance.createTransaction(txData);
         } catch (_) {}
 
-        // Selalu simpan ke local DB (sumber data utama untuk web).
-        // Ini memastikan transaksi tampil di Manajemen Admin.
-        await DatabaseHelper.instance.createTransaction(txData, itemsData);
-
-        // Keep UI logic fallback
-        final selectedNames = _wasteCategories
-            .where((e) => e.isSelected)
-            .map((e) => e.name)
-            .join(' dan ');
+        await DatabaseHelper.instance.createTransaction(txData, []);
 
         TransactionService.addTransaction(
-          title: selectedNames,
+          title: 'Sampah (Belum ditimbang)',
           type: 'Drop-in',
         );
       } catch (e, stack) {
@@ -178,7 +154,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         debugPrint(stack.toString());
       }
     }
-    if (success && _currentStep < 4) {
+    if (success && _currentStep < 3) {
       setState(() {
         _currentStep++;
       });
@@ -254,7 +230,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         child: Column(
           children: [
             // Header Top Bar (Hide back button on Success screen)
-            if (_currentStep < 4) _buildHeader(),
+            if (_currentStep < 3) _buildHeader(),
 
             // Screen Content Body
             Expanded(
@@ -268,7 +244,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
             ),
 
             // Bottom Fixed Action Bar
-            if (_currentStep < 4) _buildBottomActionBar(),
+            if (_currentStep < 3) _buildBottomActionBar(),
           ],
         ),
       ),
@@ -278,7 +254,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
   Widget _buildHeader() {
     final List<String> stepTitles = [
       'Drop-in Mandiri',
-      'Isi Detail Sampah',
       'Foto Sampah',
       'Konfirmasi Setor',
     ];
@@ -317,14 +292,14 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          // Step Progress Bar (4 Segments)
+          // Step Progress Bar (3 Segments)
           Row(
-            children: List.generate(4, (index) {
+            children: List.generate(3, (index) {
               final bool isActive = index <= _currentStep;
               return Expanded(
                 child: Container(
                   height: 4,
-                  margin: EdgeInsets.only(right: index < 3 ? 6 : 0),
+                  margin: EdgeInsets.only(right: index < 2 ? 6 : 0),
                   decoration: BoxDecoration(
                     color: isActive
                         ? Colors.white
@@ -345,13 +320,11 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
       case 0:
         return _buildStep1SelectDropPoint();
       case 1:
-        return _buildStep2WasteDetails();
+        return _buildStep2UploadPhoto();
       case 2:
-        return _buildStep3UploadPhoto();
+        return _buildStep3Confirmation();
       case 3:
-        return _buildStep4Confirmation();
-      case 4:
-        return _buildStep5Success();
+        return _buildStep4Success();
       default:
         return const SizedBox.shrink();
     }
@@ -618,168 +591,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
     );
   }
 
-  Widget _buildStep2WasteDetails() {
-    final selectedDp = _dropPoints[_selectedDropPointIndex];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Top Selected Drop Point Header Card
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                selectedDp.name,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-              GestureDetector(
-                onTap: () => setState(() => _currentStep = 0),
-                child: Text(
-                  'Ubah',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: _primaryGreen,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        const Text(
-          'PILIH JENIS SAMPAH',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.8,
-            color: Color(0xFF64748B),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // List of Waste Items with Weight Stepper
-        ...List.generate(_wasteCategories.length, (index) {
-          final item = _wasteCategories[index];
-
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: item.isSelected
-                    ? _primaryGreen
-                    : const Color(0xFFE2E8F0),
-                width: item.isSelected ? 2 : 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    // Checkbox
-                    Checkbox(
-                      value: item.isSelected,
-                      activeColor: _primaryGreen,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      onChanged: (val) {
-                        setState(() {
-                          item.isSelected = val ?? false;
-                        });
-                      },
-                    ),
-                    const SizedBox(width: 4),
-                    // Icon
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: _lightGreenBg,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(item.icon, color: _primaryGreen, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    // Name
-                    Expanded(
-                      child: Text(
-                        item.name,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                    ),
-                    // Rate per kg
-                    Text(
-                      '${item.pointsPerKg} poin/kg',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: _primaryGreen,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        }),
-
-        const SizedBox(height: 16),
-
-        // Info Banner Box
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEFF9F0),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.info_outline, size: 18, color: _primaryGreen),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Berat & poin final akan ditentukan petugas saat penimbangan di lokasi drop point.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF334155),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStep3UploadPhoto() {
+  Widget _buildStep2UploadPhoto() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -943,9 +755,8 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
     );
   }
 
-  Widget _buildStep4Confirmation() {
+  Widget _buildStep3Confirmation() {
     final selectedDp = _dropPoints[_selectedDropPointIndex];
-    final selectedItems = _wasteCategories.where((e) => e.isSelected).toList();
 
     return Column(
       children: [
@@ -974,45 +785,10 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         ),
         const SizedBox(height: 14),
 
-        // Jenis Sampah Card
-        _buildConfirmationCard(
-          title: 'JENIS SAMPAH',
-          onEdit: () => setState(() => _currentStep = 1),
-          child: Column(
-            children: List.generate(selectedItems.length, (index) {
-              final item = selectedItems[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      item.name,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                    Text(
-                      '${item.pointsPerKg} poin/kg',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-          ),
-        ),
-        const SizedBox(height: 14),
-
         // Foto Sampah Card
         _buildConfirmationCard(
           title: 'FOTO SAMPAH',
-          onEdit: () => setState(() => _currentStep = 2),
+          onEdit: () => setState(() => _currentStep = 1),
           child: Row(
             children: [
               Container(
@@ -1046,7 +822,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Poin akan dihitung dan ditambahkan otomatis setelah petugas menimbang sampah di drop point.',
+                  'Jenis sampah dan poin akan ditentukan oleh petugas saat penimbangan di drop point.',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -1109,7 +885,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
     );
   }
 
-  Widget _buildStep5Success() {
+  Widget _buildStep4Success() {
     final selectedDp = _dropPoints[_selectedDropPointIndex];
 
     return Column(
@@ -1303,7 +1079,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
   }
 
   Widget _buildBottomActionBar() {
-    final String buttonText = _currentStep == 3 ? 'Konfirmasi Setor' : 'Lanjut';
+    final String buttonText = _currentStep == 2 ? 'Konfirmasi Setor' : 'Lanjut';
 
     return Container(
       padding: const EdgeInsets.all(16),
