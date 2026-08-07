@@ -699,12 +699,17 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
 
           // Estimasi berat
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(Icons.scale_rounded, size: 14, color: Colors.grey[600]),
               const SizedBox(width: 4),
-              Text(
-                'Estimasi: ${task.estWeightKg} Kg (${task.wasteTypes.join(", ")})',
-                style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+              Expanded(
+                child: Text(
+                  'Estimasi: ${task.estWeightKg} Kg (${task.wasteTypes.join(", ")})',
+                  style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
               ),
             ],
           ),
@@ -840,9 +845,13 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                   Text(
                     task.address,
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
                   ),
                   const SizedBox(height: 8),
-                  Row(
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
                     children: [
                       for (final t in task.wasteTypes) _buildMiniChip(t),
                     ],

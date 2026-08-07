@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'transaction_service.dart';
 import 'session_service.dart';
+
 import 'db_helper.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 
 // ============================================================================
 // Halaman Tukar Poin ke Saldo
@@ -143,6 +145,51 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
   final TextEditingController amountController = TextEditingController();
   int inputPoints = 0;
   String? errorText;
+
+  String? _ktpPhotoPath;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickImage(ImageSource source) async {
+    final XFile? image = await _picker.pickImage(source: source, imageQuality: 70);
+    if (image != null) {
+      setState(() {
+        _ktpPhotoPath = image.path;
+      });
+    }
+  }
+
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Color(0xFF268B07)),
+                title: const Text('Kamera'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Color(0xFF268B07)),
+                title: const Text('Galeri'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -572,12 +619,10 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
             ),
             const SizedBox(height: 12),
             GestureDetector(
-              onTap: () {
-                // TODO: implementasi image picker untuk upload foto KTP
-              },
+              onTap: _showImageSourceDialog,
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 18),
+                padding: EdgeInsets.symmetric(vertical: _ktpPhotoPath == null ? 18 : 0),
                 decoration: BoxDecoration(
                   color: pageBackground,
                   borderRadius: BorderRadius.circular(12),
@@ -586,26 +631,47 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
                     width: 1.5,
                     style: BorderStyle.solid,
                   ),
+                  image: _ktpPhotoPath != null
+                      ? DecorationImage(
+                          image: FileImage(File(_ktpPhotoPath!)),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
                 ),
-                child: const Column(
-                  children: [
-                    Icon(
-                      Icons.camera_alt_rounded,
-                      color: primaryGreen,
-                      size: 22,
-                    ),
-                    SizedBox(height: 6),
-                    Text(
-                      'Ambil atau unggah foto KTP',
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: primaryGreen,
+                child: _ktpPhotoPath == null
+                    ? const Column(
+                        children: [
+                          Icon(
+                            Icons.camera_alt_rounded,
+                            color: primaryGreen,
+                            size: 22,
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            'Ambil atau unggah foto KTP',
+                            style: TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: primaryGreen,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Container(
+                        height: 120, // adjust height for photo preview
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.black.withOpacity(0.3),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.check_circle,
+                            color: Colors.white,
+                            size: 40,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ],

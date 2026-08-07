@@ -225,29 +225,35 @@ class _HalamanTugasState extends State<HalamanTugas> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Icon(tipeIcon, color: tipeColor, size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      tipeTugas,
-                      style: TextStyle(
-                        color: tipeColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(tipeIcon, color: tipeColor, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        tipeTugas,
+                        style: TextStyle(
+                          color: tipeColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      txId,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                        fontSize: 13,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          txId,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
+                            fontSize: 13,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,

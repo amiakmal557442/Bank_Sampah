@@ -3,6 +3,8 @@ import 'transaction_service.dart';
 import 'session_service.dart';
 import 'db_helper.dart';
 import 'api_service.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 
 class DropPoint {
   final String id;
@@ -65,8 +67,52 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
   List<WasteCategory> _wasteCategories = [];
   bool _isLoadingData = true;
 
-  // Step 3 Data: Simulated Photos
-  final List<String> _uploadedPhotos = ['photo_1.jpg'];
+  // Step 3 Data: Photos
+  final List<String> _uploadedPhotos = [];
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickImage(ImageSource source) async {
+    final XFile? image = await _picker.pickImage(source: source, imageQuality: 70);
+    if (image != null) {
+      setState(() {
+        _uploadedPhotos.add(image.path);
+      });
+      _showToast('Foto baru berhasil ditambahkan!');
+    }
+  }
+
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: Icon(Icons.camera_alt, color: _primaryGreen),
+                title: const Text('Kamera'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_library, color: _primaryGreen),
+                title: const Text('Galeri'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   Future<void> _goToNextStep() async {
     if (_currentStep == 0 && _selectedDropPointIndex < 0) {
@@ -745,12 +791,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
 
         // Upload Drop Box Area
         GestureDetector(
-          onTap: () {
-            setState(() {
-              _uploadedPhotos.add('photo_${_uploadedPhotos.length + 1}.jpg');
-            });
-            _showToast('Foto baru berhasil ditambahkan!');
-          },
+          onTap: _showImageSourceDialog,
           child: Container(
             width: double.infinity,
             height: 160,
@@ -801,11 +842,10 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
                     decoration: BoxDecoration(
                       color: _lightGreenBg,
                       borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.image_outlined,
-                      color: _primaryGreen,
-                      size: 30,
+                      image: DecorationImage(
+                        image: FileImage(File(_uploadedPhotos[index])),
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                   Positioned(
@@ -837,13 +877,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
 
             // Add (+) Button
             GestureDetector(
-              onTap: () {
-                setState(() {
-                  _uploadedPhotos.add(
-                    'photo_${_uploadedPhotos.length + 1}.jpg',
-                  );
-                });
-              },
+              onTap: _showImageSourceDialog,
               child: Container(
                 width: 72,
                 height: 72,

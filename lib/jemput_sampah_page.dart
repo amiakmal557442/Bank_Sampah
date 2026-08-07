@@ -3,6 +3,8 @@ import 'transaction_service.dart';
 import 'db_helper.dart';
 import 'session_service.dart';
 import 'api_service.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 
 // ============================================================================
 // 1. HALAMAN JADWAL & LOKASI PENJEMPUTAN
@@ -737,7 +739,50 @@ class PickupConfirmationScreen extends StatefulWidget {
 
 class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
   String? _photoPath;
+  final ImagePicker _picker = ImagePicker();
   bool _isSubmitting = false;
+
+  Future<void> _pickImage(ImageSource source) async {
+    final XFile? image = await _picker.pickImage(source: source, imageQuality: 70);
+    if (image != null) {
+      setState(() {
+        _photoPath = image.path;
+      });
+    }
+  }
+
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Color(0xFF268B07)),
+                title: const Text('Kamera'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Color(0xFF268B07)),
+                title: const Text('Galeri'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -885,13 +930,7 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
             context: context,
             content: _photoPath == null
                 ? InkWell(
-                    onTap: () async {
-                      // Simulasi ambil foto
-                      await Future.delayed(const Duration(milliseconds: 500));
-                      setState(() {
-                        _photoPath = 'simulated_photo_path.jpg';
-                      });
-                    },
+                    onTap: _showImageSourceDialog,
                     child: Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 24),
@@ -931,12 +970,18 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                           color: Colors.grey.shade200,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Colors.grey.shade300),
+                          image: _photoPath != null
+                              ? DecorationImage(
+                                  image: FileImage(File(_photoPath!)),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
                         ),
-                        child: const Icon(
+                        child: _photoPath == null ? const Icon(
                           Icons.image,
                           size: 40,
                           color: Colors.grey,
-                        ),
+                        ) : null,
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -1273,10 +1318,10 @@ class PickupSuccessScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildStatusStep('Menunggu', true, primaryGreen, 1),
-                _buildStatusStep('Dikonfirmasi', false, primaryGreen, 2),
-                _buildStatusStep('Menuju\nlokasi', false, primaryGreen, 3),
-                _buildStatusStep('Selesai', false, primaryGreen, 4),
+                Expanded(child: _buildStatusStep('Menunggu', true, primaryGreen, 1)),
+                Expanded(child: _buildStatusStep('Dikonfirmasi', false, primaryGreen, 2)),
+                Expanded(child: _buildStatusStep('Menuju\nlokasi', false, primaryGreen, 3)),
+                Expanded(child: _buildStatusStep('Selesai', false, primaryGreen, 4)),
               ],
             ),
             const SizedBox(height: 28),
@@ -1303,7 +1348,13 @@ class PickupSuccessScreen extends StatelessWidget {
                     children: [
                       Icon(Icons.schedule, size: 16, color: primaryGreen),
                       const SizedBox(width: 8),
-                      const Text('Menunggu konfirmasi & penugasan petugas'),
+                      const Expanded(
+                        child: Text(
+                          'Menunggu konfirmasi & penugasan petugas',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
