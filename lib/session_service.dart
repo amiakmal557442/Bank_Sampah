@@ -17,6 +17,7 @@ class SessionService {
   static String get role => currentUser?['role'] ?? 'nasabah';
   static int get pointBalance => currentUser?['point_balance'] ?? 0;
   static String get address => currentUser?['address'] ?? '';
+  static String get profilePicture => currentUser?['profile_picture'] ?? '';
 
   // ── Persistensi Sesi ─────────────────────────────────────────────────────
 

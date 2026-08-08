@@ -5,8 +5,10 @@ import 'transaction_service.dart';
 import 'jemput_sampah_page.dart';
 import 'map_location_screen.dart';
 import 'session_service.dart';
-import 'voucher_page.dart';
 import 'tukar_poin_page.dart';
+import 'voucher_page.dart';
+import 'edit_profile_page.dart';
+import 'api_service.dart';
 
 void main() {
   runApp(const BankSampahApp());
@@ -546,7 +548,7 @@ class _BerandaPageState extends State<BerandaPage> {
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) =>
-                                              const VoucherScreen(),
+                                              VoucherScreen(),
                                         ),
                                       );
                                       setState(() {});
@@ -2046,9 +2048,14 @@ class _RiwayatPageState extends State<RiwayatPage> {
   }
 }
 
-class ProfilPage extends StatelessWidget {
+class ProfilPage extends StatefulWidget {
   const ProfilPage({super.key});
 
+  @override
+  State<ProfilPage> createState() => _ProfilPageState();
+}
+
+class _ProfilPageState extends State<ProfilPage> {
   @override
   Widget build(BuildContext context) {
     final Color primaryGreen = const Color(0xFF268B07);
@@ -2123,56 +2130,104 @@ class ProfilPage extends StatelessWidget {
                         Row(
                           children: [
                             // Foto Profil dengan Badge Edit
-                            Stack(
-                              children: [
-                                CircleAvatar(
-                                  radius: 34,
-                                  backgroundColor: const Color(0xFFDCFCE7),
-                                  child: Text(
-                                    (() {
-                                      final names = SessionService.fullName
-                                          .split(' ');
-                                      if (names.length >= 2) {
-                                        return (names[0].isNotEmpty
-                                                ? names[0][0]
-                                                : '') +
-                                            (names[1].isNotEmpty
-                                                ? names[1][0]
-                                                : '');
-                                      } else if (names.isNotEmpty &&
-                                          names[0].isNotEmpty) {
-                                        return names[0][0];
-                                      }
-                                      return 'US';
-                                    })().toUpperCase(),
-                                    style: TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: primaryGreen,
-                                    ),
+                            GestureDetector(
+                              onTap: () async {
+                                final updated = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const EditProfilePage(),
                                   ),
-                                ),
-                                Positioned(
-                                  bottom: 0,
-                                  right: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: primaryGreen,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white,
-                                        width: 2,
+                                );
+                                if (updated == true) {
+                                  setState(() {});
+                                }
+                              },
+                              child: Stack(
+                                children: [
+                                  if (SessionService.profilePicture.isNotEmpty &&
+                                      ApiService.getProfileImageUrl(SessionService.profilePicture) != null)
+                                    CircleAvatar(
+                                      radius: 34,
+                                      backgroundColor: const Color(0xFFDCFCE7),
+                                      child: ClipOval(
+                                        child: Image.network(
+                                          ApiService.getProfileImageUrl(SessionService.profilePicture)!,
+                                          width: 68,
+                                          height: 68,
+                                          fit: BoxFit.cover,
+                                          headers: const {'ngrok-skip-browser-warning': 'true'},
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Text(
+                                              (() {
+                                                final names = SessionService.fullName.split(' ');
+                                                if (names.length >= 2) {
+                                                  return (names[0].isNotEmpty ? names[0][0] : '') +
+                                                      (names[1].isNotEmpty ? names[1][0] : '');
+                                                } else if (names.isNotEmpty && names[0].isNotEmpty) {
+                                                  return names[0][0];
+                                                }
+                                                return 'US';
+                                              })().toUpperCase(),
+                                              style: TextStyle(
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.bold,
+                                                color: primaryGreen,
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    CircleAvatar(
+                                      radius: 34,
+                                      backgroundColor: const Color(0xFFDCFCE7),
+                                      child: Text(
+                                        (() {
+                                          final names = SessionService.fullName
+                                              .split(' ');
+                                          if (names.length >= 2) {
+                                            return (names[0].isNotEmpty
+                                                    ? names[0][0]
+                                                    : '') +
+                                                (names[1].isNotEmpty
+                                                    ? names[1][0]
+                                                    : '');
+                                          } else if (names.isNotEmpty &&
+                                              names[0].isNotEmpty) {
+                                            return names[0][0];
+                                          }
+                                          return 'US';
+                                        })().toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryGreen,
+                                        ),
                                       ),
                                     ),
-                                    child: const Icon(
-                                      Icons.edit_rounded,
-                                      color: Colors.white,
-                                      size: 12,
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: primaryGreen,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.edit_rounded,
+                                        color: Colors.white,
+                                        size: 12,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
@@ -2284,7 +2339,17 @@ class ProfilPage extends StatelessWidget {
                           icon: Icons.person_outline_rounded,
                           title: 'Ubah Profil',
                           subtitle: 'Nama, email, dan foto profil',
-                          onTap: () {},
+                          onTap: () async {
+                            final updated = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const EditProfilePage(),
+                              ),
+                            );
+                            if (updated == true) {
+                              setState(() {});
+                            }
+                          },
                         ),
                         const Divider(height: 1, indent: 56, endIndent: 16),
                         _buildProfileMenuItem(

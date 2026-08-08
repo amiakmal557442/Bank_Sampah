@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 
 /// Service untuk berkomunikasi dengan API Backend (PHP + MySQL XAMPP)
@@ -10,7 +11,7 @@ class ApiService {
   // - Android Emulator       : http://10.0.2.2/bank_sampah_api
   // - Android Fisik (Wi-Fi)  : http://192.168.x.x/bank_sampah_api
   // =====================================================================
-  static const String baseUrl = 'https://contempt-scrubber-cautious.ngrok-free.dev/bank_sampah_api';
+  static const String baseUrl = 'https://dreamland-single-counting.ngrok-free.dev/bank_sampah_api';
 
   static final ApiService instance = ApiService._();
   ApiService._();
@@ -80,13 +81,11 @@ class ApiService {
   }
 
   Map<String, dynamic> _handle(http.Response response) {
-    try {
-      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
-      if (decoded is Map<String, dynamic>) return decoded;
-      return {'success': false, 'message': 'Format respons tidak valid'};
-    } catch (e) {
-      return {'success': false, 'message': 'Gagal memproses respons: $e'};
+    final body = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return body is Map<String, dynamic> ? body : {'data': body};
     }
+    throw Exception(body['message'] ?? 'Terjadi kesalahan');
   }
 
   // ─────────────────────────────────────────────────
@@ -122,8 +121,8 @@ class ApiService {
     return [];
   }
 
-  Future<bool> createUser(Map<String, dynamic> user) async {
-    final res = await _post('users/index.php', user);
+  Future<bool> createUser(Map<String, dynamic> data) async {
+    final res = await _post('users/index.php', data);
     return res['success'] == true;
   }
 
@@ -135,6 +134,48 @@ class ApiService {
   Future<bool> deleteUser(String id) async {
     final res = await _delete('users/index.php', params: {'id': id});
     return res['success'] == true;
+  }
+
+  /// Update data profil user (nama, email, no HP, alamat, foto_profil)
+  Future<bool> updateUserProfile(String id, Map<String, dynamic> data) async {
+    try {
+      final res = await _put('users/index.php', data, params: {'id': id});
+      return res['success'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Upload foto profil ke XAMPP server via multipart request
+  Future<String?> uploadProfilePicture(String userId, File imageFile) async {
+    try {
+      final uri = Uri.parse('$baseUrl/users/upload_avatar.php');
+      final request = http.MultipartRequest('POST', uri);
+      request.headers.addAll({
+        'ngrok-skip-browser-warning': 'true',
+      });
+      request.fields['user_id'] = userId;
+      request.files.add(await http.MultipartFile.fromPath('profile_picture', imageFile.path));
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      final res = _handle(response);
+      if (res['success'] == true) {
+        return res['profile_picture'] as String?;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Helper untuk mendapatkan URL gambar profil lengkap
+  static String? getProfileImageUrl(String? filename) {
+    if (filename == null || filename.isEmpty) return null;
+    if (filename.startsWith('http://') || filename.startsWith('https://')) {
+      return filename;
+    }
+    return '$baseUrl/uploads/profiles/$filename';
   }
 
   /// Ambil satu user berdasarkan ID dari XAMPP (termasuk point_balance terbaru)
