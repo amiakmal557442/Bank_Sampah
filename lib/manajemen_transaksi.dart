@@ -57,16 +57,18 @@ class SetorTransaksiModel {
 enum PenarikanStatus { menunggu, diproses, selesai, ditolak }
 
 class PenarikanModel {
-  final String userName;
-  final String tujuan; // DANA, GoPay, Bank, dst
-  final int poin;
-  final double nominal;
-  final String waktu;
+  String id;
+  String userName;
+  String tujuan;
+  int poin;
+  int nominal;
+  String waktu;
   PenarikanStatus status;
-  final bool isAnomali;
-  final String? anomaliReason;
+  bool isAnomali;
+  String? anomaliReason;
 
   PenarikanModel({
+    required this.id,
     required this.userName,
     required this.tujuan,
     required this.poin,
@@ -133,6 +135,7 @@ final List<SetorTransaksiModel> sampleSetor = [
 
 final List<PenarikanModel> samplePenarikan = [
   PenarikanModel(
+    id: '1',
     userName: 'Agus Prasetyo',
     tujuan: 'Rekening Bank',
     poin: 85000,
@@ -143,6 +146,7 @@ final List<PenarikanModel> samplePenarikan = [
     anomaliReason: 'Nominal jauh di atas rata-rata (biasanya <Rp100rb)',
   ),
   PenarikanModel(
+    id: '2',
     userName: 'Dewi Lestari',
     tujuan: 'DANA',
     poin: 4500,
@@ -151,6 +155,7 @@ final List<PenarikanModel> samplePenarikan = [
     status: PenarikanStatus.menunggu,
   ),
   PenarikanModel(
+    id: '3',
     userName: 'Hendra Gunawan',
     tujuan: 'GoPay',
     poin: 1000,
@@ -210,6 +215,7 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
   ];
 
   List<Map<String, dynamic>> _dbTransactions = [];
+  List<PenarikanModel> _dbWithdrawals = [];
   Map<int, String> _categoryNamesMap = {};
   Map<int, int> _categoryPointsMap = {};
   bool _isLoading = true;
@@ -232,8 +238,25 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
     }
 
     List<Map<String, dynamic>> txs = [];
+    List<PenarikanModel> wds = [];
     try {
       txs = await ApiService.instance.getTransactions();
+      final wdData = await ApiService.instance.fetchWithdrawals();
+      for (var w in wdData) {
+        PenarikanStatus st = PenarikanStatus.menunggu;
+        if (w['status'] == 'approved') st = PenarikanStatus.selesai;
+        if (w['status'] == 'rejected') st = PenarikanStatus.ditolak;
+        
+        wds.add(PenarikanModel(
+          id: w['id'].toString(),
+          userName: w['nasabah_name'] ?? 'Unknown',
+          tujuan: w['method'] ?? 'Transfer',
+          poin: (w['points_deducted'] ?? 0).toInt(),
+          nominal: (w['points_deducted'] ?? 0) * 10, // Assuming 1 point = 10 Rp
+          waktu: w['created_at']?.toString().substring(0, 16) ?? '',
+          status: st,
+        ));
+      }
     } catch (_) {
       txs = [];
     }
@@ -245,6 +268,7 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
     if (!mounted) return;
     setState(() {
       _dbTransactions = txs;
+      _dbWithdrawals = wds;
       _isLoading = false;
     });
   }
@@ -905,7 +929,13 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                 ['User', 'Tujuan', 'Nominal', 'Waktu', 'Status', 'Aksi'],
                 [2, 2, 2, 2, 2, 2],
               ),
-              ...samplePenarikan.map(
+            if (_dbWithdrawals.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(20),
+                child: Center(child: Text('Belum ada penarikan saldo')),
+              )
+            else
+              ..._dbWithdrawals.map(
                 (p) => Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -999,24 +1029,35 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                                     children: [
                                       _actionButton(
                                         p.isAnomali ? 'Tinjau' : 'Setujui',
-                                        onTap: () {
+                                        onTap: () async {
                                           if (p.isAnomali) {
                                             _showTinjauanAnomaliDialog(p);
                                           } else {
-                                            setState(() {
-                                              p.status =
-                                                  PenarikanStatus.diproses;
-                                            });
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Penarikan saldo disetujui dan diproses',
-                                                ),
-                                                backgroundColor: primaryGreen,
-                                              ),
-                                            );
+                                            String? error = await ApiService.instance.updateWithdrawalStatus(p.id, 'approved');
+                                            if (error == null) {
+                                              setState(() {
+                                                p.status =
+                                                    PenarikanStatus.selesai;
+                                              });
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Penarikan saldo disetujui',
+                                                    ),
+                                                    backgroundColor: primaryGreen,
+                                                  ),
+                                                );
+                                              }
+                                            } else {
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(content: Text(error), backgroundColor: Colors.red),
+                                                );
+                                              }
+                                            }
                                           }
                                         },
                                       ),
@@ -1024,10 +1065,29 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                                       _actionButton(
                                         'Tolak',
                                         primary: false,
-                                        onTap: () {
-                                          setState(() {
-                                            p.status = PenarikanStatus.ditolak;
-                                          });
+                                        onTap: () async {
+                                          String? error = await ApiService.instance.updateWithdrawalStatus(p.id, 'rejected');
+                                          if (error == null) {
+                                            setState(() {
+                                              p.status = PenarikanStatus.ditolak;
+                                            });
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text('Penarikan ditolak'),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                            }
+                                          } else {
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(content: Text(error), backgroundColor: Colors.red),
+                                              );
+                                            }
+                                          }
                                         },
                                       ),
                                     ],

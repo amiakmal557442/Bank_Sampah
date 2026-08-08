@@ -18,6 +18,7 @@ class PickupTask {
   final double estWeightKg;
   String status; // 'menuju', 'tiba', 'selesai'
   final String type;
+  final String? photoEvidence;
 
   PickupTask({
     required this.wasteId,
@@ -28,6 +29,7 @@ class PickupTask {
     required this.estWeightKg,
     this.status = 'menuju',
     this.type = 'pickup',
+    this.photoEvidence,
   });
 }
 
@@ -221,6 +223,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           type: (t['type'] ?? t['tipe_tugas'] ?? 'pickup')
               .toString()
               .toLowerCase(),
+          photoEvidence: t['photo_evidence']?.toString(),
         );
       }).toList();
 
@@ -268,11 +271,21 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
         onTap: () => setState(() => _bottomNavIndex = 3),
         child: Row(
           children: [
-            const CircleAvatar(
-              backgroundColor: baseWhite,
-              radius: 18,
-              child: Icon(Icons.person_rounded, color: oldGrassGreen, size: 22),
-            ),
+            Builder(builder: (context) {
+              final picUrl = ApiService.getProfileImageUrl(SessionService.profilePicture);
+              if (picUrl != null && picUrl.isNotEmpty) {
+                return CircleAvatar(
+                  backgroundColor: baseWhite,
+                  radius: 18,
+                  backgroundImage: NetworkImage(picUrl, headers: const {'ngrok-skip-browser-warning': 'true'}),
+                );
+              }
+              return const CircleAvatar(
+                backgroundColor: baseWhite,
+                radius: 18,
+                child: Icon(Icons.person_rounded, color: oldGrassGreen, size: 22),
+              );
+            }),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -625,6 +638,40 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   // ─────────────────────────────────────────────
   // Kartu Tugas Aktif
   // ─────────────────────────────────────────────
+  void _showImageDialog(BuildContext context, String photos) {
+    final files = photos.split(',');
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            PageView.builder(
+              itemCount: files.length,
+              itemBuilder: (c, i) => InteractiveViewer(
+                child: Image.network(
+                  '${ApiService.baseUrl}/uploads/transactions/${files[i]}',
+                  headers: const {'ngrok-skip-browser-warning': 'true'},
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 20,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildCurrentTaskCard() {
     final task = _currentTask!;
     return Container(
@@ -766,10 +813,16 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    onPressed: _launchMaps,
-                    icon: const Icon(Icons.map_rounded, size: 16),
+                    onPressed: () {
+                      if (task.photoEvidence != null && task.photoEvidence!.isNotEmpty) {
+                        _showImageDialog(context, task.photoEvidence!);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tidak ada gambar foto sampah.')));
+                      }
+                    },
+                    icon: const Icon(Icons.image_outlined, size: 16),
                     label: const Text(
-                      'Arahkan',
+                      'Lihat Gambar',
                       style: TextStyle(fontSize: 13),
                     ),
                   ),

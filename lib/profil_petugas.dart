@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'session_service.dart';
 import 'login_page.dart';
+import 'chat_admin_page.dart';
+import 'pengaturan_notifikasi_page.dart';
+import 'bantuan_faq_page.dart';
 
 // ============================================================================
 // Halaman Profil — Aplikasi Mobile Petugas/Pekerja Lapangan
@@ -464,7 +467,14 @@ class _PetugasProfilScreenState extends State<PetugasProfilScreen> {
             icon: Icons.support_agent_rounded,
             title: 'Chat dengan Admin/Kantor',
             subtitle: 'FR-PL-13 — hubungi kantor langsung',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ChatAdminPage(),
+                ),
+              );
+            },
           ),
           _divider(),
           _menuItem(
@@ -477,13 +487,27 @@ class _PetugasProfilScreenState extends State<PetugasProfilScreen> {
           _menuItem(
             icon: Icons.notifications_none_rounded,
             title: 'Pengaturan Notifikasi',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PengaturanNotifikasiPage(),
+                ),
+              );
+            },
           ),
           _divider(),
           _menuItem(
             icon: Icons.help_outline_rounded,
             title: 'Bantuan & FAQ',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const BantuanFaqPage(),
+                ),
+              );
+            },
           ),
         ],
       ),

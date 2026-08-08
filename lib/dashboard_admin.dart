@@ -8,6 +8,7 @@ import 'kelolaakun.dart';
 import 'konfigurasi_sistem.dart';
 import 'audit_log.dart';
 import 'login_page.dart';
+import 'api_service.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -169,20 +170,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               padding: const EdgeInsets.all(20),
                               child: Row(
                                 children: [
-                                  CircleAvatar(
-                                    backgroundColor: oldGrassGreen,
-                                    radius: 20,
-                                    child: Text(
-                                      adminName
-                                          .split(' ')
-                                          .map((e) => e.isNotEmpty ? e[0] : '')
-                                          .take(2)
-                                          .join(),
-                                      style: TextStyle(
-                                        color: baseWhite,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
+                                  Builder(
+                                    builder: (context) {
+                                      final picUrl = ApiService.getProfileImageUrl(SessionService.profilePicture);
+                                      Widget initialAvatar = CircleAvatar(
+                                        backgroundColor: oldGrassGreen,
+                                        radius: 20,
+                                        child: Text(
+                                          adminName
+                                              .split(' ')
+                                              .map((e) => e.isNotEmpty ? e[0] : '')
+                                              .take(2)
+                                              .join(),
+                                          style: TextStyle(
+                                            color: baseWhite,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      );
+
+                                      if (picUrl != null && picUrl.isNotEmpty) {
+                                        return CircleAvatar(
+                                          radius: 20,
+                                          backgroundColor: Colors.transparent,
+                                          backgroundImage: NetworkImage(picUrl, headers: const {'ngrok-skip-browser-warning': 'true'}),
+                                        );
+                                      }
+                                      return initialAvatar;
+                                    }
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(

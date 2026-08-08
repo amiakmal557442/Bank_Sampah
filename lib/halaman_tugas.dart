@@ -161,12 +161,8 @@ class _HalamanTugasState extends State<HalamanTugas> {
                     duration: const Duration(seconds: 4),
                   ),
                 );
-                // Hapus tugas dari list (langsung, tanpa nunggu reload)
-                setState(() {
-                  _daftarTugas.removeWhere(
-                    (t) => (t['id_transaksi'] ?? t['id'])?.toString() == txId,
-                  );
-                });
+                // Refresh data via API/Database so user sees the loading spinner
+                _loadTasks();
               }
             },
       ),
@@ -192,6 +188,40 @@ class _HalamanTugasState extends State<HalamanTugas> {
                 },
               ),
             ),
+    );
+  }
+
+  void _showImageDialog(BuildContext context, String photos) {
+    final files = photos.split(',');
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            PageView.builder(
+              itemCount: files.length,
+              itemBuilder: (c, i) => InteractiveViewer(
+                child: Image.network(
+                  '${ApiService.baseUrl}/uploads/transactions/${files[i]}',
+                  headers: const {'ngrok-skip-browser-warning': 'true'},
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 20,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -334,13 +364,18 @@ class _HalamanTugasState extends State<HalamanTugas> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    isDropIn
-                        ? (tugas['drop_point_name'] != null
-                              ? '${tugas['drop_point_name']} — ${tugas['drop_point_address'] ?? ''}'
-                              : (tugas['alamat'] ??
-                                    tugas['nasabah_address'] ??
-                                    'Drop Point'))
-                        : (tugas['alamat'] ?? tugas['nasabah_address'] ?? '-'),
+                    () {
+                      if (isDropIn) {
+                        if (tugas['drop_point_name'] != null && tugas['drop_point_name'].toString().trim().isNotEmpty) {
+                          return '${tugas['drop_point_name']} — ${tugas['drop_point_address'] ?? ''}';
+                        }
+                        final addr = tugas['address'] ?? tugas['alamat'] ?? tugas['nasabah_address'] ?? '';
+                        return addr.toString().trim().isEmpty ? 'Drop Point' : addr.toString();
+                      } else {
+                        final addr = tugas['address'] ?? tugas['alamat'] ?? tugas['nasabah_address'] ?? '';
+                        return addr.toString().trim().isEmpty ? '-' : addr.toString();
+                      }
+                    }(),
                     style: TextStyle(color: Colors.grey.shade700, height: 1.4),
                   ),
                 ),
@@ -362,6 +397,42 @@ class _HalamanTugasState extends State<HalamanTugas> {
                 ),
               ],
             ),
+            
+            if (tugas['photo_evidence'] != null && tugas['photo_evidence'].toString().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Text(
+                'Foto Sampah:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: tugas['photo_evidence'].toString().split(',').map((filename) {
+                  final url = '${ApiService.baseUrl}/uploads/transactions/$filename';
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      url,
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      headers: const {'ngrok-skip-browser-warning': 'true'},
+                      errorBuilder: (ctx, err, stack) => Container(
+                        width: 80,
+                        height: 80,
+                        color: Colors.grey.shade300,
+                        child: const Icon(Icons.broken_image, color: Colors.grey),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
             const SizedBox(height: 20),
 
             // Tombol aksi
@@ -372,20 +443,18 @@ class _HalamanTugasState extends State<HalamanTugas> {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                const MapLocationScreen(showBottomNav: false),
-                          ),
-                        );
+                        if (tugas['photo_evidence'] != null && tugas['photo_evidence'].toString().isNotEmpty) {
+                          _showImageDialog(context, tugas['photo_evidence'].toString());
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tidak ada gambar foto sampah.')));
+                        }
                       },
                       icon: Icon(
-                        Icons.map_outlined,
+                        Icons.image_outlined,
                         color: greenTheme,
                         size: 18,
                       ),
-                      label: const Text('Lokasi'),
+                      label: const Text('Lihat Gambar'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: greenTheme,
                         side: BorderSide(color: greenTheme),
@@ -727,6 +796,9 @@ class _TimbangSheetState extends State<_TimbangSheet> {
                                   )
                                   .toList();
                               await widget.onSelesai(poin, berat, itemsToSend);
+                              if (mounted) {
+                                Navigator.pop(context);
+                              }
                             }
                           : null,
                       icon: _isLoading

@@ -1,6 +1,6 @@
 <?php
 require_once 'db.php';
-$res = $conn->query("SHOW COLUMNS FROM transaction_items");
+$res = $conn->query("SHOW COLUMNS FROM transactions");
 while ($row = $res->fetch_assoc()) {
     echo $row['Field'] . " - " . $row['Type'] . "\n";
 }

@@ -738,8 +738,7 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                         'nasabah_id': SessionService.userId,
                         'full_name':
                             SessionService.fullName, // simpan nama langsung
-                        'address':
-                            SessionService.address, // simpan alamat langsung
+                        'address': SessionService.address + (widget.note.isNotEmpty ? ' (Patokan: ${widget.note})' : ''),
                         'type': 'pickup',
                         'status': 'menunggu',
                         'pickup_date':
@@ -753,6 +752,14 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                         ok = await ApiService.instance.createTransaction(
                           txData,
                         );
+                        if (ok && _photoPath != null) {
+                          final file = File(_photoPath!);
+                          if (await file.exists()) {
+                            final bytes = await file.readAsBytes();
+                            final filename = file.path.split('/').last;
+                            await ApiService.instance.uploadTransactionPhoto(txId, bytes, filename);
+                          }
+                        }
                       } catch (_) {}
 
                       // Selalu simpan ke local DB (sumber data utama untuk web).

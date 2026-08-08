@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'api_service.dart';
@@ -16,10 +17,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   late TextEditingController _fullNameController;
   late TextEditingController _emailController;
-  late TextEditingController _phoneController;
   late TextEditingController _addressController;
 
-  File? _selectedImage;
+  XFile? _selectedImage;
   bool _isLoading = false;
   final ImagePicker _picker = ImagePicker();
 
@@ -32,8 +32,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _fullNameController =
         TextEditingController(text: SessionService.fullName);
     _emailController = TextEditingController(text: SessionService.email);
-    _phoneController =
-        TextEditingController(text: SessionService.phoneNumber);
     _addressController =
         TextEditingController(text: SessionService.address);
   }
@@ -42,7 +40,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   void dispose() {
     _fullNameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
     _addressController.dispose();
     super.dispose();
   }
@@ -57,7 +54,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       );
       if (picked != null) {
         setState(() {
-          _selectedImage = File(picked.path);
+          _selectedImage = picked;
         });
       }
     } catch (e) {
@@ -160,11 +157,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
     try {
       String? updatedPhotoName;
 
-      // 1. Upload foto profil jika ada gambar baru yang dipilih
       if (_selectedImage != null) {
+        final bytes = await _selectedImage!.readAsBytes();
+        String filename = _selectedImage!.name;
+        if (!filename.contains('.')) {
+          filename += '.jpg';
+        }
         updatedPhotoName = await ApiService.instance.uploadProfilePicture(
           SessionService.userId,
-          _selectedImage!,
+          bytes,
+          filename,
         );
       }
 
@@ -172,7 +174,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final Map<String, dynamic> updateData = {
         'full_name': _fullNameController.text.trim(),
         'email': _emailController.text.trim(),
-        'phone_number': _phoneController.text.trim(),
         'address': _addressController.text.trim(),
       };
 
@@ -221,9 +222,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   Widget _buildAvatarImage() {
     if (_selectedImage != null) {
-      return CircleAvatar(
-        radius: 54,
-        backgroundImage: FileImage(_selectedImage!),
+      return FutureBuilder<Uint8List>(
+        future: _selectedImage!.readAsBytes(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return CircleAvatar(
+              radius: 54,
+              backgroundImage: MemoryImage(snapshot.data!),
+            );
+          }
+          return _buildInitialAvatar();
+        },
       );
     }
 
@@ -231,20 +240,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final String? imageUrl = ApiService.getProfileImageUrl(profilePic);
 
     if (imageUrl != null && imageUrl.isNotEmpty) {
-      return CircleAvatar(
-        radius: 54,
-        backgroundColor: lightGreenBg,
-        child: ClipOval(
-          child: Image.network(
-            imageUrl,
-            width: 108,
-            height: 108,
-            fit: BoxFit.cover,
-            headers: const {'ngrok-skip-browser-warning': 'true'},
-            errorBuilder: (context, error, stackTrace) {
-              return _buildInitialAvatar();
-            },
-          ),
+      return ClipOval(
+        child: Image.network(
+          imageUrl,
+          width: 108,
+          height: 108,
+          fit: BoxFit.cover,
+          headers: const {'ngrok-skip-browser-warning': 'true'},
+          errorBuilder: (context, error, stackTrace) {
+            return _buildInitialAvatar();
+          },
         ),
       );
     }
@@ -412,13 +417,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         }
                         return null;
                       },
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      controller: _phoneController,
-                      label: 'Nomor Telepon',
-                      icon: Icons.phone_outlined,
-                      keyboardType: TextInputType.phone,
                     ),
                     const SizedBox(height: 16),
                     _buildTextField(

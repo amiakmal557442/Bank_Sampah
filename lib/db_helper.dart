@@ -25,6 +25,7 @@ class DatabaseHelper {
       'default_setor_method': null,
       'point_balance': 0,
       'is_active': 1,
+      'profile_picture': null,
     },
     {
       'id': 'USR-002',
@@ -38,6 +39,7 @@ class DatabaseHelper {
       'default_setor_method': null,
       'point_balance': 0,
       'is_active': 1,
+      'profile_picture': null,
     },
   ];
 
@@ -171,7 +173,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
       onConfigure: _onConfigure,
@@ -240,6 +242,14 @@ class DatabaseHelper {
         ''');
       } catch (_) {}
     }
+    if (oldVersion < 5) {
+      // Add profile_picture column
+      try {
+        await db.execute(
+          'ALTER TABLE users ADD COLUMN profile_picture TEXT',
+        );
+      } catch (_) {}
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -256,6 +266,7 @@ class DatabaseHelper {
         default_setor_method TEXT,
         point_balance INTEGER DEFAULT 0,
         is_active INTEGER DEFAULT 1,
+        profile_picture TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     ''');
@@ -591,6 +602,37 @@ class DatabaseHelper {
       return result.first;
     }
     return null;
+  }
+
+  Future<bool> requestWithdrawal({
+    required String nasabahId,
+    required int pointsDeducted,
+    required String method,
+    required String accountDetails,
+  }) async {
+    if (kIsWeb) {
+      // In-memory fallback untuk web
+      // TODO: implement web behavior if needed
+      return true;
+    }
+
+    final db = await instance.database;
+    if (db == null) return false;
+
+    try {
+      await db.insert('withdrawals', {
+        'id': 'WD-${DateTime.now().millisecondsSinceEpoch}',
+        'nasabah_id': nasabahId,
+        'points_deducted': pointsDeducted,
+        'method': method,
+        'account_details': accountDetails,
+        'status': 'menunggu', 
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   // --- Operasional Lapangan Methods ---

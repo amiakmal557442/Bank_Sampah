@@ -1493,26 +1493,51 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
             flex: 3,
             child: Row(
               children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? const Color(0xFFE8F8E8)
-                        : const Color(0xFFF1F1F1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      initial,
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: isActive ? primaryGreen : mutedText,
+                Builder(
+                  builder: (context) {
+                    final profilePic = acc['profile_picture'] as String?;
+                    final imageUrl = ApiService.getProfileImageUrl(profilePic);
+                    
+                    Widget initialAvatar = Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? const Color(0xFFE8F8E8)
+                            : const Color(0xFFF1F1F1),
+                        shape: BoxShape.circle,
                       ),
-                    ),
-                  ),
+                      child: Center(
+                        child: Text(
+                          initial,
+                          style: TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: isActive ? primaryGreen : mutedText,
+                          ),
+                        ),
+                      ),
+                    );
+
+                    if (imageUrl != null && imageUrl.isNotEmpty) {
+                      return CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Colors.transparent,
+                        child: ClipOval(
+                          child: Image.network(
+                            imageUrl,
+                            width: 28,
+                            height: 28,
+                            fit: BoxFit.cover,
+                            headers: const {'ngrok-skip-browser-warning': 'true'},
+                            errorBuilder: (_, __, ___) => initialAvatar,
+                          ),
+                        ),
+                      );
+                    }
+                    return initialAvatar;
+                  }
                 ),
                 const SizedBox(width: 8),
                 Expanded(

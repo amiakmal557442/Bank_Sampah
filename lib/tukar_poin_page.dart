@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'session_service.dart';
 
 import 'db_helper.dart';
+import 'api_service.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
@@ -34,7 +35,7 @@ const int ktpVerificationThresholdPoints = 50000; // ~Rp 500.000, ASUMSI
 // SRS: 4.820 poin ≈ Rp 48.200). TODO: pastikan rate final dari business rule.
 const double pointToRupiahRate = 10.0;
 
-enum DestinationType { ewallet, bank, internal }
+enum DestinationType { ewallet, cash }
 
 class WithdrawalDestination {
   final String id;
@@ -54,13 +55,6 @@ class WithdrawalDestination {
 
 final List<WithdrawalDestination> destinations = [
   WithdrawalDestination(
-    id: 'dana',
-    name: 'DANA',
-    subtitle: 'E-wallet',
-    type: DestinationType.ewallet,
-    icon: Icons.account_balance_wallet_rounded,
-  ),
-  WithdrawalDestination(
     id: 'gopay',
     name: 'GoPay',
     subtitle: 'E-wallet',
@@ -68,25 +62,18 @@ final List<WithdrawalDestination> destinations = [
     icon: Icons.account_balance_wallet_rounded,
   ),
   WithdrawalDestination(
-    id: 'ovo',
-    name: 'OVO',
+    id: 'dana',
+    name: 'DANA',
     subtitle: 'E-wallet',
     type: DestinationType.ewallet,
     icon: Icons.account_balance_wallet_rounded,
   ),
   WithdrawalDestination(
-    id: 'bank',
-    name: 'Rekening Bank',
-    subtitle: 'Transfer bank',
-    type: DestinationType.bank,
-    icon: Icons.account_balance_rounded,
-  ),
-  WithdrawalDestination(
-    id: 'internal',
-    name: 'Saldo Aplikasi',
-    subtitle: 'Simpan sebagai saldo internal',
-    type: DestinationType.internal,
-    icon: Icons.savings_rounded,
+    id: 'cash',
+    name: 'Uang Tunai (Cash)',
+    subtitle: 'Tukar poin dengan uang tunai',
+    type: DestinationType.cash,
+    icon: Icons.payments_rounded,
   ),
 ];
 
@@ -982,26 +969,41 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
               Expanded(
                 child: GestureDetector(
                   onTap: () async {
-                    int newPoints = SessionService.pointBalance - inputPoints;
-                    await DatabaseHelper.instance.updateUserPointBalance(
+                    // Insert withdrawal request to API
+                    final error = await ApiService.instance.requestWithdrawal(
                       SessionService.userId,
-                      newPoints,
+                      inputPoints,
+                      selectedDestination?.name ?? 'Unknown',
+                      'Detail menyusul', // TODO: Add input for account details
                     );
-                    await SessionService.refresh();
 
-                    if (mounted) {
-                      setState(() {});
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Permintaan penukaran poin berhasil diajukan',
-                            style: TextStyle(fontFamily: 'PlusJakartaSans'),
+                    if (error == null) {
+                      await SessionService.refresh();
+
+                      if (mounted) {
+                        setState(() {});
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Permintaan penukaran poin berhasil diajukan',
+                              style: TextStyle(fontFamily: 'PlusJakartaSans'),
+                            ),
+                            backgroundColor: primaryGreen,
+                            duration: Duration(seconds: 2),
                           ),
-                          backgroundColor: primaryGreen,
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
+                        );
+                      }
+                    } else {
+                      if (mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(error),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     }
                   },
                   child: Container(

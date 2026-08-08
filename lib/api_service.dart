@@ -11,7 +11,7 @@ class ApiService {
   // - Android Emulator       : http://10.0.2.2/bank_sampah_api
   // - Android Fisik (Wi-Fi)  : http://192.168.x.x/bank_sampah_api
   // =====================================================================
-  static const String baseUrl = 'https://dreamland-single-counting.ngrok-free.dev/bank_sampah_api';
+  static const String baseUrl = 'https://contempt-scrubber-cautious.ngrok-free.dev/bank_sampah_api';
 
   static final ApiService instance = ApiService._();
   ApiService._();
@@ -147,7 +147,7 @@ class ApiService {
   }
 
   /// Upload foto profil ke XAMPP server via multipart request
-  Future<String?> uploadProfilePicture(String userId, File imageFile) async {
+  Future<String?> uploadProfilePicture(String userId, List<int> imageBytes, String filename) async {
     try {
       final uri = Uri.parse('$baseUrl/users/upload_avatar.php');
       final request = http.MultipartRequest('POST', uri);
@@ -155,7 +155,7 @@ class ApiService {
         'ngrok-skip-browser-warning': 'true',
       });
       request.fields['user_id'] = userId;
-      request.files.add(await http.MultipartFile.fromPath('profile_picture', imageFile.path));
+      request.files.add(http.MultipartFile.fromBytes('profile_picture', imageBytes, filename: filename));
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
@@ -163,9 +163,9 @@ class ApiService {
       if (res['success'] == true) {
         return res['profile_picture'] as String?;
       }
-      return null;
-    } catch (_) {
-      return null;
+      throw Exception(res['message'] ?? 'Gagal upload foto');
+    } catch (e) {
+      throw Exception('Error upload: $e');
     }
   }
 
@@ -199,6 +199,28 @@ class ApiService {
   // ─────────────────────────────────────────────────
   // TRANSACTIONS
   // ─────────────────────────────────────────────────
+
+  Future<String?> uploadTransactionPhoto(String txId, List<int> imageBytes, String filename) async {
+    try {
+      final uri = Uri.parse('$baseUrl/transactions/upload_photo.php');
+      final request = http.MultipartRequest('POST', uri);
+      request.headers.addAll({
+        'ngrok-skip-browser-warning': 'true',
+      });
+      request.fields['transaction_id'] = txId;
+      request.files.add(http.MultipartFile.fromBytes('photo', imageBytes, filename: filename));
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      final res = _handle(response);
+      if (res['success'] == true) {
+        return res['filename'] as String?;
+      }
+      throw Exception(res['message'] ?? 'Gagal upload foto transaksi');
+    } catch (e) {
+      throw Exception('Error upload: $e');
+    }
+  }
 
   Future<List<Map<String, dynamic>>> getTransactions({
     String? status,
@@ -362,6 +384,50 @@ class ApiService {
       return response.statusCode == 200;
     } catch (e) {
       return false;
+    }
+  }
+
+  // ─────────────────────────────────────────────────
+  // WITHDRAWALS
+  // ─────────────────────────────────────────────────
+
+  Future<String?> requestWithdrawal(String userId, int points, String method, String details) async {
+    try {
+      final res = await _post('withdrawals/index.php', {
+        'nasabah_id': userId,
+        'points_deducted': points,
+        'method': method,
+        'account_details': details,
+      });
+      if (res['success'] == true) return null;
+      return res['message'] ?? 'Gagal mengajukan penarikan';
+    } catch (e) {
+      return 'Terjadi kesalahan koneksi';
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchWithdrawals() async {
+    try {
+      final res = await _get('withdrawals/index.php');
+      if (res['success'] == true && res['data'] != null) {
+        return List<Map<String, dynamic>>.from(res['data']);
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<String?> updateWithdrawalStatus(String id, String status) async {
+    try {
+      final res = await _put('withdrawals/index.php', {
+        'id': id,
+        'status': status,
+      });
+      if (res['success'] == true) return null;
+      return res['message'] ?? 'Gagal mengubah status';
+    } catch (e) {
+      return 'Terjadi kesalahan koneksi';
     }
   }
 }

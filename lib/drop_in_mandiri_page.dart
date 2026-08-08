@@ -139,6 +139,20 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         bool ok = false;
         try {
           ok = await ApiService.instance.createTransaction(txData);
+          if (ok) {
+            for (var path in _uploadedPhotos) {
+              final file = File(path);
+              if (await file.exists()) {
+                final bytes = await file.readAsBytes();
+                final filename = file.path.split('/').last;
+                await ApiService.instance.uploadTransactionPhoto(
+                  txId,
+                  bytes,
+                  filename,
+                );
+              }
+            }
+          }
         } catch (_) {}
 
         await DatabaseHelper.instance.createTransaction(txData, []);

@@ -9,6 +9,10 @@ import 'tukar_poin_page.dart';
 import 'voucher_page.dart';
 import 'edit_profile_page.dart';
 import 'api_service.dart';
+import 'alamat_penjemputan_page.dart';
+import 'bantuan_faq_page.dart';
+import 'kebijakan_privasi_page.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
   runApp(const BankSampahApp());
@@ -2356,7 +2360,17 @@ class _ProfilPageState extends State<ProfilPage> {
                           icon: Icons.location_on_outlined,
                           title: 'Alamat Penjemputan',
                           subtitle: 'Rumah, kantor, atau lokasi pilihan',
-                          onTap: () {},
+                          onTap: () async {
+                            final updated = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AlamatPenjemputanPage(),
+                              ),
+                            );
+                            if (updated == true) {
+                              setState(() {});
+                            }
+                          },
                         ),
                         const Divider(height: 1, indent: 56, endIndent: 16),
                         _buildProfileMenuItem(
@@ -2409,14 +2423,28 @@ class _ProfilPageState extends State<ProfilPage> {
                           icon: Icons.help_outline_rounded,
                           title: 'Pusat Bantuan & FAQ',
                           subtitle: 'Pertanyaan umum & panduan aplikasi',
-                          onTap: () {},
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const BantuanFaqPage(),
+                              ),
+                            );
+                          },
                         ),
                         const Divider(height: 1, indent: 56, endIndent: 16),
                         _buildProfileMenuItem(
                           icon: Icons.shield_outlined,
                           title: 'Syarat & Kebijakan Privasi',
                           subtitle: 'Ketentuan penggunaan data',
-                          onTap: () {},
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const KebijakanPrivasiPage(),
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
