@@ -66,8 +66,56 @@ if ($method === 'GET') {
 
 if ($method === 'PUT') {
     $id = $_GET['id'] ?? null;
+    $action = $_GET['action'] ?? null;
     $data = json_decode(file_get_contents('php://input'), true);
-    if ($id && isset($data['status'])) {
+
+    if ($action === 'claim' && $id && isset($data['petugas_id'])) {
+        $petugasId = $data['petugas_id'];
+        
+        // 1. Cek apakah sudah diklaim orang lain
+        $stmtCheck = $conn->prepare("
+            SELECT t.petugas_id, u.full_name as nama_petugas 
+            FROM transactions t 
+            LEFT JOIN users u ON t.petugas_id = u.id 
+            WHERE t.id = ?
+        ");
+        $stmtCheck->bind_param("s", $id);
+        $stmtCheck->execute();
+        $resCheck = $stmtCheck->get_result();
+        
+        if ($resCheck->num_rows > 0) {
+            $row = $resCheck->fetch_assoc();
+            $existingPetugasId = $row['petugas_id'];
+            
+            if ($existingPetugasId !== null && $existingPetugasId !== '' && $existingPetugasId !== $petugasId) {
+                // Sudah diambil orang lain
+                $namaPetugas = $row['nama_petugas'] ?? 'Lainnya';
+                echo json_encode([
+                    'success' => false, 
+                    'message' => "Tugas sudah diambil oleh petugas $namaPetugas"
+                ]);
+                exit();
+            }
+        }
+        
+        // 2. Jika belum, claim tugas ini (set petugas_id dan status = 'menuju_lokasi')
+        $stmt = $conn->prepare("UPDATE transactions SET petugas_id = ?, status = 'menuju_lokasi' WHERE id = ?");
+        $stmt->bind_param("ss", $petugasId, $id);
+        $stmt->execute();
+        
+        if ($stmt->affected_rows > 0 || $existingPetugasId === $petugasId) {
+             echo json_encode([
+                 'success' => true, 
+                 'message' => 'Tugas berhasil diklaim'
+             ]);
+        } else {
+             echo json_encode([
+                 'success' => false, 
+                 'message' => 'Gagal mengklaim tugas'
+             ]);
+        }
+        exit();
+    } else if ($id && isset($data['status'])) {
         $stmt = $conn->prepare("UPDATE transactions SET status = ? WHERE id = ?");
         $stmt->bind_param("ss", $data['status'], $id);
         $stmt->execute();

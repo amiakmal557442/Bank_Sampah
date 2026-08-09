@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'session_service.dart';
 import 'login_page.dart';
 import 'chat_admin_page.dart';
+import 'api_service.dart';
 import 'pengaturan_notifikasi_page.dart';
 import 'bantuan_faq_page.dart';
 
@@ -458,6 +459,88 @@ class _PetugasProfilScreenState extends State<PetugasProfilScreen> {
   // MENU: CHAT ADMIN (FR-PL-13), LAPOR KENDALA (FR-PL-14), PENGATURAN
   // ------------------------------------------------------------------------
 
+  void _showAdminSelectionSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return FutureBuilder<List<Map<String, dynamic>>>(
+          future: ApiService.instance.getAdmins(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                height: 200,
+                child: Center(
+                  child: CircularProgressIndicator(color: Color(0xFF16A34A)),
+                ),
+              );
+            }
+
+            if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+              return const SizedBox(
+                height: 200,
+                child: Center(
+                  child: Text('Tidak ada admin aktif yang tersedia saat ini.'),
+                ),
+              );
+            }
+
+            final admins = snapshot.data!;
+
+            return Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Pilih Admin / Kantor',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: admins.length,
+                      separatorBuilder: (_, __) => const Divider(),
+                      itemBuilder: (context, index) {
+                        final admin = admins[index];
+                        final adminName = admin['full_name'] ?? 'Admin';
+                        final adminId = admin['id'] ?? '';
+                        final role = admin['role'] ?? 'Admin';
+
+                        return ListTile(
+                          leading: const CircleAvatar(
+                            backgroundColor: Color(0xFF16A34A),
+                            child: Icon(Icons.person, color: Colors.white),
+                          ),
+                          title: Text(adminName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('Role: $role'),
+                          onTap: () {
+                            Navigator.pop(context); // close sheet
+                            Navigator.push(
+                              this.context,
+                              MaterialPageRoute(
+                                builder: (_) => ChatAdminPage(
+                                  adminId: adminId,
+                                  adminName: adminName,
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildMenuList() {
     return _card(
       padding: EdgeInsets.zero,
@@ -468,12 +551,7 @@ class _PetugasProfilScreenState extends State<PetugasProfilScreen> {
             title: 'Chat dengan Admin/Kantor',
             subtitle: 'FR-PL-13 — hubungi kantor langsung',
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ChatAdminPage(),
-                ),
-              );
+              _showAdminSelectionSheet(context);
             },
           ),
           _divider(),

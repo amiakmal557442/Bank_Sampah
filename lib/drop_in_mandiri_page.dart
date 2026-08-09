@@ -5,6 +5,7 @@ import 'db_helper.dart';
 import 'api_service.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart';
 
 class DropPoint {
   final String id;
@@ -68,7 +69,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
   bool _isLoadingData = true;
 
   // Step 3 Data: Photos
-  final List<String> _uploadedPhotos = [];
+  final List<XFile> _uploadedPhotos = [];
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _pickImage(ImageSource source) async {
@@ -78,7 +79,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
     );
     if (image != null) {
       setState(() {
-        _uploadedPhotos.add(image.path);
+        _uploadedPhotos.add(image);
       });
       _showToast('Foto baru berhasil ditambahkan!');
     }
@@ -140,17 +141,10 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         try {
           ok = await ApiService.instance.createTransaction(txData);
           if (ok) {
-            for (var path in _uploadedPhotos) {
-              final file = File(path);
-              if (await file.exists()) {
-                final bytes = await file.readAsBytes();
-                final filename = file.path.split('/').last;
-                await ApiService.instance.uploadTransactionPhoto(
-                  txId,
-                  bytes,
-                  filename,
-                );
-              }
+            for (var photoFile in _uploadedPhotos) {
+              final bytes = await photoFile.readAsBytes();
+              final filename = photoFile.name;
+              await ApiService.instance.uploadTransactionPhoto(txId, bytes, filename);
             }
           }
         } catch (_) {}
@@ -669,7 +663,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
                       color: _lightGreenBg,
                       borderRadius: BorderRadius.circular(12),
                       image: DecorationImage(
-                        image: FileImage(File(_uploadedPhotos[index])),
+                        image: kIsWeb ? NetworkImage(_uploadedPhotos[index].path) : FileImage(File(_uploadedPhotos[index].path)) as ImageProvider,
                         fit: BoxFit.cover,
                       ),
                     ),

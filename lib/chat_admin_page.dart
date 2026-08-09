@@ -1,7 +1,17 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'api_service.dart';
+import 'session_service.dart';
 
 class ChatAdminPage extends StatefulWidget {
-  const ChatAdminPage({super.key});
+  final String adminId;
+  final String adminName;
+
+  const ChatAdminPage({
+    super.key,
+    required this.adminId,
+    required this.adminName,
+  });
 
   @override
   State<ChatAdminPage> createState() => _ChatAdminPageState();
@@ -9,46 +19,99 @@ class ChatAdminPage extends StatefulWidget {
 
 class _ChatAdminPageState extends State<ChatAdminPage> {
   final TextEditingController _messageController = TextEditingController();
-  final List<Map<String, dynamic>> _messages = [
-    {
-      'isMe': false,
-      'text': 'Halo, ada yang bisa kami bantu terkait jadwal operasional Anda?',
-      'time': '08:00',
-    },
-    {
-      'isMe': true,
-      'text': 'Saya butuh bantuan untuk jadwal rute area Depok hari ini.',
-      'time': '08:05',
-    },
-  ];
+  final ScrollController _scrollController = ScrollController();
+  List<Map<String, dynamic>> _messages = [];
+  Timer? _timer;
+  bool _isLoading = true;
 
-  void _sendMessage() {
-    if (_messageController.text.trim().isEmpty) return;
+  @override
+  void initState() {
+    super.initState();
+    _fetchMessages();
+    _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      _fetchMessages(isPolling: true);
+    });
+  }
 
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _scrollController.dispose();
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchMessages({bool isPolling = false}) async {
+    final currentUserId = SessionService.userId;
+    if (currentUserId.isEmpty) return;
+
+    final data = await ApiService.instance.getChatMessages(currentUserId, widget.adminId);
+    
+    // Convert API format to UI format
+    final List<Map<String, dynamic>> formatted = data.map((e) {
+      bool isMe = e['sender_id'] == currentUserId;
+      // Extract time from created_at
+      String rawDate = e['created_at'] ?? '';
+      String timeStr = '';
+      if (rawDate.length >= 16) {
+        // e.g. "2023-10-15 14:30:00" -> "14:30"
+        timeStr = rawDate.substring(11, 16);
+      }
+      return {
+        'isMe': isMe,
+        'text': e['message'] ?? '',
+        'time': timeStr,
+      };
+    }).toList();
+
+    if (mounted) {
+      setState(() {
+        _messages = formatted;
+        _isLoading = false;
+      });
+      if (!isPolling) {
+        _scrollToBottom();
+      }
+    }
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      });
+    }
+  }
+
+  Future<void> _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    final currentUserId = SessionService.userId;
+    if (currentUserId.isEmpty) return;
+
+    // Optimistic UI update
     setState(() {
       _messages.add({
         'isMe': true,
-        'text': _messageController.text.trim(),
-        'time':
-            '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+        'text': text,
+        'time': '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
       });
-      _messageController.clear();
     });
+    _messageController.clear();
+    _scrollToBottom();
 
-    // Simulate admin reply
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        setState(() {
-          _messages.add({
-            'isMe': false,
-            'text': 'Baik, petugas kami akan segera mengecek dan merespons.',
-            'time':
-                '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
-          });
-        });
-      }
-    });
+    // Call API
+    await ApiService.instance.sendChatMessage(currentUserId, widget.adminId, text);
+    // Refresh to get actual data
+    _fetchMessages();
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -57,11 +120,11 @@ class _ChatAdminPageState extends State<ChatAdminPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Admin / Kantor',
+              widget.adminName,
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             Text(
@@ -77,10 +140,13 @@ class _ChatAdminPageState extends State<ChatAdminPage> {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
+            child: _isLoading 
+                ? const Center(child: CircularProgressIndicator(color: primaryGreen))
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
                 final msg = _messages[index];
                 final isMe = msg['isMe'] as bool;
                 return Align(

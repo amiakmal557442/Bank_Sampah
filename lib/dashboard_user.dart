@@ -12,6 +12,7 @@ import 'api_service.dart';
 import 'alamat_penjemputan_page.dart';
 import 'bantuan_faq_page.dart';
 import 'kebijakan_privasi_page.dart';
+import 'chat_admin_page.dart';
 import 'package:http/http.dart' as http;
 
 void main() {
@@ -2413,6 +2414,13 @@ class _ProfilPageState extends State<ProfilPage> {
                     child: Column(
                       children: [
                         _buildProfileMenuItem(
+                          icon: Icons.chat_bubble_outline_rounded,
+                          title: 'Chat dengan Admin',
+                          subtitle: 'Hubungi admin / kantor langsung',
+                          onTap: () => _showAdminSelectionSheet(context),
+                        ),
+                        const Divider(height: 1, indent: 56, endIndent: 16),
+                        _buildProfileMenuItem(
                           icon: Icons.help_outline_rounded,
                           title: 'Pusat Bantuan & FAQ',
                           subtitle: 'Pertanyaan umum & panduan aplikasi',
@@ -2499,8 +2507,99 @@ class _ProfilPageState extends State<ProfilPage> {
     );
   }
 
+  // ─── CHAT DENGAN ADMIN ───────────────────────────────────────────────────
+  void _showAdminSelectionSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SizedBox(
+          height: 360,
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: ApiService.instance.getAdmins(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF16A34A)),
+                );
+              }
+              if (snapshot.hasError ||
+                  !snapshot.hasData ||
+                  snapshot.data!.isEmpty) {
+                return const Center(
+                  child: Text('Tidak ada admin aktif yang tersedia saat ini.'),
+                );
+              }
+              final admins = snapshot.data!;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Pilih Admin / Kantor',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: admins.length,
+                      separatorBuilder: (_, __) => const Divider(),
+                      itemBuilder: (context, index) {
+                        final admin = admins[index];
+                        final adminName = admin['full_name'] ?? 'Admin';
+                        final adminId = admin['id'] ?? '';
+                        final role = admin['role'] ?? 'Admin';
+                        return ListTile(
+                          leading: const CircleAvatar(
+                            backgroundColor: Color(0xFF16A34A),
+                            child: Icon(Icons.person, color: Colors.white),
+                          ),
+                          title: Text(
+                            adminName,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text('Role: $role'),
+                          trailing: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF16A34A)),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              this.context,
+                              MaterialPageRoute(
+                                builder: (_) => ChatAdminPage(
+                                  adminId: adminId,
+                                  adminName: adminName,
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
   // Widget Pembantu Baris Menu Profil
   Widget _buildProfileMenuItem({
+
     required IconData icon,
     required String title,
     required String subtitle,

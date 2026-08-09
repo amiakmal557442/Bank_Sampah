@@ -10,6 +10,9 @@ import 'audit_log.dart';
 import 'login_page.dart';
 import 'api_service.dart';
 
+import 'api_service.dart';
+import 'chat_admin_page.dart';
+
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -28,6 +31,107 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   int _selectedMenuIndex = 0;
 
+  void _showChatUsersSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        final currentAdminId = SessionService.userId;
+        return FutureBuilder<List<Map<String, dynamic>>>(
+          future: ApiService.instance.getChatUsers(currentAdminId),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                height: 200,
+                child: Center(
+                  child: CircularProgressIndicator(color: Color(0xFF16A34A)),
+                ),
+              );
+            }
+
+            if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+              return const SizedBox(
+                height: 200,
+                child: Center(
+                  child: Text('Tidak ada pengguna yang tersedia untuk di chat saat ini.'),
+                ),
+              );
+            }
+
+            final users = snapshot.data!;
+
+            return Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Pilih Pengguna / Petugas',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: users.length,
+                      separatorBuilder: (_, __) => const Divider(),
+                      itemBuilder: (context, index) {
+                        final user = users[index];
+                        final userName = user['full_name'] ?? 'User';
+                        final userId = user['id'] ?? '';
+                        final role = user['role'] ?? 'User';
+                        final unreadCount = user['unread_count'] as int? ?? 0;
+
+                        return ListTile(
+                          leading: const CircleAvatar(
+                            backgroundColor: Color(0xFF16A34A),
+                            child: Icon(Icons.person, color: Colors.white),
+                          ),
+                          title: Text(userName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('Role: $role'),
+                          trailing: unreadCount > 0
+                              ? Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.green,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    unreadCount.toString(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                )
+                              : null,
+                          onTap: () {
+                            Navigator.pop(context); // close sheet
+                            Navigator.push(
+                              this.context,
+                              MaterialPageRoute(
+                                builder: (_) => ChatAdminPage(
+                                  adminId: userId, // from Admin perspective, the other person is adminId variable in ChatAdminPage
+                                  adminName: userName,
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final String adminName = SessionService.fullName.isNotEmpty
@@ -36,6 +140,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showChatUsersSheet(context),
+        icon: const Icon(Icons.chat_bubble_outline),
+        label: const Text('Chat Pengguna & Petugas'),
+        backgroundColor: const Color(0xFF16A34A),
+        foregroundColor: Colors.white,
+      ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           return Center(

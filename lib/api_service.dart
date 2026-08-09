@@ -11,15 +11,15 @@ class ApiService {
   // - Android Emulator       : http://10.0.2.2/bank_sampah_api
   // - Android Fisik (Wi-Fi)  : http://192.168.x.x/bank_sampah_api
   // =====================================================================
-  static const String baseUrl = 'http://localhost:8080/bank_sampah_api';
+  static const String baseUrl = 'https://contempt-scrubber-cautious.ngrok-free.dev/bank_sampah_api';
 
   static final ApiService instance = ApiService._();
   ApiService._();
 
-  // Header default untuk semua request
   static const Map<String, String> _headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    'ngrok-skip-browser-warning': 'true',
   };
 
   // ─────────────────────────────────────────────────
@@ -103,6 +103,7 @@ class ApiService {
       }
       return null;
     } catch (e) {
+      print('[ApiService.login] Error: $e');
       return null;
     }
   }
@@ -371,6 +372,19 @@ class ApiService {
     return res['success'] == true;
   }
 
+  Future<bool> claimTask(String transactionId, String petugasId) async {
+    final res = await _put(
+      'tasks/index.php',
+      {'petugas_id': petugasId},
+      params: {'id': transactionId, 'action': 'claim'},
+    );
+    if (res['success'] == true) {
+      return true;
+    } else {
+      throw Exception(res['message'] ?? 'Gagal mengklaim tugas');
+    }
+  }
+
   // ─────────────────────────────────────────────────
   // HEALTH CHECK (tes koneksi ke API)
   // ─────────────────────────────────────────────────
@@ -427,6 +441,62 @@ class ApiService {
       return res['message'] ?? 'Gagal mengubah status';
     } catch (e) {
       return 'Terjadi kesalahan koneksi';
+    }
+  }
+
+  // ─────────────────────────────────────────────────
+  // CHAT SYSTEM
+  // ─────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> getAdmins() async {
+    try {
+      final res = await _get('chats/get_admins.php');
+      if (res['success'] == true && res['data'] != null) {
+        return List<Map<String, dynamic>>.from(res['data']);
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getChatUsers(String adminId) async {
+    try {
+      final res = await _get('chats/get_chat_users.php', params: {'admin_id': adminId});
+      if (res['success'] == true && res['data'] != null) {
+        return List<Map<String, dynamic>>.from(res['data']);
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getChatMessages(String user1, String user2) async {
+    try {
+      final res = await _get('chats/get_messages.php', params: {
+        'user1': user1,
+        'user2': user2,
+      });
+      if (res['success'] == true && res['data'] != null) {
+        return List<Map<String, dynamic>>.from(res['data']);
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<bool> sendChatMessage(String senderId, String receiverId, String message) async {
+    try {
+      final res = await _post('chats/send_message.php', {
+        'sender_id': senderId,
+        'receiver_id': receiverId,
+        'message': message,
+      });
+      return res['success'] == true;
+    } catch (_) {
+      return false;
     }
   }
 }

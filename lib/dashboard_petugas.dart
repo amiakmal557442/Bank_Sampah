@@ -5,6 +5,7 @@ import 'riwayatpetugas.dart';
 import 'halaman_tugas.dart';
 import 'api_service.dart';
 import 'db_helper.dart';
+import 'widgets/image_viewer_dialog.dart';
 
 // ============================================================
 // Model Data Dummy untuk Antrean Penjemputan
@@ -638,39 +639,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   // ─────────────────────────────────────────────
   // Kartu Tugas Aktif
   // ─────────────────────────────────────────────
-  void _showImageDialog(BuildContext context, String photos) {
-    final files = photos.split(',');
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(10),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            PageView.builder(
-              itemCount: files.length,
-              itemBuilder: (c, i) => InteractiveViewer(
-                child: Image.network(
-                  '${ApiService.baseUrl}/uploads/transactions/${files[i]}',
-                  headers: const {'ngrok-skip-browser-warning': 'true'},
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-            Positioned(
-              top: 20,
-              right: 20,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                onPressed: () => Navigator.pop(ctx),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // _showImageDialog removed in favor of ImageViewerDialog
 
   Widget _buildCurrentTaskCard() {
     final task = _currentTask!;
@@ -782,83 +751,65 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           // Tombol aksi
           Row(
             children: [
-              if (task.type == 'drop_in' || task.type == 'drop-in')
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: oldGrassGreen,
-                      foregroundColor: baseWhite,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 2,
-                    ),
-                    onPressed: () =>
-                        _showTimbangManualSheet(wasteId: task.wasteId),
-                    child: const Text(
-                      'Terima & Timbang',
-                      style: TextStyle(fontSize: 13),
+              // Tombol Lihat Gambar
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: oldGrassGreen,
+                    side: const BorderSide(color: oldGrassGreen),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                )
-              else ...[
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: oldGrassGreen,
-                      side: const BorderSide(color: oldGrassGreen),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    onPressed: () {
-                      if (task.photoEvidence != null && task.photoEvidence!.isNotEmpty) {
-                        _showImageDialog(context, task.photoEvidence!);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tidak ada gambar foto sampah.')));
-                      }
-                    },
-                    icon: const Icon(Icons.image_outlined, size: 16),
-                    label: const Text(
-                      'Lihat Gambar',
-                      style: TextStyle(fontSize: 13),
-                    ),
+                  onPressed: () {
+                    if (task.photoEvidence != null && task.photoEvidence!.isNotEmpty) {
+                      ImageViewerDialog.show(context, task.photoEvidence!);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tidak ada gambar foto sampah.')));
+                    }
+                  },
+                  icon: const Icon(Icons.image_outlined, size: 16),
+                  label: const Text(
+                    'Lihat Gambar',
+                    style: TextStyle(fontSize: 13),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: oldGrassGreen,
-                      foregroundColor: baseWhite,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 2,
+              ),
+              const SizedBox(width: 12),
+              // Tombol Aksi Utama
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: oldGrassGreen,
+                    foregroundColor: baseWhite,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    onPressed: () {
-                      if (task.status == 'tiba') {
+                    elevation: 2,
+                  ),
+                  onPressed: () {
+                    if (task.type == 'drop_in' || task.type == 'drop-in') {
+                      _showTimbangManualSheet(wasteId: task.wasteId);
+                    } else {
+                      _currentTask = task;
+                      if (task.status == 'menuju_lokasi' || task.status == 'tiba') {
                         _showTimbangManualSheet(wasteId: task.wasteId);
-                      } else if (task.status == 'menuju_lokasi') {
-                        _showTibaDialogForCurrentTask();
                       } else {
                         _updateStatusMenujuForCurrentTask();
                       }
-                    },
-                    child: Text(
-                      task.status == 'tiba'
-                          ? 'Timbang'
-                          : (task.status == 'menuju_lokasi'
-                                ? 'Tiba di Lokasi'
-                                : 'Jemput'),
-                      style: const TextStyle(fontSize: 13),
-                    ),
+                    }
+                  },
+                  child: Text(
+                    (task.type == 'drop_in' || task.type == 'drop-in' || task.status == 'menuju_lokasi' || task.status == 'tiba')
+                        ? 'Verifikasi & Timbang'
+                        : 'Menjemput',
+                    style: const TextStyle(fontSize: 13),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-              ],
+              ),
             ],
           ),
         ],
@@ -1393,27 +1344,44 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   // ═══════════════════════════════════════════════════════════
   Future<void> _updateStatusMenujuForCurrentTask() async {
     if (_currentTask == null) return;
+    
+    final petugasId = SessionService.currentUser?['id']?.toString() ?? '';
+    bool success = false;
+    String? errorMessage;
+
     try {
-      await ApiService.instance.updateTaskStatus(
-        _currentTask!.wasteId,
-        'menuju_lokasi',
-      );
-    } catch (_) {
-      await DatabaseHelper.instance.updateTransactionStatus(
+      success = await ApiService.instance.claimTask(_currentTask!.wasteId, petugasId);
+    } catch (e) {
+      errorMessage = e.toString().replaceAll('Exception: ', '');
+    }
+
+    if (!success && errorMessage == null) {
+       success = await DatabaseHelper.instance.updateTransactionStatus(
         _currentTask!.wasteId,
         'menuju_lokasi',
       );
     }
 
-    if (mounted) {
+    if (!mounted) return;
+
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Status diperbarui: Sedang Menjemput'),
+          content: Text('Tugas berhasil diklaim!'),
           backgroundColor: oldGrassGreen,
         ),
       );
-      _loadData();
+    } else if (errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
     }
+    _loadData();
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -1561,6 +1529,7 @@ class _TimbangManualSheet extends StatefulWidget {
 
 class _TimbangManualSheetState extends State<_TimbangManualSheet> {
   late List<ManualWasteItem> _items;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -1720,11 +1689,17 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: _totalWeight > 0 ? _konfirmasiTimbang : null,
-                      icon: const Icon(Icons.check_circle_rounded),
-                      label: const Text(
-                        'Konfirmasi Timbangan',
-                        style: TextStyle(
+                      onPressed: (_totalWeight > 0 && !_isSubmitting) ? _konfirmasiTimbang : null,
+                      icon: _isSubmitting 
+                          ? const SizedBox(
+                              width: 20, 
+                              height: 20, 
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                            ) 
+                          : const Icon(Icons.check_circle_rounded),
+                      label: Text(
+                        _isSubmitting ? 'Memproses...' : 'Konfirmasi Timbangan',
+                        style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1879,9 +1854,7 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
         'final_points': (e.weightKg * e.pointsPerKg).toInt(),
       };
     }).toList();
-
-    Navigator.pop(context);
-
+    setState(() => _isSubmitting = true);
     // 1. Update ke API (jika ada koneksi)
     try {
       await ApiService.instance.updateTransaction(wasteId, {
@@ -1902,6 +1875,7 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
     await SessionService.refresh();
 
     if (!mounted) return;
+    setState(() => _isSubmitting = false);
 
     showDialog(
       context: context,
@@ -1946,6 +1920,7 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
               ),
               onPressed: () {
                 Navigator.pop(ctx);
+                Navigator.pop(context); // Close bottom sheet
                 // Refresh main dashboard setelah selesai dengan memanggil onComplete callback
                 widget.onComplete();
               },

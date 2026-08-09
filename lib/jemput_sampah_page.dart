@@ -5,6 +5,7 @@ import 'session_service.dart';
 import 'api_service.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart';
 
 // ============================================================================
 // 1. HALAMAN JADWAL & LOKASI PENJEMPUTAN
@@ -414,7 +415,7 @@ class PickupConfirmationScreen extends StatefulWidget {
 }
 
 class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
-  String? _photoPath;
+  XFile? _photoFile;
   final ImagePicker _picker = ImagePicker();
   bool _isSubmitting = false;
 
@@ -425,7 +426,7 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
     );
     if (image != null) {
       setState(() {
-        _photoPath = image.path;
+        _photoFile = image;
       });
     }
   }
@@ -590,7 +591,7 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
           _buildSectionCard(
             title: 'FOTO BUKTI SAMPAH',
             context: context,
-            content: _photoPath == null
+            content: _photoFile == null
                 ? InkWell(
                     onTap: _showImageSourceDialog,
                     child: Container(
@@ -632,14 +633,14 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                           color: Colors.grey.shade200,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Colors.grey.shade300),
-                          image: _photoPath != null
+                          image: _photoFile != null
                               ? DecorationImage(
-                                  image: FileImage(File(_photoPath!)),
+                                  image: kIsWeb ? NetworkImage(_photoFile!.path) : FileImage(File(_photoFile!.path)) as ImageProvider,
                                   fit: BoxFit.cover,
                                 )
                               : null,
                         ),
-                        child: _photoPath == null
+                        child: _photoFile == null
                             ? const Icon(
                                 Icons.image,
                                 size: 40,
@@ -658,7 +659,7 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              _photoPath!,
+                              _photoFile!.name,
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey,
@@ -666,7 +667,7 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                             ),
                             const SizedBox(height: 8),
                             InkWell(
-                              onTap: () => setState(() => _photoPath = null),
+                              onTap: () => setState(() => _photoFile = null),
                               child: Text(
                                 'Ubah Foto',
                                 style: TextStyle(
@@ -718,7 +719,7 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
               onPressed: _isSubmitting
                   ? null
                   : () async {
-                      if (_photoPath == null) {
+                      if (_photoFile == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Harap lampirkan foto bukti sampah'),
@@ -744,7 +745,7 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                         'pickup_date':
                             '${widget.selectedDay}, ${widget.selectedDate} Juli 2026',
                         'pickup_time_slot': widget.selectedTime,
-                        'photo_evidence': _photoPath,
+                        'photo_evidence': _photoFile?.name ?? '',
                       };
 
                       bool ok = false;
@@ -752,13 +753,10 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                         ok = await ApiService.instance.createTransaction(
                           txData,
                         );
-                        if (ok && _photoPath != null) {
-                          final file = File(_photoPath!);
-                          if (await file.exists()) {
-                            final bytes = await file.readAsBytes();
-                            final filename = file.path.split('/').last;
-                            await ApiService.instance.uploadTransactionPhoto(txId, bytes, filename);
-                          }
+                        if (ok && _photoFile != null) {
+                          final bytes = await _photoFile!.readAsBytes();
+                          final filename = _photoFile!.name;
+                          await ApiService.instance.uploadTransactionPhoto(txId, bytes, filename);
                         }
                       } catch (_) {}
 

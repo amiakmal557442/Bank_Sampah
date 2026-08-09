@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'api_service.dart';
+import 'widgets/image_viewer_dialog.dart';
 import 'db_helper.dart';
 import 'map_location_screen.dart';
 import 'session_service.dart';
@@ -46,29 +47,51 @@ class _HalamanTugasState extends State<HalamanTugas> {
     }
   }
 
-  // Update status ke menuju_lokasi
+  // Update status ke menuju_lokasi (sekaligus claim)
   Future<void> _updateStatusMenuju(String id) async {
+    final petugasId = SessionService.currentUser?['id']?.toString() ?? '';
     bool success = false;
+    String? errorMessage;
+
     try {
-      success = await ApiService.instance.updateTaskStatus(id, 'menuju_lokasi');
-    } catch (_) {}
-    if (!success) {
-      success = await DatabaseHelper.instance.updateTransactionStatus(
+      success = await ApiService.instance.claimTask(id, petugasId);
+    } catch (e) {
+      errorMessage = e.toString().replaceAll('Exception: ', '');
+    }
+
+    // Jika API gagal tapi bukan karena direbut (misal offline), kita bisa fallback.
+    // Tapi karena ini sistem claim, lebih aman tolak jika gagal terkoneksi atau direbut.
+    if (!success && errorMessage == null) {
+       // Fallback local db (hanya jika API benar2 mati, tapi claim local db tidak akan tersinkron anti-rebutan)
+       success = await DatabaseHelper.instance.updateTransactionStatus(
         id,
         'menuju_lokasi',
       );
     }
 
-    if (success && mounted) {
+    if (!mounted) return;
+
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Status diperbarui: Menuju Lokasi'),
+          content: const Text('Tugas berhasil diklaim!'),
           backgroundColor: greenTheme,
           behavior: SnackBarBehavior.floating,
         ),
       );
-      _loadTasks();
+    } else if (errorMessage != null) {
+      // Menampilkan pesan error dari backend (misal "Tugas sudah diambil oleh ...")
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
     }
+    
+    _loadTasks(); // refresh data, agar tugas yg hilang terhapus
   }
 
   // Dialog timbang untuk menyelesaikan tugas dan menambah poin nasabah
@@ -191,39 +214,7 @@ class _HalamanTugasState extends State<HalamanTugas> {
     );
   }
 
-  void _showImageDialog(BuildContext context, String photos) {
-    final files = photos.split(',');
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(10),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            PageView.builder(
-              itemCount: files.length,
-              itemBuilder: (c, i) => InteractiveViewer(
-                child: Image.network(
-                  '${ApiService.baseUrl}/uploads/transactions/${files[i]}',
-                  headers: const {'ngrok-skip-browser-warning': 'true'},
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-            Positioned(
-              top: 20,
-              right: 20,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                onPressed: () => Navigator.pop(ctx),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Image viewer dihilangkan karena diganti komponen global ImageViewerDialog
 
   Widget _buildTaskCard(Map<String, dynamic> tugas) {
     final String statusStr = tugas['status']?.toString() ?? 'dikonfirmasi';
@@ -241,21 +232,19 @@ class _HalamanTugasState extends State<HalamanTugas> {
         ? Icons.store
         : Icons.local_shipping_outlined;
 
-    // Drop-in:  Langsung "Terima & Timbang"
-    // Pickup:   "Jemput" → "Tiba di Lokasi" → "Timbang"
+    // Drop-in:  Langsung "Verifikasi & Timbang"
+    // Pickup:   "Menjemput" → "Verifikasi dan Timbang"
     final String mainBtnLabel = isDropIn
-        ? 'Terima & Timbang'
-        : (isTiba ? 'Timbang' : (isMenuju ? 'Tiba di Lokasi' : 'Jemput'));
+        ? 'Verifikasi & Timbang'
+        : (sudahMenuju ? 'Verifikasi dan Timbang' : 'Menjemput');
     final IconData mainBtnIcon = isDropIn
         ? Icons.scale_rounded
-        : (isTiba
-              ? Icons.scale_rounded
-              : (isMenuju
-                    ? Icons.where_to_vote_rounded
-                    : Icons.local_shipping));
-    final Color mainBtnColor = isDropIn
+        : (sudahMenuju
+              ? Icons.fact_check_rounded
+              : Icons.local_shipping);
+    final Color mainBtnColor = (isDropIn || sudahMenuju)
         ? Colors.green.shade700
-        : (sudahMenuju ? Colors.green.shade700 : greenTheme);
+        : greenTheme;
 
     final String txId =
         (tugas['id_transaksi'] ?? tugas['id'])?.toString() ?? '';
@@ -413,7 +402,7 @@ class _HalamanTugasState extends State<HalamanTugas> {
                 spacing: 8,
                 runSpacing: 8,
                 children: tugas['photo_evidence'].toString().split(',').map((filename) {
-                  final url = '${ApiService.baseUrl}/uploads/transactions/$filename';
+                  final url = '${ApiService.baseUrl}/uploads/transactions/${filename.trim()}';
                   return ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
@@ -438,13 +427,13 @@ class _HalamanTugasState extends State<HalamanTugas> {
             // Tombol aksi
             Row(
               children: [
-                if (!isDropIn) ...[
+                // Tombol Lihat Gambar (selalu muncul untuk semua tipe tugas)
                   // Tombol Peta
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () {
                         if (tugas['photo_evidence'] != null && tugas['photo_evidence'].toString().isNotEmpty) {
-                          _showImageDialog(context, tugas['photo_evidence'].toString());
+                          ImageViewerDialog.show(context, tugas['photo_evidence'].toString());
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tidak ada gambar foto sampah.')));
                         }
@@ -466,7 +455,7 @@ class _HalamanTugasState extends State<HalamanTugas> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                ],
+
                 // Tombol aksi utama
                 Expanded(
                   child: ElevatedButton.icon(
@@ -485,25 +474,11 @@ class _HalamanTugasState extends State<HalamanTugas> {
                           );
                         }
                         _showSelesaikanDialog(tugas);
-                      } else if (isTiba) {
-                        // Pickup: sudah tiba → selesaikan dengan timbang
-                        _showSelesaikanDialog(tugas);
-                      } else if (isMenuju) {
-                        // Pickup: sudah menuju → update ke tiba, lalu buka dialog timbang
-                        try {
-                          await ApiService.instance.updateTaskStatus(
-                            txId,
-                            'tiba',
-                          );
-                        } catch (_) {
-                          await DatabaseHelper.instance.updateTransactionStatus(
-                            txId,
-                            'tiba',
-                          );
-                        }
+                      } else if (sudahMenuju) {
+                        // Pickup: sudah diklaim (menuju/tiba) → selesaikan dengan timbang
                         _showSelesaikanDialog(tugas);
                       } else {
-                        // Pickup: belum berangkat (dikonfirmasi) → update ke menuju_lokasi
+                        // Pickup: belum diklaim (dikonfirmasi) → claim (update ke menuju_lokasi)
                         _updateStatusMenuju(txId);
                       }
                     },
@@ -773,7 +748,6 @@ class _TimbangSheetState extends State<_TimbangSheet> {
                               setState(() => _isLoading = true);
                               final poin = _totalPoin;
                               final berat = _totalBerat;
-                              Navigator.pop(context); // tutup sheet
                               final itemsToSend = _items
                                   .where((e) => e['selected'] == true)
                                   .map(

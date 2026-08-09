@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'db_helper.dart';
 import 'api_service.dart';
 import 'transaction_service.dart';
+import 'widgets/image_viewer_dialog.dart';
 
 // ============================================================================
 // Halaman Manajemen Transaksi — Admin Dashboard (Desktop/Web)
@@ -371,6 +372,23 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                     height: 1.4,
                   ),
                 ),
+                if (tx['photo_evidence'] != null && tx['photo_evidence'].toString().isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      ImageViewerDialog.show(context, tx['photo_evidence'].toString());
+                    },
+                    icon: const Icon(Icons.photo_library, size: 18),
+                    label: const Text('Lihat Foto Bukti'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: primaryGreen,
+                      side: const BorderSide(color: primaryGreen),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ]
               ],
             ),
           ),

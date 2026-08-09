@@ -89,7 +89,7 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
   Future<void> _loadAccounts() async {
     setState(() => _isLoading = true);
     try {
-      final data = await DatabaseHelper.instance.getAllUsers();
+      final data = await ApiService.instance.getUsers();
       if (mounted) {
         setState(() {
           _allAccounts = data;
@@ -1321,7 +1321,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
                       children: [
                         _roleFilterChip('Semua', null),
                         _roleFilterChip('Administrator', 'admin'),
-                        _roleFilterChip('Staf Kantor', 'staf_kantor'),
                         _roleFilterChip('Petugas', 'petugas'),
                         _roleFilterChip('End User', 'nasabah'),
                       ],
