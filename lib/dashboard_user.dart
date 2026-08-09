@@ -2100,13 +2100,6 @@ class _ProfilPageState extends State<ProfilPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(
-                          Icons.settings_outlined,
-                          color: Colors.white,
-                        ),
-                      ),
                     ],
                   ),
                 ),

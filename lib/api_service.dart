@@ -11,7 +11,7 @@ class ApiService {
   // - Android Emulator       : http://10.0.2.2/bank_sampah_api
   // - Android Fisik (Wi-Fi)  : http://192.168.x.x/bank_sampah_api
   // =====================================================================
-  static const String baseUrl = 'https://contempt-scrubber-cautious.ngrok-free.dev/bank_sampah_api';
+  static const String baseUrl = 'http://localhost:8080/bank_sampah_api';
 
   static final ApiService instance = ApiService._();
   ApiService._();
@@ -20,7 +20,6 @@ class ApiService {
   static const Map<String, String> _headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'ngrok-skip-browser-warning': 'true', // bypass ngrok browser warning page
   };
 
   // ─────────────────────────────────────────────────
