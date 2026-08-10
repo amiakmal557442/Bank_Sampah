@@ -33,8 +33,7 @@ const int ktpVerificationThresholdPoints = 50000; // ~Rp 500.000, ASUMSI
 
 // Rate konversi poin -> rupiah (asumsi 1 poin = Rp 10, konsisten dgn contoh
 // SRS: 4.820 poin ≈ Rp 48.200). TODO: pastikan rate final dari business rule.
-const double pointToRupiahRate = 10.0;
-
+// (Sekarang rate ini diambil dari konfigurasi sistem)
 enum DestinationType { ewallet, cash }
 
 class WithdrawalDestination {
@@ -126,8 +125,9 @@ class TukarPoinScreen extends StatefulWidget {
 
 class _TukarPoinScreenState extends State<TukarPoinScreen> {
   int get userPoints => SessionService.pointBalance;
-  final int minWithdrawalPoints = 1000;
-
+  int minWithdrawalPoints = 1000;
+  double pointToRupiahRate = 1.0;
+  bool _isLoadingConfig = true;
   WithdrawalDestination? selectedDestination;
   final TextEditingController amountController = TextEditingController();
   int inputPoints = 0;
@@ -183,6 +183,27 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
     super.initState();
     selectedDestination = destinations.first;
     amountController.addListener(_onAmountChanged);
+    _loadSystemConfig();
+  }
+
+  Future<void> _loadSystemConfig() async {
+    try {
+      final config = await DatabaseHelper.instance.getSystemConfig();
+      if (mounted) {
+        setState(() {
+          // Asumsi konfigurasi tersimpan dalam double/int, fallback jika null
+          minWithdrawalPoints = (config['min_withdraw'] as num?)?.toInt() ?? 10000;
+          pointToRupiahRate = (config['point_rate'] as num?)?.toDouble() ?? 1.0;
+          _isLoadingConfig = false;
+        });
+        // trigger re-validation in case amount was already entered
+        _onAmountChanged();
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoadingConfig = false);
+      }
+    }
   }
 
   @override
@@ -269,6 +290,13 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
               color: darkText,
             ),
           ),
+          const Spacer(),
+          if (_isLoadingConfig)
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: primaryGreen),
+            ),
         ],
       ),
     );

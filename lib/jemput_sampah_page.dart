@@ -754,9 +754,17 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                           txData,
                         );
                         if (ok && _photoFile != null) {
-                          final bytes = await _photoFile!.readAsBytes();
+                          List<int>? bytes;
+                          if (kIsWeb) {
+                            bytes = await _photoFile!.readAsBytes();
+                          }
                           final filename = _photoFile!.name;
-                          await ApiService.instance.uploadTransactionPhoto(txId, bytes, filename);
+                          await ApiService.instance.uploadTransactionPhoto(
+                            txId: txId,
+                            filePath: _photoFile!.path,
+                            imageBytes: bytes,
+                            filename: filename,
+                          );
                         }
                       } catch (_) {}
 
@@ -1073,7 +1081,9 @@ class PickupSuccessScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const PickupTrackingScreen(),
+                        builder: (context) => const PickupTrackingScreen(
+                          petugasName: null, // Belum ada petugas saat baru dibuat
+                        ),
                       ),
                     );
                   },
@@ -1143,7 +1153,8 @@ class PickupSuccessScreen extends StatelessWidget {
 // 5. TRACKING REAL-TIME PETUGAS
 // ============================================================================
 class PickupTrackingScreen extends StatelessWidget {
-  const PickupTrackingScreen({super.key});
+  final String? petugasName;
+  const PickupTrackingScreen({super.key, this.petugasName});
 
   @override
   Widget build(BuildContext context) {
@@ -1301,57 +1312,42 @@ class PickupTrackingScreen extends StatelessWidget {
                           radius: 24,
                           backgroundColor: primaryGreen.withOpacity(0.1),
                           child: Icon(
-                            Icons.person_rounded,
+                            petugasName != null ? Icons.person_rounded : Icons.hourglass_empty_rounded,
                             color: primaryGreen,
                           ),
                         ),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Dedi Kurniawan',
+                                petugasName ?? 'Belum ada petugas yang sedang menjemput',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 15,
+                                  fontSize: petugasName != null ? 15 : 13,
                                 ),
                               ),
-                              Text(
-                                '⭐ 4.9 • 320 penjemputan',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 12,
+                              if (petugasName != null) ...[
+                                const Text(
+                                  '⭐ 4.9 • 320 penjemputan',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 12,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                'Motor bak • B 3821 SDK',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 12,
+                                const Text(
+                                  'Motor bak • B 3821 SDK',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 12,
+                                  ),
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                         ),
-                        IconButton(
-                          onPressed: () {},
-                          icon: Icon(Icons.phone_rounded, color: primaryGreen),
-                          style: IconButton.styleFrom(
-                            backgroundColor: primaryGreen.withOpacity(0.08),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        IconButton(
-                          onPressed: () {},
-                          icon: Icon(
-                            Icons.chat_bubble_outline_rounded,
-                            color: primaryGreen,
-                          ),
-                          style: IconButton.styleFrom(
-                            backgroundColor: primaryGreen.withOpacity(0.08),
-                          ),
-                        ),
+                        // Bagian telfon dan chat dihilangkan
                       ],
                     ),
                   ),
@@ -1400,35 +1396,16 @@ class PickupTrackingScreen extends StatelessWidget {
                             side: BorderSide(color: Colors.grey.shade300),
                           ),
                           onPressed: () {},
-                          child: const Text(
-                            'Batalkan',
-                            style: TextStyle(color: Colors.black),
+                          child: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Batalkan',
+                              style: TextStyle(color: Colors.black),
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                            side: const BorderSide(
-                              color: Color(0xFFCBD5E1),
-                              width: 1.5,
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 0,
-                          ),
-                          onPressed: () {},
-                          child: const Text(
-                            'Chat Petugas',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ),
+                      // Bagian Chat Petugas dihilangkan
                     ],
                   ),
                 ],

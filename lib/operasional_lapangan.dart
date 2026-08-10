@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'db_helper.dart';
+import 'api_service.dart';
 
 class OperasionalLapanganScreen extends StatefulWidget {
   const OperasionalLapanganScreen({super.key});
@@ -32,9 +33,11 @@ class _OperasionalLapanganScreenState extends State<OperasionalLapanganScreen> {
 
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
-    final summary = await DatabaseHelper.instance.getOperasionalSummary();
-    final dropPoints = await DatabaseHelper.instance.getDropPointCapacities();
-    final workerStatus = await DatabaseHelper.instance.getLiveWorkerStatus();
+    
+    final data = await ApiService.instance.getOperasionalData();
+    final summary = Map<String, dynamic>.from(data['summary'] ?? {});
+    final dropPoints = List<Map<String, dynamic>>.from(data['dropPoints'] ?? []);
+    final workerStatus = List<Map<String, dynamic>>.from(data['workerStatus'] ?? []);
 
     if (mounted) {
       setState(() {

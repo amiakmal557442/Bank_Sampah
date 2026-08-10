@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'db_helper.dart';
+import 'api_service.dart';
 
 class LaporanAnalitikScreen extends StatefulWidget {
   const LaporanAnalitikScreen({super.key});
@@ -40,7 +41,7 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     final filter = _filterOptions[_selectedFilterIndex];
-    final result = await DatabaseHelper.instance.getLaporanAnalitikData(
+    final result = await ApiService.instance.getLaporanAnalitikData(
       bulan: filter['bulan'] as int,
       tahun: filter['tahun'] as int,
     );

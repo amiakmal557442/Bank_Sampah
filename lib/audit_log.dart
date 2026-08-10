@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'db_helper.dart';
+import 'api_service.dart';
 
 class AuditLogScreen extends StatefulWidget {
   const AuditLogScreen({super.key});
@@ -32,10 +33,18 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
 
   Future<void> _loadLogs() async {
     setState(() => _isLoading = true);
-    final logs = await DatabaseHelper.instance.getAuditLogs(
+    List<Map<String, dynamic>> logs = await ApiService.instance.getAuditLogs(
       modul: _selectedModule,
       query: _searchQuery,
     );
+    
+    // Fallback jika API gagal atau kosong, ambil dari lokal
+    if (logs.isEmpty) {
+      logs = await DatabaseHelper.instance.getAuditLogs(
+        modul: _selectedModule,
+        query: _searchQuery,
+      );
+    }
     if (mounted) {
       setState(() {
         _logs = logs;
@@ -284,9 +293,9 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                             size: 16,
                             color: textGrey,
                           ),
-                          label: const Text(
-                            'Hari Ini (04 Agu 2026)',
-                            style: TextStyle(fontFamily: 'Segoe UI'),
+                          label: Text(
+                            'Hari Ini (${DateTime.now().day.toString().padLeft(2, '0')} ${_getMonthName(DateTime.now().month)} ${DateTime.now().year})',
+                            style: const TextStyle(fontFamily: 'Segoe UI'),
                           ),
                         ),
                       ],
@@ -592,5 +601,25 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
         ),
       ],
     );
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des'
+    ];
+    if (month >= 1 && month <= 12) return months[month];
+    return '';
   }
 }

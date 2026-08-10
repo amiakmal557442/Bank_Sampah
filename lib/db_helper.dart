@@ -148,6 +148,45 @@ class DatabaseHelper {
         // Simpan default users sebagai fallback pertama kali
         await _saveWebUsers();
       }
+
+      // Muat web_system_config
+      final configJson = prefs.getString('web_system_config');
+      if (configJson != null) {
+        try {
+          final Map<String, dynamic> decoded = jsonDecode(configJson);
+          _webSystemConfig.addAll(decoded);
+        } catch (e) {
+          // Fallback to default if decoding fails
+        }
+      } else {
+        await _saveWebSystemConfig();
+      }
+
+      // Muat web_audit_logs
+      final logsJson = prefs.getString('web_audit_logs');
+      if (logsJson != null) {
+        try {
+          final List<dynamic> decoded = jsonDecode(logsJson);
+          _webAuditLogs.clear();
+          _webAuditLogs.addAll(decoded.cast<Map<String, dynamic>>());
+        } catch (e) {
+          // Fallback
+        }
+      } else {
+        // Initial mock logs
+        _webAuditLogs.addAll([
+          {
+            'time': DateTime.now().subtract(const Duration(minutes: 5)).toString().substring(0, 16),
+            'user_name': 'Akmal Ahsan',
+            'role': 'Administrator',
+            'module': 'Authentication',
+            'action': 'Login ke dalam sistem',
+            'ip_address': '192.168.1.5',
+            'status': 'BERHASIL'
+          }
+        ]);
+        await _saveWebAuditLogs();
+      }
     } catch (e) {
       // Jika gagal total, biarkan default seed
     }
@@ -157,6 +196,18 @@ class DatabaseHelper {
     if (!kIsWeb) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('web_users', jsonEncode(_webUsers));
+  }
+
+  Future<void> _saveWebSystemConfig() async {
+    if (!kIsWeb) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('web_system_config', jsonEncode(_webSystemConfig));
+  }
+
+  Future<void> _saveWebAuditLogs() async {
+    if (!kIsWeb) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('web_audit_logs', jsonEncode(_webAuditLogs));
   }
 
   Future<Database?> get database async {
@@ -235,10 +286,6 @@ class DatabaseHelper {
         await db.execute('''
           INSERT INTO audit_logs (time, user_name, role, module, action, ip_address, status) 
           VALUES ('04 Aug 2026 - 10:42', 'Akmal Ahsan', 'Administrator', 'Konfigurasi Sistem', 'Mengubah Rasio Poin dari Rp 1 ke Rp 1.2/Poin', '192.168.1.10', 'SUKSES')
-        ''');
-        await db.execute('''
-          INSERT INTO audit_logs (time, user_name, role, module, action, ip_address, status) 
-          VALUES ('04 Aug 2026 - 08:30', 'Unknown User', 'Guest', 'Authentication', 'Percobaan Login Gagal (Salah Password 3x)', '180.252.10.4', 'GAGAL')
         ''');
       } catch (_) {}
     }
@@ -1111,8 +1158,20 @@ class DatabaseHelper {
 
   /// Saves system configuration settings
   Future<bool> saveSystemConfig(Map<String, dynamic> config) async {
+    // Insert Audit Log
+    await insertAuditLog({
+      'time': DateTime.now().toString().substring(0, 16),
+      'user_name': 'Administrator',
+      'role': 'Admin',
+      'module': 'Konfigurasi Sistem',
+      'action': 'Mengubah konfigurasi sistem dan limit poin',
+      'ip_address': '127.0.0.1',
+      'status': 'BERHASIL',
+    });
+
     if (kIsWeb) {
       _webSystemConfig.addAll(config);
+      await _saveWebSystemConfig();
       return true;
     }
 
@@ -1170,8 +1229,16 @@ class DatabaseHelper {
   }
 
   Future<bool> insertAuditLog(Map<String, dynamic> log) async {
+    // Coba kirim ke API terlebih dahulu
+    bool apiSuccess = await ApiService.instance.insertAuditLog(log);
+    if (apiSuccess) {
+      return true;
+    }
+
+    // Fallback ke lokal
     if (kIsWeb) {
       _webAuditLogs.insert(0, log);
+      await _saveWebAuditLogs();
       return true;
     }
     final db = await instance.database;

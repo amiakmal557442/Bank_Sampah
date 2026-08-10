@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 
 /// Service untuk berkomunikasi dengan API Backend (PHP + MySQL XAMPP)
 /// Ganti BASE_URL jika menjalankan di perangkat Android fisik dengan IP lokal Anda.
@@ -11,7 +12,7 @@ class ApiService {
   // - Android Emulator       : http://10.0.2.2/bank_sampah_api
   // - Android Fisik (Wi-Fi)  : http://192.168.x.x/bank_sampah_api
   // =====================================================================
-  static const String baseUrl = 'https://contempt-scrubber-cautious.ngrok-free.dev/bank_sampah_api';;
+  static const String baseUrl = 'https://contempt-scrubber-cautious.ngrok-free.dev/bank_sampah_api';
 
   static final ApiService instance = ApiService._();
   ApiService._();
@@ -109,6 +110,37 @@ class ApiService {
   }
 
   // ─────────────────────────────────────────────────
+  // AUDIT LOGS
+  // ─────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> getAuditLogs({String? modul, String? query}) async {
+    try {
+      final params = <String, String>{};
+      if (modul != null && modul != 'Semua Modul') params['modul'] = modul;
+      if (query != null && query.isNotEmpty) params['query'] = query;
+
+      final res = await _get('audit_logs/index.php', params: params.isNotEmpty ? params : null);
+      if (res['success'] == true) {
+        return List<Map<String, dynamic>>.from(res['data'] ?? []);
+      }
+      return [];
+    } catch (e) {
+      print('[ApiService.getAuditLogs] Error: $e');
+      return [];
+    }
+  }
+
+  Future<bool> insertAuditLog(Map<String, dynamic> log) async {
+    try {
+      final res = await _post('audit_logs/index.php', log);
+      return res['success'] == true;
+    } catch (e) {
+      print('[ApiService.insertAuditLog] Error: $e');
+      return false;
+    }
+  }
+
+  // ─────────────────────────────────────────────────
   // USERS
   // ─────────────────────────────────────────────────
 
@@ -147,7 +179,12 @@ class ApiService {
   }
 
   /// Upload foto profil ke XAMPP server via multipart request
-  Future<String?> uploadProfilePicture(String userId, List<int> imageBytes, String filename) async {
+  Future<String?> uploadProfilePicture({
+    required String userId, 
+    String? filePath,
+    List<int>? imageBytes, 
+    required String filename,
+  }) async {
     try {
       final uri = Uri.parse('$baseUrl/users/upload_avatar.php');
       final request = http.MultipartRequest('POST', uri);
@@ -155,7 +192,14 @@ class ApiService {
         'ngrok-skip-browser-warning': 'true',
       });
       request.fields['user_id'] = userId;
-      request.files.add(http.MultipartFile.fromBytes('profile_picture', imageBytes, filename: filename));
+      
+      if (!kIsWeb && filePath != null) {
+        request.files.add(await http.MultipartFile.fromPath('profile_picture', filePath, filename: filename));
+      } else if (imageBytes != null) {
+        request.files.add(http.MultipartFile.fromBytes('profile_picture', imageBytes, filename: filename));
+      } else {
+        throw Exception('Data gambar tidak tersedia');
+      }
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
@@ -200,7 +244,12 @@ class ApiService {
   // TRANSACTIONS
   // ─────────────────────────────────────────────────
 
-  Future<String?> uploadTransactionPhoto(String txId, List<int> imageBytes, String filename) async {
+  Future<String?> uploadTransactionPhoto({
+    required String txId,
+    String? filePath,
+    List<int>? imageBytes,
+    required String filename,
+  }) async {
     try {
       final uri = Uri.parse('$baseUrl/transactions/upload_photo.php');
       final request = http.MultipartRequest('POST', uri);
@@ -208,7 +257,14 @@ class ApiService {
         'ngrok-skip-browser-warning': 'true',
       });
       request.fields['transaction_id'] = txId;
-      request.files.add(http.MultipartFile.fromBytes('photo', imageBytes, filename: filename));
+      
+      if (!kIsWeb && filePath != null) {
+        request.files.add(await http.MultipartFile.fromPath('photo', filePath, filename: filename));
+      } else if (imageBytes != null) {
+        request.files.add(http.MultipartFile.fromBytes('photo', imageBytes, filename: filename));
+      } else {
+        throw Exception('Data gambar tidak tersedia');
+      }
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
@@ -497,6 +553,63 @@ class ApiService {
       return res['success'] == true;
     } catch (_) {
       return false;
+    }
+  }
+  // ─────────────────────────────────────────────────
+  // LAPORAN & ANALITIK
+  // ─────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getLaporanAnalitikData({
+    int bulan = 0,
+    int tahun = 0,
+  }) async {
+    try {
+      final res = await _get(
+        'reports/index.php',
+        params: {
+          'bulan': bulan.toString(),
+          'tahun': tahun.toString(),
+        },
+      );
+      return res;
+    } catch (e) {
+      print('Error fetching laporan analitik: $e');
+      return {
+        'totalTx': 0,
+        'totalPoints': 0,
+        'totalKg': 0.0,
+        'totalNasabah': 0,
+        'allNasabah': 1,
+        'recyclePct': 0.0,
+        'kategoriData': [],
+        'trendData': [],
+        'rekapData': [],
+      };
+    }
+  }
+
+  // ─────────────────────────────────────────────────
+  // OPERASIONAL LAPANGAN
+  // ─────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getOperasionalData() async {
+    try {
+      final res = await _get('reports/operasional.php');
+      return res;
+    } catch (e) {
+      print('Error fetching operasional data: $e');
+      return {
+        'summary': {
+          'totalPetugas': 0,
+          'petugasAktif': 0,
+          'petugasIstirahat': 0,
+          'dropPointKritis': 0,
+          'tugasSelesai': 0,
+          'tugasAntrean': 0,
+        },
+        'dropPoints': [],
+        'workerStatus': []
+      };
     }
   }
 }

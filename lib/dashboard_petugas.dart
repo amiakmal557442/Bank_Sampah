@@ -6,6 +6,7 @@ import 'halaman_tugas.dart';
 import 'api_service.dart';
 import 'db_helper.dart';
 import 'widgets/image_viewer_dialog.dart';
+import 'chat_admin_page.dart';
 
 // ============================================================
 // Model Data Dummy untuk Antrean Penjemputan
@@ -567,10 +568,10 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             onTap: _showUpdateDropPointSheet,
           ),
           _buildQuickAction(
-            Icons.report_problem_rounded,
-            'Lapor\nKendala',
+            Icons.support_agent_rounded,
+            'Chat admin\njika kendala',
             Colors.redAccent,
-            onTap: _showLaporKendalaSheet,
+            onTap: _showAdminSelectionSheet,
           ),
         ],
       ),
@@ -790,21 +791,17 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                     elevation: 2,
                   ),
                   onPressed: () {
-                    if (task.type == 'drop_in' || task.type == 'drop-in') {
+                    _currentTask = task;
+                    if (task.status == 'menuju_lokasi' || task.status == 'tiba') {
                       _showTimbangManualSheet(wasteId: task.wasteId);
                     } else {
-                      _currentTask = task;
-                      if (task.status == 'menuju_lokasi' || task.status == 'tiba') {
-                        _showTimbangManualSheet(wasteId: task.wasteId);
-                      } else {
-                        _updateStatusMenujuForCurrentTask();
-                      }
+                      _updateStatusMenujuForCurrentTask();
                     }
                   },
                   child: Text(
-                    (task.type == 'drop_in' || task.type == 'drop-in' || task.status == 'menuju_lokasi' || task.status == 'tiba')
+                    (task.status == 'menuju_lokasi' || task.status == 'tiba')
                         ? 'Verifikasi & Timbang'
-                        : 'Menjemput',
+                        : (task.type == 'drop_in' || task.type == 'drop-in' ? 'Terima Drop-in' : 'Menjemput'),
                     style: const TextStyle(fontSize: 13),
                     textAlign: TextAlign.center,
                   ),
@@ -1248,6 +1245,91 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           limeGreen: limeGreen,
           onComplete: () {
             if (mounted) _loadData();
+          },
+        );
+      },
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  //  4. CHAT ADMIN (Menggantikan Lapor Kendala)
+  // ─────────────────────────────────────────────
+  void _showAdminSelectionSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return FutureBuilder<List<Map<String, dynamic>>>(
+          future: ApiService.instance.getAdmins(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                height: 200,
+                child: Center(
+                  child: CircularProgressIndicator(color: Color(0xFF16A34A)),
+                ),
+              );
+            }
+
+            if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+              return const SizedBox(
+                height: 200,
+                child: Center(
+                  child: Text('Tidak ada admin aktif yang tersedia saat ini.'),
+                ),
+              );
+            }
+
+            final admins = snapshot.data!;
+
+            return Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Pilih Admin / Kantor',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: admins.length,
+                      separatorBuilder: (_, __) => const Divider(),
+                      itemBuilder: (context, index) {
+                        final admin = admins[index];
+                        final adminName = admin['full_name'] ?? 'Admin';
+                        final adminId = admin['id'] ?? '';
+                        final role = admin['role'] ?? 'Admin';
+
+                        return ListTile(
+                          leading: const CircleAvatar(
+                            backgroundColor: Color(0xFF16A34A),
+                            child: Icon(Icons.person, color: Colors.white),
+                          ),
+                          title: Text(adminName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('Role: $role'),
+                          onTap: () {
+                            Navigator.pop(context); // close sheet
+                            Navigator.push(
+                              this.context,
+                              MaterialPageRoute(
+                                builder: (_) => ChatAdminPage(
+                                  adminId: adminId,
+                                  adminName: adminName,
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
           },
         );
       },

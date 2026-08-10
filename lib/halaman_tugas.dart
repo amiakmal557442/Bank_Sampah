@@ -232,17 +232,16 @@ class _HalamanTugasState extends State<HalamanTugas> {
         ? Icons.store
         : Icons.local_shipping_outlined;
 
-    // Drop-in:  Langsung "Verifikasi & Timbang"
-    // Pickup:   "Menjemput" → "Verifikasi dan Timbang"
-    final String mainBtnLabel = isDropIn
-        ? 'Verifikasi & Timbang'
-        : (sudahMenuju ? 'Verifikasi dan Timbang' : 'Menjemput');
-    final IconData mainBtnIcon = isDropIn
-        ? Icons.scale_rounded
-        : (sudahMenuju
-              ? Icons.fact_check_rounded
-              : Icons.local_shipping);
-    final Color mainBtnColor = (isDropIn || sudahMenuju)
+    // Drop-in dan Pickup punya alur yang sama: Menunggu -> Terima/Jemput -> Verifikasi & Timbang
+    final String mainBtnLabel = sudahMenuju 
+        ? 'Verifikasi & Timbang' 
+        : (isDropIn ? 'Terima Drop-in' : 'Menjemput');
+        
+    final IconData mainBtnIcon = sudahMenuju
+        ? Icons.fact_check_rounded
+        : (isDropIn ? Icons.check_circle_outline : Icons.local_shipping);
+        
+    final Color mainBtnColor = sudahMenuju
         ? Colors.green.shade700
         : greenTheme;
 
@@ -460,25 +459,11 @@ class _HalamanTugasState extends State<HalamanTugas> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      if (isDropIn) {
-                        // Drop-in: update status ke 'tiba' dulu, lalu buka dialog timbang
-                        try {
-                          await ApiService.instance.updateTaskStatus(
-                            txId,
-                            'tiba',
-                          );
-                        } catch (_) {
-                          await DatabaseHelper.instance.updateTransactionStatus(
-                            txId,
-                            'tiba',
-                          );
-                        }
-                        _showSelesaikanDialog(tugas);
-                      } else if (sudahMenuju) {
-                        // Pickup: sudah diklaim (menuju/tiba) → selesaikan dengan timbang
+                      if (sudahMenuju) {
+                        // Sudah diklaim (menuju/tiba) → selesaikan dengan timbang
                         _showSelesaikanDialog(tugas);
                       } else {
-                        // Pickup: belum diklaim (dikonfirmasi) → claim (update ke menuju_lokasi)
+                        // Belum diklaim → ambil tugas (update ke menuju_lokasi)
                         _updateStatusMenuju(txId);
                       }
                     },

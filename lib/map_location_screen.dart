@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'api_service.dart';
 import 'db_helper.dart';
+import 'jemput_sampah_page.dart';
+import 'session_service.dart';
 
 class MapLocationScreen extends StatefulWidget {
   final bool showBottomNav;
@@ -35,10 +38,60 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
     _mapController = controller;
   }
 
+  bool _hasActivePickup = false;
+  String? _activePetugasName;
+  int _estimatedMinutes = 12;
+  Timer? _etaTimer;
+
   @override
   void initState() {
     super.initState();
     _loadDropPoints();
+    _checkActivePickup();
+  }
+
+  @override
+  void dispose() {
+    _etaTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkActivePickup() async {
+    if (!SessionService.isLoggedIn) return;
+
+    try {
+      final txs = await ApiService.instance.getTransactions(
+        nasabahId: SessionService.userId,
+        status: 'dikonfirmasi,menuju_lokasi,tiba',
+      );
+
+      // Find an active transaction with a petugas assigned
+      for (var tx in txs) {
+        if (tx['petugas_id'] != null &&
+            tx['petugas_id'].toString().isNotEmpty) {
+          setState(() {
+            _hasActivePickup = true;
+            _activePetugasName = tx['petugas_name'] ?? 'Petugas';
+            _estimatedMinutes = 12; // Base estimated time
+          });
+          _startEtaTimer();
+          return; // Found active task
+        }
+      }
+    } catch (_) {}
+  }
+
+  void _startEtaTimer() {
+    _etaTimer?.cancel();
+    _etaTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (_estimatedMinutes > 1) {
+        setState(() {
+          _estimatedMinutes--;
+        });
+      } else {
+        timer.cancel();
+      }
+    });
   }
 
   Future<void> _loadDropPoints() async {
@@ -93,70 +146,83 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 1. Banner Pelacakan Aktif
-            Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green[200]!),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-                      borderRadius: BorderRadius.circular(8),
+            if (_hasActivePickup)
+              Container(
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.local_shipping,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.local_shipping,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Petugas sedang menuju\nlokasimu',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Petugas sedang menuju\nlokasimu',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Estimasi tiba ~12 menit',
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
-                        ),
-                      ],
+                          const SizedBox(height: 4),
+                          Text(
+                            'Estimasi tiba ~$_estimatedMinutes menit',
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: Row(
-                      children: const [
-                        Text(
-                          'Lacak',
-                          style: TextStyle(
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PickupTrackingScreen(
+                              petugasName: _activePetugasName,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Row(
+                        children: const [
+                          Text(
+                            'Lacak',
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right,
                             color: Colors.green,
-                            fontWeight: FontWeight.bold,
+                            size: 16,
                           ),
-                        ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: Colors.green,
-                          size: 16,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
             // 2. Google Maps API
             Container(

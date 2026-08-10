@@ -142,9 +142,17 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
           ok = await ApiService.instance.createTransaction(txData);
           if (ok) {
             for (var photoFile in _uploadedPhotos) {
-              final bytes = await photoFile.readAsBytes();
+              List<int>? bytes;
+              if (kIsWeb) {
+                bytes = await photoFile.readAsBytes();
+              }
               final filename = photoFile.name;
-              await ApiService.instance.uploadTransactionPhoto(txId, bytes, filename);
+              await ApiService.instance.uploadTransactionPhoto(
+                txId: txId,
+                filePath: photoFile.path,
+                imageBytes: bytes,
+                filename: filename,
+              );
             }
           }
         } catch (_) {}

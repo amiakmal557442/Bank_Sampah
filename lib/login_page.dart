@@ -63,6 +63,15 @@ class _LoginPageState extends State<LoginPage> {
       if (mounted) Navigator.pop(context);
 
       if (user != null) {
+        await DatabaseHelper.instance.insertAuditLog({
+          'time': DateTime.now().toString().substring(0, 16),
+          'user_name': user['full_name'] ?? email,
+          'role': user['role'] ?? 'nasabah',
+          'module': 'Authentication',
+          'action': 'Login ke dalam sistem',
+          'ip_address': '127.0.0.1',
+          'status': 'BERHASIL'
+        });
         await SessionService.saveSession(user);
 
         if (mounted) {
@@ -90,6 +99,15 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
       } else {
+        await DatabaseHelper.instance.insertAuditLog({
+          'time': DateTime.now().toString().substring(0, 16),
+          'user_name': email,
+          'role': '-',
+          'module': 'Authentication',
+          'action': 'Percobaan login gagal',
+          'ip_address': '127.0.0.1',
+          'status': 'GAGAL'
+        });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

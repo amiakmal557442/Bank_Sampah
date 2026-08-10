@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'api_service.dart';
 import 'session_service.dart';
@@ -158,15 +159,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
       String? updatedPhotoName;
 
       if (_selectedImage != null) {
-        final bytes = await _selectedImage!.readAsBytes();
+        List<int>? bytes;
+        if (kIsWeb) {
+          bytes = await _selectedImage!.readAsBytes();
+        }
         String filename = _selectedImage!.name;
         if (!filename.contains('.')) {
           filename += '.jpg';
         }
         updatedPhotoName = await ApiService.instance.uploadProfilePicture(
-          SessionService.userId,
-          bytes,
-          filename,
+          userId: SessionService.userId,
+          filePath: _selectedImage!.path,
+          imageBytes: bytes,
+          filename: filename,
         );
       }
 
