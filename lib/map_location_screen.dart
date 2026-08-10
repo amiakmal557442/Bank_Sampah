@@ -187,8 +187,8 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                               : _defaultCenter,
                           zoom: 12.0,
                         ),
-                        myLocationEnabled: true,
-                        myLocationButtonEnabled: true,
+                        myLocationEnabled: false,
+                        myLocationButtonEnabled: false,
                         markers: _dropPoints.map((dp) {
                           return Marker(
                             markerId: MarkerId(dp['id'].toString()),

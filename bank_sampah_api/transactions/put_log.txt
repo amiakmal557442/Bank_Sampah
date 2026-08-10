@@ -1,0 +1,153 @@
+Array
+(
+    [status] => dikonfirmasi
+)
+
+Array
+(
+    [status] => selesai
+    [total_actual_points] => 24500
+    [items] => Array
+        (
+            [0] => Array
+                (
+                    [id] => ITI-1786280997025622
+                    [transaction_id] => TRX-1786280835991
+                    [waste_category_id] => 1
+                    [name] => Plastik
+                    [estimated_weight] => 0
+                    [actual_weight] => 1
+                    [final_points] => 2000
+                )
+
+            [1] => Array
+                (
+                    [id] => ITI-1786280997028112
+                    [transaction_id] => TRX-1786280835991
+                    [waste_category_id] => 4
+                    [name] => Elektronik Bekas
+                    [estimated_weight] => 0
+                    [actual_weight] => 4.5
+                    [final_points] => 22500
+                )
+
+        )
+
+)
+
+Array
+(
+    [status] => dikonfirmasi
+)
+
+Array
+(
+    [status] => selesai
+    [total_actual_points] => 29500
+    [items] => Array
+        (
+            [0] => Array
+                (
+                    [id] => ITI-1786347843714503
+                    [transaction_id] => TRX-1786347691626
+                    [waste_category_id] => 1
+                    [name] => Plastik
+                    [estimated_weight] => 0
+                    [actual_weight] => 1
+                    [final_points] => 2000
+                )
+
+            [1] => Array
+                (
+                    [id] => ITI-1786347843715218
+                    [transaction_id] => TRX-1786347691626
+                    [waste_category_id] => 4
+                    [name] => Elektronik Bekas
+                    [estimated_weight] => 0
+                    [actual_weight] => 5.5
+                    [final_points] => 27500
+                )
+
+        )
+
+)
+
+Array
+(
+    [status] => dikonfirmasi
+)
+
+Array
+(
+    [status] => selesai
+    [total_actual_points] => 14000
+    [items] => Array
+        (
+            [0] => Array
+                (
+                    [id] => ITI-1786349591151601
+                    [transaction_id] => TRX-1786349522063
+                    [waste_category_id] => 1
+                    [name] => Plastik
+                    [estimated_weight] => 0
+                    [actual_weight] => 1
+                    [final_points] => 2000
+                )
+
+            [1] => Array
+                (
+                    [id] => ITI-1786349591151948
+                    [transaction_id] => TRX-1786349522063
+                    [waste_category_id] => 2
+                    [name] => Kertas & Kardus
+                    [estimated_weight] => 0
+                    [actual_weight] => 8
+                    [final_points] => 12000
+                )
+
+        )
+
+)
+
+Array
+(
+    [status] => dikonfirmasi
+)
+
+Array
+(
+    [status] => selesai
+    [total_actual_points] => 37000
+    [items] => Array
+        (
+            [0] => Array
+                (
+                    [id] => ITI-1786350324509396
+                    [transaction_id] => TRX-1786349891779
+                    [waste_category_id] => 1
+                    [name] => Plastik
+                    [estimated_weight] => 0
+                    [actual_weight] => 1
+                    [final_points] => 2000
+                )
+
+            [1] => Array
+                (
+                    [id] => ITI-1786350324509713
+                    [transaction_id] => TRX-1786349891779
+                    [waste_category_id] => 4
+                    [name] => Elektronik Bekas
+                    [estimated_weight] => 0
+                    [actual_weight] => 7
+                    [final_points] => 35000
+                )
+
+        )
+
+)
+
+Array
+(
+    [status] => dikonfirmasi
+)
+
