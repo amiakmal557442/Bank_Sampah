@@ -1,4 +1,7 @@
+
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:file_saver/file_saver.dart';
 import 'db_helper.dart';
 import 'api_service.dart';
 
@@ -50,6 +53,64 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
         _logs = logs;
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _exportToCsv() async {
+    if (_logs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tidak ada data untuk diekspor.')),
+      );
+      return;
+    }
+
+    try {
+      // 1. Generate CSV String
+      final List<String> csvRows = [];
+      // Header
+      csvRows.add('Waktu,Pengguna,Role,Modul,Aktivitas,IP Address,Status');
+      
+      for (var log in _logs) {
+        final time = (log['time']?.toString() ?? '').replaceAll(',', ' ');
+        final user = (log['user_name']?.toString() ?? '').replaceAll(',', ' ');
+        final role = (log['role']?.toString() ?? '').replaceAll(',', ' ');
+        final module = (log['module']?.toString() ?? '').replaceAll(',', ' ');
+        final action = (log['action']?.toString() ?? '').replaceAll(',', ' ');
+        final ip = (log['ip_address']?.toString() ?? '').replaceAll(',', ' ');
+        final status = (log['status']?.toString() ?? '').replaceAll(',', ' ');
+        
+        csvRows.add('$time,$user,$role,$module,$action,$ip,$status');
+      }
+      
+      final String csvString = csvRows.join('\n');
+
+      final Uint8List bytes = Uint8List.fromList(csvString.codeUnits);
+
+      // 2. Tampilkan dialog "Save As" (file_saver)
+      final String? path = await FileSaver.instance.saveFile(
+        name: 'audit_log_${DateTime.now().millisecondsSinceEpoch}',
+        bytes: bytes,
+        mimeType: MimeType.csv,
+      );
+
+      if (path != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('File berhasil diekspor!\nLokasi/Nama: $path'),
+            backgroundColor: const Color(0xFF268B07),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengekspor: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -126,14 +187,7 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Mengekspor log ke CSV...'),
-                              backgroundColor: Color(0xFF268B07),
-                            ),
-                          );
-                        },
+                        onPressed: _exportToCsv,
                         icon: Icon(Icons.download, color: baseWhite, size: 18),
                         label: Text(
                           'Ekspor Log (.CSV)',

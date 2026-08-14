@@ -1,4 +1,10 @@
+
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:file_saver/file_saver.dart';
+import 'package:excel/excel.dart' hide Border;
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'db_helper.dart';
 import 'api_service.dart';
 
@@ -247,45 +253,183 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
     );
   }
 
-  void _simulateExport(String format) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text('Mengekspor laporan ($format)...'),
-          ],
-        ),
-        backgroundColor: _green,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+  Future<void> _simulateExport(String format) async {
+    if (_data.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tidak ada data untuk diekspor.')),
+      );
+      return;
+    }
 
-    Future.delayed(const Duration(seconds: 2), () {
+    try {
+      final filterLabel = _filterOptions[_selectedFilterIndex]['label'];
+      
+      // Data Mappings
+      final int totalTx = _data['totalTx'] ?? 0;
+      final int totalPts = _data['totalPoints'] ?? 0;
+      final double totalKg = _data['totalKg']?.toDouble() ?? 0.0;
+      final int totalNasabah = _data['totalNasabah'] ?? 0;
+      final int allNasabah = _data['allNasabah'] ?? 1;
+      final double aktifPct = allNasabah > 0 ? (totalNasabah / allNasabah) * 100 : 0.0;
+      final double recyclePct = _data['recyclePct']?.toDouble() ?? 0.0;
+      
+      final List? kategoriList = _data['kategoriData'] as List?;
+      final List? trenList = _data['trendData'] as List?;
+      final List? rekapList = _data['rekapData'] as List?;
+
+      String? path;
+      Uint8List? bytes;
+      MimeType? mime;
+      String? name;
+
+      if (format.contains('CSV')) {
+        // Build CSV
+        final StringBuffer csv = StringBuffer();
+        csv.writeln('LAPORAN ANALITIK BANK SAMPAH');
+        csv.writeln('Periode: $filterLabel\n');
+        
+        csv.writeln('RINGKASAN');
+        csv.writeln('Total Transaksi,Total Poin Dikeluarkan,Total Volume (Kg),Nasabah Aktif (%),Tingkat Daur Ulang (%)');
+        csv.writeln('$totalTx,$totalPts,$totalKg,${aktifPct.toStringAsFixed(1)},${recyclePct.toStringAsFixed(1)}\n');
+        
+        csv.writeln('VOLUME PER KATEGORI');
+        csv.writeln('Kategori,Volume (Kg)');
+        if (kategoriList != null) {
+          for (var k in kategoriList) csv.writeln('${k['name']},${k['kg']}');
+        }
+        csv.writeln('');
+        
+        csv.writeln('TREN SETORAN MINGGUAN');
+        csv.writeln('Hari/Tanggal,Transaksi,Poin Keluar');
+        if (trenList != null) {
+          for (var t in trenList) csv.writeln('${t['label']},${t['cnt']},${t['pts']}');
+        }
+        csv.writeln('');
+        
+        csv.writeln('REKAP BULANAN');
+        csv.writeln('Bulan,Total Transaksi,Total Poin');
+        if (rekapList != null) {
+          for (var r in rekapList) csv.writeln('${r['periode']},${r['totalTx']},${r['totalPts']}');
+        }
+        
+        bytes = Uint8List.fromList(csv.toString().codeUnits);
+        mime = MimeType.csv;
+        name = 'Laporan_Analitik_$filterLabel';
+        
+      } else if (format.contains('Excel')) {
+        // Build Excel
+        var excel = Excel.createExcel();
+        Sheet sheetObject = excel['Laporan'];
+        excel.setDefaultSheet('Laporan');
+
+        sheetObject.appendRow([TextCellValue('LAPORAN ANALITIK BANK SAMPAH')]);
+        sheetObject.appendRow([TextCellValue('Periode: $filterLabel')]);
+        sheetObject.appendRow([TextCellValue('')]);
+        
+        sheetObject.appendRow([TextCellValue('RINGKASAN')]);
+        sheetObject.appendRow([TextCellValue('Total Transaksi'), TextCellValue('Total Poin'), TextCellValue('Total Volume (Kg)'), TextCellValue('Nasabah Aktif (%)'), TextCellValue('Tingkat Daur Ulang (%)')]);
+        sheetObject.appendRow([IntCellValue(totalTx), IntCellValue(totalPts), DoubleCellValue(totalKg), DoubleCellValue(aktifPct), DoubleCellValue(recyclePct)]);
+        sheetObject.appendRow([TextCellValue('')]);
+        
+        sheetObject.appendRow([TextCellValue('VOLUME PER KATEGORI')]);
+        sheetObject.appendRow([TextCellValue('Kategori'), TextCellValue('Volume (Kg)')]);
+        if (kategoriList != null) {
+          for (var k in kategoriList) {
+            sheetObject.appendRow([TextCellValue(k['name'].toString()), DoubleCellValue((k['kg'] ?? 0).toDouble())]);
+          }
+        }
+        sheetObject.appendRow([TextCellValue('')]);
+        
+        sheetObject.appendRow([TextCellValue('TREN SETORAN MINGGUAN')]);
+        sheetObject.appendRow([TextCellValue('Hari/Tanggal'), TextCellValue('Transaksi'), TextCellValue('Poin Keluar')]);
+        if (trenList != null) {
+          for (var t in trenList) {
+            sheetObject.appendRow([TextCellValue(t['label'].toString()), IntCellValue(t['cnt'] as int), IntCellValue(t['pts'] as int)]);
+          }
+        }
+        
+        final List<int>? fileBytes = excel.encode();
+        bytes = Uint8List.fromList(fileBytes!);
+        mime = MimeType.microsoftExcel;
+        name = 'Laporan_Analitik_$filterLabel';
+        
+      } else if (format.contains('PDF')) {
+        // Build PDF
+        final pdfDoc = pw.Document();
+        
+        pdfDoc.addPage(
+          pw.Page(
+            build: (pw.Context context) => pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('LAPORAN ANALITIK BANK SAMPAH', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                pw.Text('Periode: $filterLabel\n\n'),
+                
+                pw.Text('RINGKASAN', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                pw.TableHelper.fromTextArray(
+                  context: context,
+                  data: <List<String>>[
+                    <String>['Total Transaksi', 'Total Poin', 'Total Volume (Kg)', 'Nasabah Aktif (%)', 'Tingkat Daur Ulang (%)'],
+                    <String>['$totalTx', '$totalPts', '$totalKg', '${aktifPct.toStringAsFixed(1)}%', '${recyclePct.toStringAsFixed(1)}%'],
+                  ],
+                ),
+                pw.SizedBox(height: 20),
+                
+                pw.Text('VOLUME PER KATEGORI', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                pw.TableHelper.fromTextArray(
+                  context: context,
+                  data: <List<String>>[
+                    <String>['Kategori', 'Volume (Kg)'],
+                    ...?kategoriList?.map((k) => [k['name'].toString(), k['kg'].toString()]),
+                  ],
+                ),
+                pw.SizedBox(height: 20),
+                
+                pw.Text('TREN SETORAN MINGGUAN', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                pw.TableHelper.fromTextArray(
+                  context: context,
+                  data: <List<String>>[
+                    <String>['Hari/Tanggal', 'Transaksi', 'Poin Keluar'],
+                    ...?trenList?.map((t) => [t['label'].toString(), t['cnt'].toString(), t['pts'].toString()]),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+        
+        bytes = await pdfDoc.save();
+        mime = MimeType.pdf;
+        name = 'Laporan_Analitik_$filterLabel';
+      }
+
+      if (bytes != null) {
+        path = await FileSaver.instance.saveFile(
+          name: name!.replaceAll(' ', '_'),
+          bytes: bytes,
+          mimeType: mime!,
+        );
+
+        if (path != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('File berhasil diekspor!\nLokasi/Nama: $path'),
+              backgroundColor: _green,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white, size: 18),
-                const SizedBox(width: 10),
-                Text('Laporan berhasil diekspor ($format)!'),
-              ],
-            ),
-            backgroundColor: Colors.green[700],
-            duration: const Duration(seconds: 3),
+            content: Text('Gagal mengekspor: $e'),
+            backgroundColor: Colors.red,
           ),
         );
       }
-    });
+    }
   }
 
   @override

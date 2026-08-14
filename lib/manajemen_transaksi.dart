@@ -10,8 +10,6 @@ import 'widgets/image_viewer_dialog.dart';
 //   FR-AD-04 — Approval/verifikasi transaksi setor sampah dari pengguna
 //   FR-AD-05 — Kelola penarikan saldo/konversi poin: approval, riwayat,
 //              dan deteksi anomali
-//   FR-AD-06 — Kelola penjualan sampah ke mitra pengolah/pengepul/industri
-//              daur ulang (modul B2B)
 //
 // RBAC: halaman ini bisa diakses Admin DAN Staf Kantor (berbeda dengan
 // Master Data yang admin-only) — sesuai peran Staf Kantor di SRS 2.2:
@@ -60,6 +58,7 @@ enum PenarikanStatus { menunggu, diproses, selesai, ditolak }
 class PenarikanModel {
   String id;
   String userName;
+  String nasabahId;
   String tujuan;
   int poin;
   int nominal;
@@ -71,6 +70,7 @@ class PenarikanModel {
   PenarikanModel({
     required this.id,
     required this.userName,
+    required this.nasabahId,
     required this.tujuan,
     required this.poin,
     required this.nominal,
@@ -79,28 +79,6 @@ class PenarikanModel {
     this.isAnomali = false,
     this.anomaliReason,
   });
-}
-
-enum B2BStatus { negosiasi, disepakati, terkirim, selesai }
-
-class B2BDealModel {
-  final String mitraName;
-  final String kategori;
-  final double totalBerat;
-  final double hargaPerKg;
-  final String tanggal;
-  B2BStatus status;
-
-  B2BDealModel({
-    required this.mitraName,
-    required this.kategori,
-    required this.totalBerat,
-    required this.hargaPerKg,
-    required this.tanggal,
-    required this.status,
-  });
-
-  double get totalNilai => totalBerat * hargaPerKg;
 }
 
 // Sample data
@@ -138,6 +116,7 @@ final List<PenarikanModel> samplePenarikan = [
   PenarikanModel(
     id: '1',
     userName: 'Agus Prasetyo',
+    nasabahId: 'USR-000',
     tujuan: 'Rekening Bank',
     poin: 85000,
     nominal: 850000,
@@ -149,6 +128,7 @@ final List<PenarikanModel> samplePenarikan = [
   PenarikanModel(
     id: '2',
     userName: 'Dewi Lestari',
+    nasabahId: 'USR-000',
     tujuan: 'DANA',
     poin: 4500,
     nominal: 45000,
@@ -158,6 +138,7 @@ final List<PenarikanModel> samplePenarikan = [
   PenarikanModel(
     id: '3',
     userName: 'Hendra Gunawan',
+    nasabahId: 'USR-000',
     tujuan: 'GoPay',
     poin: 1000,
     nominal: 10000,
@@ -166,32 +147,6 @@ final List<PenarikanModel> samplePenarikan = [
   ),
 ];
 
-final List<B2BDealModel> sampleB2B = [
-  B2BDealModel(
-    mitraName: 'PT Daur Ulang Nusantara',
-    kategori: 'Plastik PET',
-    totalBerat: 420,
-    hargaPerKg: 3500,
-    tanggal: '28 Jul 2026',
-    status: B2BStatus.disepakati,
-  ),
-  B2BDealModel(
-    mitraName: 'CV Kertas Hijau',
-    kategori: 'Kertas & Kardus',
-    totalBerat: 680,
-    hargaPerKg: 1800,
-    tanggal: '25 Jul 2026',
-    status: B2BStatus.terkirim,
-  ),
-  B2BDealModel(
-    mitraName: 'UD Logam Jaya',
-    kategori: 'Logam Campur',
-    totalBerat: 150,
-    hargaPerKg: 6200,
-    tanggal: '20 Jul 2026',
-    status: B2BStatus.selesai,
-  ),
-];
 
 // --------------------------------------------------------------------------
 // MAIN SCREEN
@@ -212,11 +167,12 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
   final List<String> tabs = [
     'Approval Setor',
     'Penarikan Saldo',
-    'Penjualan B2B',
+    'Daftar Titipan',
   ];
 
   List<Map<String, dynamic>> _dbTransactions = [];
   List<PenarikanModel> _dbWithdrawals = [];
+  List<Map<String, dynamic>> _dbTitipan = [];
   Map<int, String> _categoryNamesMap = {};
   Map<int, int> _categoryPointsMap = {};
   bool _isLoading = true;
@@ -240,9 +196,10 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
 
     List<Map<String, dynamic>> txs = [];
     List<PenarikanModel> wds = [];
+    List<Map<String, dynamic>>? wdData;
     try {
       txs = await ApiService.instance.getTransactions();
-      final wdData = await ApiService.instance.fetchWithdrawals();
+      wdData = await ApiService.instance.fetchWithdrawals();
       for (var w in wdData) {
         PenarikanStatus st = PenarikanStatus.menunggu;
         if (w['status'] == 'approved') st = PenarikanStatus.selesai;
@@ -250,8 +207,9 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
         
         wds.add(PenarikanModel(
           id: w['id'].toString(),
-          userName: w['nasabah_name'] ?? 'Unknown',
-          tujuan: w['method'] ?? 'Transfer',
+          userName: w['full_name'] ?? w['nasabah_name'] ?? 'Unknown',
+          nasabahId: w['nasabah_id']?.toString() ?? '',
+          tujuan: w['account_details'] ?? w['method'] ?? 'Transfer',
           poin: (w['points_deducted'] ?? 0).toInt(),
           nominal: (w['points_deducted'] ?? 0) * 10, // Assuming 1 point = 10 Rp
           waktu: w['created_at']?.toString().substring(0, 16) ?? '',
@@ -265,11 +223,58 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
     if (txs.isEmpty) {
       txs = await DatabaseHelper.instance.getAllTransactions();
     }
+    
+    // Fallback Penarikan (Withdrawals) dari local DB
+    if (wds.isEmpty) {
+      final localWds = await DatabaseHelper.instance.getWithdrawals();
+      for (var w in localWds) {
+        PenarikanStatus st = PenarikanStatus.menunggu;
+        if (w['status'] == 'approved') st = PenarikanStatus.selesai;
+        if (w['status'] == 'rejected') st = PenarikanStatus.ditolak;
+        
+        wds.add(PenarikanModel(
+          id: w['id'].toString(),
+          userName: w['full_name'] ?? w['nasabah_name'] ?? 'Unknown',
+          nasabahId: w['nasabah_id']?.toString() ?? '',
+          tujuan: w['account_details'] ?? w['method'] ?? 'Transfer',
+          poin: (w['points_deducted'] ?? 0).toInt(),
+          nominal: (w['points_deducted'] ?? 0) * 10,
+          waktu: w['created_at']?.toString().substring(0, 16) ?? '',
+          status: st,
+        ));
+      }
+    }
 
     if (!mounted) return;
+    
+    // Load titipan directly from loaded withdrawals (API + Local)
+    List<Map<String, dynamic>> titipan = [];
+    
+    // Process API withdrawals
+    if (wdData != null) {
+      for (var w in wdData) {
+        if (w['status'] == 'approved' && w['account_details'] != null && w['account_details'].toString().contains('(Titip Kurir)')) {
+           titipan.add({
+             'id': w['id'],
+             'full_name': w['nasabah_name'] ?? w['full_name'] ?? 'Nasabah',
+             'phone_number': w['phone_number'] ?? '-',
+             'nasabah_address': w['nasabah_address'] ?? w['address'] ?? '-',
+             'account_details': w['account_details'],
+           });
+        }
+      }
+    }
+    
+    // Process Local withdrawals
+    if (titipan.isEmpty) {
+       final localTitipan = await DatabaseHelper.instance.getTitipanKurir();
+       titipan.addAll(localTitipan);
+    }
+    
     setState(() {
       _dbTransactions = txs;
       _dbWithdrawals = wds;
+      _dbTitipan = titipan;
       _isLoading = false;
     });
   }
@@ -464,7 +469,7 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
           ),
           const SizedBox(height: 3),
           const Text(
-            'FR-AD-04 · FR-AD-05 · FR-AD-06 — approval setor, penarikan saldo, dan penjualan B2B',
+            'FR-AD-04 · FR-AD-05 — approval setor dan penarikan saldo',
             style: TextStyle(
               fontFamily: 'PlusJakartaSans',
               fontSize: 12,
@@ -532,7 +537,7 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                 ],
               ),
             ),
-            const Tab(text: 'Penjualan B2B'),
+            const Tab(text: 'Daftar Titipan'),
           ],
         ),
       ),
@@ -1051,12 +1056,26 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                                           if (p.isAnomali) {
                                             _showTinjauanAnomaliDialog(p);
                                           } else {
-                                            String? error = await ApiService.instance.updateWithdrawalStatus(p.id, 'approved');
+                                            String? error;
+                                            try {
+                                              error = await ApiService.instance.updateWithdrawalStatus(p.id, 'approved');
+                                            } catch (e) {
+                                              error = 'API error';
+                                            }
+                                            if (error != null) {
+                                              bool localSuccess = await DatabaseHelper.instance.updateWithdrawalStatus(p.id, 'approved');
+                                              if (localSuccess) error = null;
+                                            } else {
+                                              // Always sync local DB if API succeeds
+                                              await DatabaseHelper.instance.updateWithdrawalStatus(p.id, 'approved');
+                                            }
                                             if (error == null) {
                                               setState(() {
                                                 p.status =
                                                     PenarikanStatus.selesai;
                                               });
+                                              // Refresh to update Daftar Titipan tab
+                                              _loadTransactions();
                                               if (mounted) {
                                                 ScaffoldMessenger.of(
                                                   context,
@@ -1084,7 +1103,21 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                                         'Tolak',
                                         primary: false,
                                         onTap: () async {
-                                          String? error = await ApiService.instance.updateWithdrawalStatus(p.id, 'rejected');
+                                          String? error;
+                                          try {
+                                            error = await ApiService.instance.updateWithdrawalStatus(p.id, 'rejected', reason: 'Barang habis');
+                                          } catch (e) {
+                                            error = 'API error';
+                                          }
+                                          if (error != null) {
+                                            bool localSuccess = await DatabaseHelper.instance.updateWithdrawalStatus(
+                                              p.id, 'rejected', 
+                                              pointsToRefund: p.poin, 
+                                              nasabahId: p.nasabahId,
+                                              reason: 'Barang habis'
+                                            );
+                                            if (localSuccess) error = null;
+                                          }
                                           if (error == null) {
                                             setState(() {
                                               p.status = PenarikanStatus.ditolak;
@@ -1167,224 +1200,6 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
   }
 
   // ------------------------------------------------------------------------
-  // TAB 3: PENJUALAN B2B (FR-AD-06)
-  // ------------------------------------------------------------------------
-
-  String _b2bStatusLabel(B2BStatus s) {
-    switch (s) {
-      case B2BStatus.negosiasi:
-        return 'Negosiasi';
-      case B2BStatus.disepakati:
-        return 'Disepakati';
-      case B2BStatus.terkirim:
-        return 'Terkirim';
-      case B2BStatus.selesai:
-        return 'Selesai';
-    }
-  }
-
-  Color _b2bStatusColor(B2BStatus s) {
-    switch (s) {
-      case B2BStatus.negosiasi:
-        return warningAmber;
-      case B2BStatus.disepakati:
-        return const Color(0xFF5F8A4A);
-      case B2BStatus.terkirim:
-        return limeGreen;
-      case B2BStatus.selesai:
-        return primaryGreen;
-    }
-  }
-
-  Widget _buildB2BTab() {
-    final totalNilaiBulanIni = sampleB2B.fold<double>(
-      0,
-      (sum, item) => sum + item.totalNilai,
-    );
-
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.fromLTRB(28, 16, 28, 0),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: primaryGreen,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Total nilai penjualan B2B (bulan ini)',
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Rp ${totalNilaiBulanIni.toStringAsFixed(0)}',
-                      style: const TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    _showAddB2BDialog();
-                  },
-                  icon: const Icon(Icons.add_rounded, size: 16),
-                  label: const Text('Tambah Kesepakatan'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: primaryGreen,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    elevation: 0,
-                    textStyle: const TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          _tableContainer(
-            children: [
-              _tableHeaderRow(
-                [
-                  'Mitra',
-                  'Kategori',
-                  'Total Berat',
-                  'Harga/kg',
-                  'Total Nilai',
-                  'Status',
-                ],
-                [2, 2, 1, 1, 2, 1],
-              ),
-              ...sampleB2B.map(
-                (deal) => Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: borderColor, width: 0.5),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              deal.mitraName,
-                              style: const TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
-                                color: darkText,
-                              ),
-                            ),
-                            Text(
-                              deal.tanggal,
-                              style: const TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 10,
-                                fontWeight: FontWeight.w400,
-                                color: mutedText,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          deal.kategori,
-                          style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w400,
-                            color: subtleText,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 1,
-                        child: Text(
-                          '${deal.totalBerat.toStringAsFixed(0)} kg',
-                          style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: darkText,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 1,
-                        child: Text(
-                          'Rp ${deal.hargaPerKg.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w400,
-                            color: subtleText,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          'Rp ${deal.totalNilai.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: primaryGreen,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 1,
-                        child: _pill(
-                          _b2bStatusLabel(deal.status),
-                          _b2bStatusColor(deal.status),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showTinjauanAnomaliDialog(PenarikanModel p) {
     showDialog(
       context: context,
@@ -1442,106 +1257,125 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
     );
   }
 
-  void _showAddB2BDialog() {
-    final mitraController = TextEditingController();
-    final kategoriController = TextEditingController();
-    final beratController = TextEditingController();
-    final hargaController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text(
-            'Tambah Kesepakatan B2B',
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: mitraController,
-                  decoration: const InputDecoration(labelText: 'Nama Mitra'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: kategoriController,
-                  decoration: const InputDecoration(
-                    labelText: 'Kategori Sampah',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: beratController,
-                  decoration: const InputDecoration(
-                    labelText: 'Total Berat (kg)',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: hargaController,
-                  decoration: const InputDecoration(
-                    labelText: 'Harga per kg (Rp)',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Batal', style: TextStyle(color: subtleText)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryGreen,
-                elevation: 0,
+  // ------------------------------------------------------------------------
+  // DAFTAR TITIPAN TAB
+  // ------------------------------------------------------------------------
+  Widget _buildDaftarTitipanTab() {
+    // Menghindari error null akibat hot reload pada variabel state baru
+    if ((_dbTitipan as dynamic) == null || _dbTitipan.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.shopping_bag_outlined, size: 64, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            const Text(
+              'Tidak ada titipan aktif',
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: subtleText,
               ),
-              onPressed: () {
-                final mitra = mitraController.text.trim();
-                final kategori = kategoriController.text.trim();
-                final berat = double.tryParse(beratController.text.trim()) ?? 0;
-                final harga = double.tryParse(hargaController.text.trim()) ?? 0;
-
-                if (mitra.isNotEmpty &&
-                    kategori.isNotEmpty &&
-                    berat > 0 &&
-                    harga > 0) {
-                  setState(() {
-                    sampleB2B.add(
-                      B2BDealModel(
-                        mitraName: mitra,
-                        kategori: kategori,
-                        totalBerat: berat,
-                        hargaPerKg: harga,
-                        tanggal: 'Hari ini',
-                        status: B2BStatus.negosiasi,
-                      ),
-                    );
-                  });
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Kesepakatan B2B ditambahkan'),
-                      backgroundColor: primaryGreen,
-                    ),
-                  );
-                }
-              },
-              child: const Text(
-                'Simpan',
-                style: TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Semua barang sudah berhasil diserahkan ke kurir.',
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 13,
+                color: mutedText,
               ),
             ),
           ],
-        );
-      },
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 40),
+      children: [
+        _tableContainer(
+          children: [
+            _tableHeaderRow(
+              ['Nasabah Penerima', 'Barang', 'Status Pengantaran'],
+              [2, 3, 2],
+            ),
+            ..._dbTitipan.map((t) {
+              final String name = t['full_name'] ?? t['nasabah_name'] ?? 'Nasabah';
+              final String item = t['account_details']?.toString().replaceAll('(Titip Kurir)', '').trim() ?? '-';
+              
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: const BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: borderColor, width: 0.5),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            name,
+                            style: const TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: darkText,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            t['nasabah_address'] ?? '-',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              fontSize: 11,
+                              color: subtleText,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        item,
+                        style: const TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: darkText,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          _pill('Siap Diantar', primaryGreen),
+                          _pill('Titip Kurir', Colors.blue),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ],
     );
   }
 
@@ -1560,7 +1394,7 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
               children: [
                 _buildApprovalSetorTab(),
                 _buildPenarikanSaldoTab(),
-                _buildB2BTab(),
+                _buildDaftarTitipanTab(),
               ],
             ),
           ),

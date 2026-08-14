@@ -1,0 +1,71 @@
+PENJELASAN FITUR APLIKASI BANK SAMPAH
+(Fungsi & Kegunaannya)
+
+Aplikasi ini menghubungkan tiga pihak: Nasabah yang punya sampah, Petugas yang menjemput sampah, dan Admin yang mengawasi seluruh prosesnya. Berikut adalah rincian fitur untuk masing-masing peran:
+
+-----------------------------------------------------
+1. ADMIN (Sang Manajer Pusat)
+-----------------------------------------------------
+Admin bertugas memantau seluruh sistem dari balik meja kantor. Tugas utamanya adalah memastikan semuanya aman, tercatat, dan berjalan lancar.
+
+a. Kelola Akun (Manajemen Pengguna)
+- Fungsinya: Menambahkan akun, menghapus, atau memblokir pengguna (baik itu akun Nasabah maupun Petugas).
+- Kegunaannya: Sebagai satpam digital. Kalau ada petugas yang resign atau ada nasabah yang melanggar aturan, Admin bisa langsung memblokir aksesnya agar mereka tidak bisa masuk ke aplikasi lagi.
+
+b. Master Data (Pengatur Harga)
+- Fungsinya: Menentukan harga (Poin) untuk setiap Kg sampah. Misalnya Plastik = 500 poin/kg.
+- Kegunaannya: Sangat praktis. Jika harga jual barang bekas di pasaran sedang naik/turun, Admin cukup ganti angkanya di halaman ini, dan seluruh perhitungan saldo Nasabah akan otomatis mengikuti harga baru tersebut.
+
+c. Manajemen Transaksi
+- Fungsinya: Tombol untuk menyetujui ("Oke") atau menolak setoran sampah dari nasabah.
+- Kegunaannya: Mencegah kecurangan. Poin Nasabah tidak akan bertambah secara instan sampai Admin benar-benar mengecek dan yakin kalau sampahnya sudah diterima di gudang secara fisik.
+
+d. Operasional Lapangan
+- Fungsinya: Membagi tugas jemputan sampah ke petugas yang tersedia.
+- Kegunaannya: Agar petugas lapangan tidak bingung hari ini harus pergi menjemput ke mana saja, dan memastikan tidak ada pesanan nasabah yang terlewat.
+
+e. Laporan & Analitik (Ekspor PDF/Excel/CSV)
+- Fungsinya: Menampilkan grafik naik-turun volume sampah dan tombol untuk men-download laporannya.
+- Kegunaannya: Mempermudah Admin membuat laporan akhir bulan untuk atasan, kelurahan, atau investor tanpa perlu menghitung manual menggunakan kalkulator.
+
+f. Audit Log (CCTV Digital)
+- Fungsinya: Mencatat diam-diam semua tombol yang diklik atau data yang diubah oleh siapapun di aplikasi.
+- Kegunaannya: Kalau sewaktu-waktu ada saldo nasabah yang hilang atau harga yang berubah drastis tanpa izin, Admin bisa melihat catatan ini untuk melacak pelakunya.
+
+-----------------------------------------------------
+2. NASABAH (Masyarakat Umum)
+-----------------------------------------------------
+Ini adalah warga yang ingin mendapatkan penghasilan tambahan dengan cara menukarkan sampah dari rumahnya. Aplikasinya dibuat sangat simpel.
+
+a. Dashboard Utama
+- Fungsinya: Menampilkan Saldo Poin saat ini dan total kilogram sampah yang sudah berhasil mereka kumpulkan seumur hidup.
+- Kegunaannya: Memberikan rasa puas (pencapaian) sehingga nasabah makin bersemangat untuk terus mengumpulkan dan memilah sampah secara konsisten.
+
+b. Pilih Cara Setor (Ada 2 Pilihan):
+   (1) Drop-in Mandiri:
+       - Fungsinya: Menampilkan Google Maps lokasi Drop Point terdekat. 
+       - Kegunaannya: Nasabah TIDAK PERLU menunggu mobil petugas keliling. Nasabah berangkat/jalan sendiri ke lokasi Drop Point terdekat untuk menimbang sampahnya. Cocok kalau sampahnya sedikit atau nasabah sedang keluar rumah bawa motor.
+   (2) Jemput Sampah (Pick-Up):
+       - Fungsinya: Memanggil kurir untuk datang mengambil sampah ke rumah pada jam yang disepakati.
+       - Kegunaannya: Nasabah MENUNGGU di rumah. Cocok untuk nasabah yang sampahnya sangat berat/banyak (misal habis acara hajatan) atau untuk lansia yang kesulitan keluar rumah.
+
+c. Tukar Poin & Klaim Voucher
+- Fungsinya: Mengubah Poin di layar HP menjadi Uang Tunai / Saldo Dompet Digital, atau menukarnya dengan Kupon Diskon (Voucher).
+- Kegunaannya: Ini adalah magnet utama aplikasi! Masyarakat mau men-download aplikasi ini karena sampah yang dulunya dibuang kini bisa diubah menjadi cuan/uang.
+
+-----------------------------------------------------
+3. PETUGAS (Kurir Lapangan)
+-----------------------------------------------------
+Petugas adalah tim yang berkendara membawa gerobak/motor roda tiga untuk mengambil sampah ke rumah-rumah nasabah.
+
+a. Halaman Tugas
+- Fungsinya: Menampilkan daftar alamat dan rute rumah nasabah yang harus mereka datangi hari ini.
+- Kegunaannya: Petugas tidak perlu lagi membawa kertas catatan kusut yang rawan hilang. Semuanya tersusun rapi di layar HP.
+
+b. Update Status Perjalanan
+- Fungsinya: Tombol lapor posisi: "Sedang Menuju Lokasi" lalu "Sedang Menimbang" lalu "Selesai".
+- Kegunaannya: Agar Nasabah merasa tenang karena tahu petugas benar-benar akan datang, dan Admin di kantor bisa mengawasi rute kerja petugasnya.
+
+c. Input Timbangan Aktual
+- Fungsinya: Mengetikkan angka berat timbangan sampah asli saat petugas berada di depan rumah nasabah.
+- Kegunaannya: Nasabah seringkali hanya bisa menebak-nebak (dikira 10 Kg, padahal saat ditimbang kurir cuma 6 Kg). Angka 6 Kg dari petugas inilah yang menjadi patokan sah yang akan diubah menjadi Poin di aplikasi.

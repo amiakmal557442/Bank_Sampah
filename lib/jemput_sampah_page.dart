@@ -6,6 +6,10 @@ import 'api_service.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
+import 'chat_page.dart';
 
 // ============================================================================
 // 1. HALAMAN JADWAL & LOKASI PENJEMPUTAN
@@ -58,6 +62,42 @@ class _PickupScheduleScreenState extends State<PickupScheduleScreen> {
   ];
 
   final TextEditingController _noteController = TextEditingController();
+
+  final MapController _mapController = MapController();
+  LatLng? _currentPosition;
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+    
+    if (permission == LocationPermission.deniedForever) return;
+
+    final position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+    
+    if (mounted) {
+      setState(() {
+        _currentPosition = LatLng(position.latitude, position.longitude);
+        _mapController.move(_currentPosition!, 15.0);
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -220,34 +260,36 @@ class _PickupScheduleScreenState extends State<PickupScheduleScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          Container(
-            height: 130,
-            decoration: BoxDecoration(
-              color: Colors.green.shade50,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: primaryGreen, width: 1.5),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: SizedBox(
+              height: 130,
+              child: FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: _currentPosition ?? const LatLng(-4.0150, 119.6290),
+                  initialZoom: 13.0,
+                ),
                 children: [
-                  Icon(Icons.map_rounded, color: primaryGreen, size: 36),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Peta interaktif (Google Maps API)',
-                    style: TextStyle(
-                      color: primaryGreen,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.example.bank_sampah',
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Drag pin untuk atur titik jemput secara presisi',
-                    style: TextStyle(
-                      color: primaryGreen.withOpacity(0.7),
-                      fontSize: 12,
+                  if (_currentPosition != null)
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: _currentPosition!,
+                          width: 40,
+                          height: 40,
+                          child: const Icon(
+                            Icons.location_on,
+                            color: Colors.red,
+                            size: 40,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
                 ],
               ),
             ),
@@ -1082,7 +1124,8 @@ class PickupSuccessScreen extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (context) => const PickupTrackingScreen(
-                          petugasName: null, // Belum ada petugas saat baru dibuat
+                          petugasName: null,
+                          petugasId: null,
                         ),
                       ),
                     );
@@ -1152,9 +1195,56 @@ class PickupSuccessScreen extends StatelessWidget {
 // ============================================================================
 // 5. TRACKING REAL-TIME PETUGAS
 // ============================================================================
-class PickupTrackingScreen extends StatelessWidget {
+class PickupTrackingScreen extends StatefulWidget {
   final String? petugasName;
-  const PickupTrackingScreen({super.key, this.petugasName});
+  final String? petugasId;
+  const PickupTrackingScreen({super.key, this.petugasName, this.petugasId});
+
+  @override
+  State<PickupTrackingScreen> createState() => _PickupTrackingScreenState();
+}
+
+class _PickupTrackingScreenState extends State<PickupTrackingScreen> {
+  final MapController _mapController = MapController();
+  LatLng? _currentPosition;
+  LatLng? _petugasPosition;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTracking();
+  }
+
+  Future<void> _startTracking() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+    
+    if (permission == LocationPermission.deniedForever) return;
+
+    final position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+    
+    if (mounted) {
+      setState(() {
+        _currentPosition = LatLng(position.latitude, position.longitude);
+        // Simulasi posisi petugas berada sedikit bergeser dari posisi nasabah
+        _petugasPosition = LatLng(position.latitude + 0.005, position.longitude - 0.005);
+        
+        // Pusatkan peta di antara keduanya atau di posisi user
+        _mapController.move(_currentPosition!, 13.5);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1201,47 +1291,60 @@ class PickupTrackingScreen extends StatelessWidget {
             color: const Color(0xFFE8F5E9),
             width: double.infinity,
             height: MediaQuery.of(context).size.height * 0.5,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: primaryGreen,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: primaryGreen.withOpacity(0.4),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.local_shipping_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Peta interaktif (Google Maps API)',
-                    style: TextStyle(
-                      color: primaryGreen,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Posisi petugas ter-update tiap 5-10 detik',
-                    style: TextStyle(
-                      color: primaryGreen.withOpacity(0.7),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: _currentPosition ?? const LatLng(-4.0150, 119.6290),
+                initialZoom: 13.0,
               ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.bank_sampah',
+                ),
+                if (_currentPosition != null)
+                  MarkerLayer(
+                    markers: [
+                      // Marker Lokasi Nasabah (User)
+                      Marker(
+                        point: _currentPosition!,
+                        width: 40,
+                        height: 40,
+                        child: const Icon(
+                          Icons.person_pin_circle,
+                          color: Colors.blue,
+                          size: 40,
+                        ),
+                      ),
+                      // Marker Lokasi Petugas (Simulasi)
+                      if (_petugasPosition != null)
+                        Marker(
+                          point: _petugasPosition!,
+                          width: 45,
+                          height: 45,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: primaryGreen,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Colors.black26,
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2),
+                                )
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.local_shipping_rounded,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+              ],
             ),
           ),
           Align(
@@ -1312,7 +1415,7 @@ class PickupTrackingScreen extends StatelessWidget {
                           radius: 24,
                           backgroundColor: primaryGreen.withOpacity(0.1),
                           child: Icon(
-                            petugasName != null ? Icons.person_rounded : Icons.hourglass_empty_rounded,
+                            widget.petugasName != null ? Icons.person_rounded : Icons.hourglass_empty_rounded,
                             color: primaryGreen,
                           ),
                         ),
@@ -1322,13 +1425,13 @@ class PickupTrackingScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                petugasName ?? 'Belum ada petugas yang sedang menjemput',
+                                widget.petugasName ?? 'Belum ada petugas yang sedang menjemput',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: petugasName != null ? 15 : 13,
+                                  fontSize: widget.petugasName != null ? 15 : 13,
                                 ),
                               ),
-                              if (petugasName != null) ...[
+                              if (widget.petugasName != null) ...[
                                 const Text(
                                   '⭐ 4.9 • 320 penjemputan',
                                   style: TextStyle(
@@ -1405,7 +1508,39 @@ class PickupTrackingScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      // Bagian Chat Petugas dihilangkan
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryGreen,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ChatPage(
+                                  peerId: widget.petugasId ?? 'petugas123',
+                                  peerName: widget.petugasName ?? 'Petugas',
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.chat_bubble_rounded, size: 20),
+                          label: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Hubungi',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ],

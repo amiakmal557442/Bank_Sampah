@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'db_helper.dart';
 import 'api_service.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 class OperasionalLapanganScreen extends StatefulWidget {
   const OperasionalLapanganScreen({super.key});
@@ -155,26 +157,17 @@ class _OperasionalLapanganScreenState extends State<OperasionalLapanganScreen> {
                   ),
                   child: Stack(
                     children: [
-                      Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: FlutterMap(
+                          options: MapOptions(
+                            initialCenter: const LatLng(-4.0150, 119.6290), // Pusat Parepare
+                            initialZoom: 13.0,
+                          ),
                           children: [
-                            Icon(
-                              Icons.map_outlined,
-                              size: 48,
-                              color: oldGrassGreen,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Peta Interaktif Lapangan (Google Maps API)',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: oldGrassGreen,
-                              ),
-                            ),
-                            Text(
-                              'Menampilkan ${_summary['petugasAktif']} Petugas Aktif & Rute Optimasi',
-                              style: TextStyle(fontSize: 12, color: textGrey),
+                            TileLayer(
+                              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                              userAgentPackageName: 'com.example.bank_sampah',
                             ),
                           ],
                         ),

@@ -6,8 +6,18 @@ import 'dashboard_user.dart';
 import 'dashboard_petugas.dart';
 import 'dashboard_admin.dart';
 
+import 'dart:io' show Platform;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+
   await DatabaseHelper.instance.initWebStorage();
   runApp(const MyApp());
 }

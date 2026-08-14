@@ -559,12 +559,12 @@ class _BerandaPageState extends State<BerandaPage> {
                                       setState(() {});
                                     },
                                     icon: Icon(
-                                      Icons.card_giftcard_outlined,
+                                      Icons.shopping_basket_outlined,
                                       size: 18,
                                       color: const Color(0xFF334155),
                                     ),
                                     label: const Text(
-                                      'Voucher',
+                                      'Sembako',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,
@@ -869,6 +869,39 @@ class _BerandaPageState extends State<BerandaPage> {
         showDialog(
           context: context,
           builder: (ctx) {
+            final isWithdrawal = tx.icon == Icons.card_giftcard_outlined || tx.icon == Icons.account_balance_wallet_outlined;
+            
+            if (isWithdrawal) {
+              String jenis = tx.title.split('(').first.trim();
+              String detail = '';
+              if (tx.title.contains('(')) {
+                detail = tx.title.substring(tx.title.indexOf('(')).replaceAll(RegExp(r'[()]'), '').trim();
+              }
+              return AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: const Text('Detail Transaksi', style: TextStyle(fontWeight: FontWeight.bold)),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _detailRow('Jenis', jenis),
+                    if (detail.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      _detailRow('Detail', detail),
+                    ],
+                    const SizedBox(height: 8),
+                    _detailRow('Poin digunakan', tx.points),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Tutup', style: TextStyle(color: Color(0xFF268B07), fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              );
+            }
+
             String jenisSampah = 'N/A';
             if (tx.rawItems.isNotEmpty) {
               jenisSampah = tx.rawItems
@@ -1205,6 +1238,39 @@ class _SemuaTransaksiPageState extends State<SemuaTransaksiPage> {
         showDialog(
           context: context,
           builder: (ctx) {
+            final isWithdrawal = tx.icon == Icons.card_giftcard_outlined || tx.icon == Icons.account_balance_wallet_outlined;
+            
+            if (isWithdrawal) {
+              String jenis = tx.title.split('(').first.trim();
+              String detail = '';
+              if (tx.title.contains('(')) {
+                detail = tx.title.substring(tx.title.indexOf('(')).replaceAll(RegExp(r'[()]'), '').trim();
+              }
+              return AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: const Text('Detail Transaksi', style: TextStyle(fontWeight: FontWeight.bold)),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _detailRow('Jenis', jenis),
+                    if (detail.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      _detailRow('Detail', detail),
+                    ],
+                    const SizedBox(height: 8),
+                    _detailRow('Poin digunakan', tx.points),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Tutup', style: TextStyle(color: Color(0xFF268B07), fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              );
+            }
+
             String jenisSampah = 'N/A';
             if (tx.rawItems.isNotEmpty) {
               jenisSampah = tx.rawItems
@@ -1855,6 +1921,39 @@ class _RiwayatPageState extends State<RiwayatPage> {
         showDialog(
           context: context,
           builder: (ctx) {
+            final isWithdrawal = tx.icon == Icons.card_giftcard_outlined || tx.icon == Icons.account_balance_wallet_outlined;
+            
+            if (isWithdrawal) {
+              String jenis = tx.title.split('(').first.trim();
+              String detail = '';
+              if (tx.title.contains('(')) {
+                detail = tx.title.substring(tx.title.indexOf('(')).replaceAll(RegExp(r'[()]'), '').trim();
+              }
+              return AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: const Text('Detail Transaksi', style: TextStyle(fontWeight: FontWeight.bold)),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _detailRow('Jenis', jenis),
+                    if (detail.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      _detailRow('Detail', detail),
+                    ],
+                    const SizedBox(height: 8),
+                    _detailRow('Poin digunakan', tx.points),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Tutup', style: TextStyle(color: Color(0xFF268B07), fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              );
+            }
+
             String jenisSampah = 'N/A';
             if (tx.rawItems.isNotEmpty) {
               jenisSampah = tx.rawItems

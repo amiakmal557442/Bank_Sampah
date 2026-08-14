@@ -7,6 +7,7 @@ import 'api_service.dart';
 import 'db_helper.dart';
 import 'widgets/image_viewer_dialog.dart';
 import 'chat_admin_page.dart';
+import 'chat_page.dart';
 
 // ============================================================
 // Model Data Dummy untuk Antrean Penjemputan
@@ -21,6 +22,7 @@ class PickupTask {
   String status; // 'menuju', 'tiba', 'selesai'
   final String type;
   final String? photoEvidence;
+  final String? customerId;
 
   PickupTask({
     required this.wasteId,
@@ -32,6 +34,7 @@ class PickupTask {
     this.status = 'menuju',
     this.type = 'pickup',
     this.photoEvidence,
+    this.customerId,
   });
 }
 
@@ -110,6 +113,9 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   // Data Tugas & Antrean
   PickupTask? _currentTask;
   List<PickupTask> _queue = [];
+  
+  // Data Titipan Kurir
+  List<Map<String, dynamic>> _titipanList = [];
 
   // Data Drop Point
   List<WorkerDropPoint> _dropPoints = [];
@@ -126,7 +132,15 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       final petugasId = SessionService.currentUser?['id'] as String?;
 
       // Load Drop Points
-      final dps = await ApiService.instance.getDropPoints();
+      List<Map<String, dynamic>> dps = [];
+      try {
+        dps = await ApiService.instance.getDropPoints();
+      } catch (_) {}
+      
+      if (dps.isEmpty) {
+        dps = await DatabaseHelper.instance.getDropPoints();
+      }
+
       _dropPoints = dps
           .map(
             (e) => WorkerDropPoint(
@@ -160,6 +174,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           return <String, dynamic>{
             'id': t['id_transaksi'],
             'nasabah_name': t['nama_nasabah'] ?? '-',
+            'nasabah_id': t['nasabah_id']?.toString(),
             'nasabah_address': t['alamat'] ?? '-',
             'pickup_time_slot': null,
             'pickup_date': null,
@@ -226,6 +241,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
               .toString()
               .toLowerCase(),
           photoEvidence: t['photo_evidence']?.toString(),
+          customerId: t['nasabah_id']?.toString(),
         );
       }).toList();
 
@@ -234,6 +250,17 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       } else {
         _currentTask = null;
       }
+      
+      // Load Titipan Kurir
+      try {
+        final List<Map<String, dynamic>> res = await ApiService.instance.fetchWithdrawals();
+        _titipanList = res.where((w) {
+          return w['status'] == 'approved' && w['account_details']?.toString().contains('(Titip Kurir)') == true;
+        }).toList();
+      } catch (e) {
+        _titipanList = await DatabaseHelper.instance.getTitipanKurir();
+      }
+      
     } catch (e) {
       debugPrint('Error loading dashboard petugas data: $e');
     }
@@ -452,7 +479,96 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           ),
           const SizedBox(height: 8),
           for (final task in _queue) _buildQueueTaskCard(task),
+          
+          if (_titipanList.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            _buildSectionHeader('DAFTAR TITIPAN (BAWAAN)'),
+            const SizedBox(height: 8),
+            for (final titipan in _titipanList) _buildTitipanCard(titipan),
+          ],
+          
           const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // Titipan Card
+  // ─────────────────────────────────────────────
+  Widget _buildTitipanCard(Map<String, dynamic> titipan) {
+    String itemName = titipan['account_details']?.toString().replaceAll('(Titip Kurir)', '').trim() ?? 'Barang';
+    String nasabahName = titipan['full_name'] ?? titipan['nasabah_name'] ?? 'Nasabah';
+    
+    String nasabahAddress = titipan['nasabah_address']?.toString().trim() ?? '';
+    if (nasabahAddress.isEmpty) nasabahAddress = titipan['address']?.toString().trim() ?? '';
+    if (nasabahAddress.isEmpty) nasabahAddress = 'Alamat belum diatur';
+    
+    return Container(
+      margin: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: baseWhite,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: oldGrassGreen.withValues(alpha: 0.3), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: oldGrassGreen.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.shopping_bag_outlined, color: oldGrassGreen, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  itemName,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Untuk: $nasabahName',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.location_on_rounded, size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        nasabahAddress,
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -554,12 +670,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             'Scan\nWaste-ID',
             limeGreen,
             onTap: _showScanWasteIdModal,
-          ),
-          _buildQuickAction(
-            Icons.scale_rounded,
-            'Timbang\nManual',
-            Colors.orange,
-            onTap: _showTimbangManualSheet,
           ),
           _buildQuickAction(
             Icons.storefront_rounded,
@@ -771,13 +881,53 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                     }
                   },
                   icon: const Icon(Icons.image_outlined, size: 16),
-                  label: const Text(
-                    'Lihat Gambar',
-                    style: TextStyle(fontSize: 13),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Lihat Gambar',
+                      style: TextStyle(fontSize: 12),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
+              // Tombol Chat Nasabah
+              if (task.status == 'menuju_lokasi' || task.status == 'tiba') ...[
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.orange,
+                      side: const BorderSide(color: Colors.orange),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    onPressed: () {
+                      final String nasabahId = task.customerId ?? 'nasabah123';
+                      final String nasabahName = task.customerName;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatPage(
+                            peerId: nasabahId,
+                            peerName: nasabahName,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
+                    label: const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'Chat Nasabah',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               // Tombol Aksi Utama
               Expanded(
                 child: ElevatedButton(

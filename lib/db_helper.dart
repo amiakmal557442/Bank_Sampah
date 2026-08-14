@@ -70,19 +70,19 @@ class DatabaseHelper {
   static final List<Map<String, dynamic>> _webDropPoints = [
     {
       'id': 'DP-001',
-      'name': 'Drop Point Pusat',
-      'address': 'Jl. Merdeka No.10',
-      'latitude': -6.2,
-      'longitude': 106.816666,
+      'name': 'Drop Point Pusat Parepare',
+      'address': 'Jl. Bau Massepe No. 10, Parepare',
+      'latitude': -4.0150,
+      'longitude': 119.6290,
       'capacity_status': 'aman',
       'operating_hours': '08:00 - 17:00',
     },
     {
       'id': 'DP-002',
-      'name': 'Drop Point Cabang Utara',
-      'address': 'Jl. Utara Raya No.5',
-      'latitude': -6.15,
-      'longitude': 106.9,
+      'name': 'Drop Point Soreang',
+      'address': 'Jl. Jendral Sudirman No. 5, Soreang',
+      'latitude': -3.9868,
+      'longitude': 119.6341,
       'capacity_status': 'aman',
       'operating_hours': '09:00 - 15:00',
     },
@@ -122,6 +122,8 @@ class DatabaseHelper {
   static final List<Map<String, dynamic>> _webTransactions = [];
 
   static final List<Map<String, dynamic>> _webTransactionItems = [];
+
+  static final List<Map<String, dynamic>> _webWithdrawals = [];
 
   DatabaseHelper._init();
 
@@ -441,6 +443,17 @@ class DatabaseHelper {
       )
     ''');
 
+    // 11. Table chat_messages
+    await db.execute('''
+      CREATE TABLE chat_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender_id TEXT NOT NULL,
+        receiver_id TEXT NOT NULL,
+        message TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
     // Seed mock audit logs
     for (var log in _webAuditLogs) {
       await db.insert('audit_logs', log);
@@ -472,6 +485,46 @@ class DatabaseHelper {
   }
 
   // User auth and operations
+  Future<bool> verifyAdminPassword(String email, String password) async {
+    final List<Map<String, dynamic>> res = await _webUsers.where((u) => u['email'] == email && u['password'] == password && u['role'] == 'admin').toList();
+    return res.isNotEmpty;
+  }
+
+  // ==========================================
+  // CHAT SYSTEM FALLBACK
+  // ==========================================
+  
+  Future<List<Map<String, dynamic>>> getChatMessages(String user1, String user2) async {
+    if (kIsWeb) {
+      // In web fallback, we might not have a table, so return empty for now
+      return [];
+    }
+    final db = await instance.database;
+    if (db == null) return [];
+    
+    final List<Map<String, dynamic>> maps = await db.query(
+      'chat_messages',
+      where: '(sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)',
+      whereArgs: [user1, user2, user2, user1],
+      orderBy: 'created_at ASC',
+    );
+    return maps;
+  }
+
+  Future<bool> insertChatMessage(String senderId, String receiverId, String message) async {
+    if (kIsWeb) return false;
+    final db = await instance.database;
+    if (db == null) return false;
+    
+    final int res = await db.insert('chat_messages', {
+      'sender_id': senderId,
+      'receiver_id': receiverId,
+      'message': message,
+      // created_at is default CURRENT_TIMESTAMP
+    });
+    return res > 0;
+  }
+
   Future<Map<String, dynamic>?> login(String email, String password) async {
     final cleanEmail = email.trim().toLowerCase();
     final hashedPassword = _hashPassword(password);
@@ -1785,5 +1838,188 @@ class DatabaseHelper {
       });
     }
     return result;
+  }
+
+  // --- Penarikan Saldo & Tukar Barang Sembako ---
+
+  Future<void> insertWithdrawal(
+      String nasabahId, int pointsDeducted, String method, String accountDetails) async {
+    final String newId = 'WD-${DateTime.now().millisecondsSinceEpoch}';
+    final now = DateTime.now().toIso8601String();
+    
+    if (kIsWeb) {
+       _webWithdrawals.add({
+         'id': newId,
+         'nasabah_id': nasabahId,
+         'points_deducted': pointsDeducted,
+         'method': method,
+         'account_details': accountDetails,
+         'status': 'pending',
+         'created_at': now,
+       });
+       // Potong poin langsung sebagai 'escrow' / tertahan
+       var userIndex = _webUsers.indexWhere((u) => u['id'] == nasabahId);
+       if (userIndex != -1) {
+         _webUsers[userIndex]['point_balance'] = ((_webUsers[userIndex]['point_balance'] as num?)?.toInt() ?? 0) - pointsDeducted;
+       }
+       return;
+    }
+
+    final db = await instance.database;
+    if (db == null) return;
+    
+    await db.insert('withdrawals', {
+      'id': newId,
+      'nasabah_id': nasabahId,
+      'points_deducted': pointsDeducted,
+      'method': method,
+      'account_details': accountDetails,
+      'status': 'pending',
+    });
+
+    // Potong poin langsung sebagai 'escrow' / tertahan
+    final user = await db.query('users', where: 'id = ?', whereArgs: [nasabahId]);
+    if (user.isNotEmpty) {
+      int currentPoints = (user.first['point_balance'] as num?)?.toInt() ?? 0;
+      await db.update(
+        'users', 
+        {'point_balance': currentPoints - pointsDeducted},
+        where: 'id = ?',
+        whereArgs: [nasabahId],
+      );
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getWithdrawals({String? status}) async {
+    if (kIsWeb) {
+      var filtered = _webWithdrawals;
+      if (status != null) {
+        filtered = filtered.where((w) => w['status'] == status).toList();
+      }
+      
+      List<Map<String, dynamic>> result = [];
+      for (var w in filtered) {
+        var user = _webUsers.firstWhere((u) => u['id'] == w['nasabah_id'], orElse: () => {});
+        result.add({
+          ...w,
+          'full_name': user['full_name'] ?? 'Unknown',
+          'phone_number': user['phone_number'] ?? 'Unknown',
+        });
+      }
+      return result;
+    }
+
+    final db = await instance.database;
+    if (db == null) return [];
+    
+    String query = '''
+      SELECT w.*, u.full_name, u.phone_number 
+      FROM withdrawals w
+      LEFT JOIN users u ON w.nasabah_id = u.id
+    ''';
+    List<dynamic> args = [];
+    
+    if (status != null) {
+      query += ' WHERE w.status = ?';
+      args.add(status);
+    }
+    
+    query += ' ORDER BY w.created_at DESC';
+    
+    return await db.rawQuery(query, args);
+  }
+
+  Future<bool> updateWithdrawalStatus(String id, String newStatus, {int? pointsToRefund, String? nasabahId, String? reason}) async {
+    if (kIsWeb) {
+      var index = _webWithdrawals.indexWhere((w) => w['id'] == id);
+      if (index != -1) {
+        _webWithdrawals[index]['status'] = newStatus;
+        if (newStatus == 'rejected') {
+          if (reason != null) {
+            _webWithdrawals[index]['account_details'] = '${_webWithdrawals[index]['account_details']} (Ditolak: $reason)';
+          }
+          if (pointsToRefund != null && nasabahId != null) {
+            var userIndex = _webUsers.indexWhere((u) => u['id'] == nasabahId);
+            if (userIndex != -1) {
+               _webUsers[userIndex]['point_balance'] = ((_webUsers[userIndex]['point_balance'] as num?)?.toInt() ?? 0) + pointsToRefund;
+            }
+          }
+        }
+      }
+      return true;
+    }
+
+    final db = await instance.database;
+    if (db == null) return false;
+    
+    await db.update(
+      'withdrawals',
+      {'status': newStatus},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (newStatus == 'rejected') {
+      if (reason != null) {
+        final wd = await db.query('withdrawals', where: 'id = ?', whereArgs: [id]);
+        if (wd.isNotEmpty) {
+          await db.update(
+            'withdrawals',
+            {'account_details': '${wd.first['account_details']} (Ditolak: $reason)'},
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+        }
+      }
+      
+      if (pointsToRefund != null && nasabahId != null) {
+        final user = await db.query('users', where: 'id = ?', whereArgs: [nasabahId]);
+        if (user.isNotEmpty) {
+          int currentPoints = (user.first['point_balance'] as num?)?.toInt() ?? 0;
+          await db.update(
+            'users', 
+            {'point_balance': currentPoints + pointsToRefund},
+            where: 'id = ?',
+            whereArgs: [nasabahId],
+          );
+        }
+      }
+    }
+    
+    return true;
+  }
+
+  // --- Daftar Titipan Petugas ---
+  Future<List<Map<String, dynamic>>> getTitipanKurir() async {
+    if (kIsWeb) {
+      var filtered = _webWithdrawals.where((w) => 
+        w['status'] == 'approved' && 
+        w['account_details']?.toString().contains('(Titip Kurir)') == true
+      ).toList();
+      
+      List<Map<String, dynamic>> result = [];
+      for (var w in filtered) {
+        var user = _webUsers.firstWhere((u) => u['id'] == w['nasabah_id'], orElse: () => {});
+        result.add({
+          ...w,
+          'full_name': user['full_name'] ?? 'Unknown',
+          'phone_number': user['phone_number'] ?? 'Unknown',
+          'nasabah_address': user['address'] ?? '-',
+        });
+      }
+      return result;
+    }
+
+    final db = await instance.database;
+    if (db == null) return [];
+    
+    String query = '''
+      SELECT w.*, u.full_name, u.phone_number, u.address as nasabah_address
+      FROM withdrawals w
+      LEFT JOIN users u ON w.nasabah_id = u.id
+      WHERE w.status = 'approved' AND w.account_details LIKE '%(Titip Kurir)%'
+      ORDER BY w.created_at DESC
+    ''';
+    
+    return await db.rawQuery(query);
   }
 }

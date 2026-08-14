@@ -1,6 +1,11 @@
 import 'dart:async';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'api_service.dart';
 import 'db_helper.dart';
 import 'jemput_sampah_page.dart';
@@ -27,27 +32,49 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
 
   List<Map<String, dynamic>> _dropPoints = [];
   bool _isLoading = true;
-  GoogleMapController? _mapController;
+  final MapController _mapController = MapController();
 
-  final LatLng _defaultCenter = const LatLng(
-    -6.200000,
-    106.816666,
-  ); // Default Jakarta center
-
-  void _onMapCreated(GoogleMapController controller) {
-    _mapController = controller;
-  }
+  final LatLng _defaultParepare = const LatLng(-4.0150, 119.6290);
+  LatLng? _currentPosition;
 
   bool _hasActivePickup = false;
   String? _activePetugasName;
   int _estimatedMinutes = 12;
   Timer? _etaTimer;
 
+  bool _hasActiveDropIn = false;
+  String? _activeDropInDpId;
+  String? _activePetugasId;
+
   @override
   void initState() {
     super.initState();
     _loadDropPoints();
     _checkActivePickup();
+    _determinePosition();
+  }
+
+  Future<void> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+    
+    if (permission == LocationPermission.deniedForever) return;
+
+    final position = await Geolocator.getCurrentPosition();
+    if (!mounted) return;
+    setState(() {
+      _currentPosition = LatLng(position.latitude, position.longitude);
+    });
+    _mapController.move(_currentPosition!, 13.0);
   }
 
   @override
@@ -65,18 +92,40 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
         status: 'dikonfirmasi,menuju_lokasi,tiba',
       );
 
+      bool foundPickup = false;
+      bool foundDropIn = false;
+
       // Find an active transaction with a petugas assigned
       for (var tx in txs) {
-        if (tx['petugas_id'] != null &&
-            tx['petugas_id'].toString().isNotEmpty) {
-          setState(() {
-            _hasActivePickup = true;
-            _activePetugasName = tx['petugas_name'] ?? 'Petugas';
-            _estimatedMinutes = 12; // Base estimated time
-          });
-          _startEtaTimer();
-          return; // Found active task
+        final type = (tx['tipe_tugas'] ?? tx['type'] ?? '').toString().toLowerCase();
+        final isDropIn = type == 'drop-in' || type == 'drop_in';
+
+        if (tx['petugas_id'] != null && tx['petugas_id'].toString().isNotEmpty) {
+          if (!isDropIn && !foundPickup) {
+            foundPickup = true;
+            setState(() {
+              _hasActivePickup = true;
+              _activePetugasId = tx['petugas_id']?.toString();
+              _activePetugasName = tx['petugas_name'] ?? 'Petugas';
+              _estimatedMinutes = 12;
+            });
+            _startEtaTimer();
+          } else if (isDropIn && !foundDropIn) {
+            foundDropIn = true;
+            setState(() {
+              _hasActiveDropIn = true;
+              _activeDropInDpId = tx['drop_point_id']?.toString();
+            });
+          }
         }
+      }
+
+      if (!foundPickup && mounted) {
+        setState(() => _hasActivePickup = false);
+        _etaTimer?.cancel();
+      }
+      if (!foundDropIn && mounted) {
+        setState(() => _hasActiveDropIn = false);
       }
     } catch (_) {}
   }
@@ -199,6 +248,7 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                           MaterialPageRoute(
                             builder: (context) => PickupTrackingScreen(
                               petugasName: _activePetugasName,
+                              petugasId: _activePetugasId,
                             ),
                           ),
                         );
@@ -224,7 +274,35 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                 ),
               ),
 
-            // 2. Google Maps API
+            // Banner Drop-in Aktif
+            if (_hasActiveDropIn)
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange[300]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle_outline, color: Colors.orange[700], size: 24),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'DROP-IN SUDAH SIAP DI JEMPUT',
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // 2. Flutter Map (Mendukung Desktop & Mobile)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               height: 250, // Slightly taller for better view
@@ -236,43 +314,54 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                 borderRadius: BorderRadius.circular(14),
                 child: _isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : GoogleMap(
-                        onMapCreated: _onMapCreated,
-                        initialCameraPosition: CameraPosition(
-                          target: _dropPoints.isNotEmpty
-                              ? LatLng(
-                                  double.tryParse(
-                                        _dropPoints[0]['latitude'].toString(),
-                                      ) ??
-                                      -6.200000,
-                                  double.tryParse(
-                                        _dropPoints[0]['longitude'].toString(),
-                                      ) ??
-                                      106.816666,
-                                )
-                              : _defaultCenter,
-                          zoom: 12.0,
+                    : FlutterMap(
+                        mapController: _mapController,
+                        options: MapOptions(
+                          initialCenter: _currentPosition ?? _defaultParepare,
+                          initialZoom: 13.0,
                         ),
-                        myLocationEnabled: false,
-                        myLocationButtonEnabled: false,
-                        markers: _dropPoints.map((dp) {
-                          return Marker(
-                            markerId: MarkerId(dp['id'].toString()),
-                            position: LatLng(
-                              double.tryParse(dp['latitude'].toString()) ??
-                                  -6.2,
-                              double.tryParse(dp['longitude'].toString()) ??
-                                  106.8,
-                            ),
-                            infoWindow: InfoWindow(
-                              title: dp['name'].toString(),
-                              snippet: dp['address'].toString(),
-                            ),
-                            icon: BitmapDescriptor.defaultMarkerWithHue(
-                              BitmapDescriptor.hueGreen,
-                            ),
-                          );
-                        }).toSet(),
+                        children: [
+                          TileLayer(
+                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            userAgentPackageName: 'com.example.bank_sampah',
+                          ),
+                          MarkerLayer(
+                            markers: [
+                              ..._dropPoints.map((dp) {
+                                final dpId = dp['id']?.toString();
+                                final lat = double.tryParse(dp['latitude'].toString()) ?? -4.0131;
+                                final lng = double.tryParse(dp['longitude'].toString()) ?? 119.6250;
+                                
+                                final isActiveDropIn = _hasActiveDropIn && dpId != null && dpId == _activeDropInDpId;
+
+                                return Marker(
+                                  point: LatLng(lat, lng),
+                                  width: isActiveDropIn ? 50 : 40,
+                                  height: isActiveDropIn ? 50 : 40,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text(dp['name'].toString())),
+                                      );
+                                    },
+                                    child: Icon(
+                                      isActiveDropIn ? Icons.person_pin_circle : Icons.location_on, 
+                                      color: isActiveDropIn ? Colors.orange : Colors.green, 
+                                      size: isActiveDropIn ? 50 : 40,
+                                    ),
+                                  ),
+                                );
+                              }),
+                              if (_currentPosition != null)
+                                Marker(
+                                  point: _currentPosition!,
+                                  width: 40,
+                                  height: 40,
+                                  child: const Icon(Icons.my_location, color: Colors.blue, size: 30),
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
               ),
             ),
@@ -374,8 +463,8 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                 itemBuilder: (context, index) {
                   if (_dropPoints.isEmpty) {
                     return _buildDropPointCard(
-                      name: 'Drop Point Margonda',
-                      address: 'Jl. Margonda Raya No. 12, Depok',
+                      name: 'Drop Point Pusat Parepare',
+                      address: 'Jl. Bau Massepe No. 10, Parepare',
                       hours: '08:00–17:00',
                       status: 'aman',
                     );

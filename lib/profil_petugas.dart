@@ -69,32 +69,6 @@ final List<AbsensiHistoryItem> sampleAbsensi = [
     isComplete: true,
   ),
 ];
-
-class KendalaHistoryItem {
-  final String judul;
-  final String tanggal;
-  final String status; // 'Diproses', 'Selesai'
-
-  KendalaHistoryItem({
-    required this.judul,
-    required this.tanggal,
-    required this.status,
-  });
-}
-
-final List<KendalaHistoryItem> sampleKendala = [
-  KendalaHistoryItem(
-    judul: 'Lokasi tidak ditemukan - Jl. Kartini No. 8',
-    tanggal: '29 Jul 2026',
-    status: 'Selesai',
-  ),
-  KendalaHistoryItem(
-    judul: 'Ban motor bocor di tengah rute',
-    tanggal: '22 Jul 2026',
-    status: 'Selesai',
-  ),
-];
-
 class PetugasProfilScreen extends StatefulWidget {
   const PetugasProfilScreen({super.key});
 
@@ -554,14 +528,6 @@ class _PetugasProfilScreenState extends State<PetugasProfilScreen> {
               _showAdminSelectionSheet(context);
             },
           ),
-          _divider(),
-          _menuItem(
-            icon: Icons.report_problem_outlined,
-            title: 'Riwayat Lapor Kendala',
-            subtitle: 'FR-PL-14 — ${sampleKendala.length} laporan sebelumnya',
-            onTap: () => _showKendalaHistory(context),
-          ),
-          _divider(),
           _menuItem(
             icon: Icons.notifications_none_rounded,
             title: 'Pengaturan Notifikasi',
@@ -588,105 +554,6 @@ class _PetugasProfilScreenState extends State<PetugasProfilScreen> {
             },
           ),
         ],
-      ),
-    );
-  }
-
-  void _showKendalaHistory(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: borderColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const Text(
-              'Riwayat Lapor Kendala',
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: darkText,
-              ),
-            ),
-            const SizedBox(height: 14),
-            ...sampleKendala.map(
-              (k) => Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: pageBackground,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            k.judul,
-                            style: const TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: darkText,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            k.tanggal,
-                            style: const TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w400,
-                              color: mutedText,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8F8E8),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        k.status,
-                        style: const TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: primaryGreen,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

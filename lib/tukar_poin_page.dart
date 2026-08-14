@@ -92,30 +92,6 @@ class ConversionHistoryItem {
   });
 }
 
-final List<ConversionHistoryItem> sampleHistory = [
-  ConversionHistoryItem(
-    destination: 'DANA',
-    points: 1000,
-    amount: 10000,
-    date: '25 Jul 2026, 07.20',
-    status: 'Selesai',
-  ),
-  ConversionHistoryItem(
-    destination: 'Rekening Bank',
-    points: 5000,
-    amount: 50000,
-    date: '20 Jul 2026, 11.05',
-    status: 'Gagal',
-  ),
-  ConversionHistoryItem(
-    destination: 'GoPay',
-    points: 2000,
-    amount: 20000,
-    date: '14 Jul 2026, 16.40',
-    status: 'Selesai',
-  ),
-];
-
 class TukarPoinScreen extends StatefulWidget {
   const TukarPoinScreen({super.key});
 
@@ -132,6 +108,8 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
   final TextEditingController amountController = TextEditingController();
   int inputPoints = 0;
   String? errorText;
+  List<ConversionHistoryItem> _historyList = [];
+  bool _isLoadingHistory = true;
 
   String? _ktpPhotoPath;
   final ImagePicker _picker = ImagePicker();
@@ -184,6 +162,7 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
     selectedDestination = destinations.first;
     amountController.addListener(_onAmountChanged);
     _loadSystemConfig();
+    _loadHistory();
   }
 
   Future<void> _loadSystemConfig() async {
@@ -203,6 +182,66 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
       if (mounted) {
         setState(() => _isLoadingConfig = false);
       }
+    }
+  }
+
+  Future<void> _loadHistory() async {
+    try {
+      final withdrawals = await ApiService.instance.fetchWithdrawals();
+      final userWds = withdrawals.where((w) => w['nasabah_id']?.toString() == SessionService.userId).toList();
+      
+      List<ConversionHistoryItem> history = [];
+      for (var w in userWds) {
+         String st = 'Diproses';
+         if (w['status'] == 'approved' || w['status'] == 'selesai') st = 'Selesai';
+         if (w['status'] == 'rejected') st = 'Gagal';
+         String details = w['account_details'] ?? '';
+         if (w['status'] == 'pending') details += '\n(Poin belum terpotong)';
+         String method = w['method'] ?? 'Unknown';
+         
+         history.add(ConversionHistoryItem(
+           destination: '$method\n$details'.trim(),
+           points: (w['points_deducted'] ?? 0).toInt(),
+           amount: ((w['points_deducted'] ?? 0) * pointToRupiahRate).toDouble(),
+           date: w['created_at']?.toString().substring(0, 16) ?? '',
+           status: st,
+         ));
+      }
+      
+      if (mounted) {
+        setState(() {
+          _historyList = history;
+          _isLoadingHistory = false;
+        });
+      }
+    } catch (_) {
+       // fallback to local DB
+       final localWds = await DatabaseHelper.instance.getWithdrawals();
+       final userWds = localWds.where((w) => w['nasabah_id']?.toString() == SessionService.userId).toList();
+       List<ConversionHistoryItem> history = [];
+       for (var w in userWds) {
+         String st = 'Diproses';
+         if (w['status'] == 'approved' || w['status'] == 'selesai') st = 'Selesai';
+         if (w['status'] == 'rejected') st = 'Gagal';
+         
+         String details = w['account_details'] ?? '';
+         if (w['status'] == 'pending') details += '\n(Poin belum terpotong)';
+         String method = w['method'] ?? 'Unknown';
+         
+         history.add(ConversionHistoryItem(
+           destination: '$method\n$details'.trim(),
+           points: (w['points_deducted'] ?? 0).toInt(),
+           amount: ((w['points_deducted'] ?? 0) * pointToRupiahRate).toDouble(),
+           date: w['created_at']?.toString().substring(0, 16) ?? '',
+           status: st,
+         ));
+       }
+       if (mounted) {
+         setState(() {
+           _historyList = history;
+           _isLoadingHistory = false;
+         });
+       }
     }
   }
 
@@ -728,8 +767,10 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            children: sampleHistory.map((item) {
+          child: _isLoadingHistory ? const Center(child: CircularProgressIndicator()) : Column(
+            children: _historyList.isEmpty 
+              ? [const Padding(padding: EdgeInsets.all(20), child: Text('Belum ada riwayat konversi', style: TextStyle(color: Colors.grey)))]
+              : _historyList.map((item) {
               final isSuccess = item.status == 'Selesai';
               final statusColor = isSuccess
                   ? primaryGreen
@@ -1014,13 +1055,14 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text(
-                              'Permintaan penukaran poin berhasil diajukan',
+                              'Permintaan penukaran poin diajukan. Sedang diproses admin dan poin belum terpotong.',
                               style: TextStyle(fontFamily: 'PlusJakartaSans'),
                             ),
                             backgroundColor: primaryGreen,
-                            duration: Duration(seconds: 2),
+                            duration: Duration(seconds: 4),
                           ),
                         );
+                        _loadHistory();
                       }
                     } else {
                       if (mounted) {

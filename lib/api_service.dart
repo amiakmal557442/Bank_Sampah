@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'db_helper.dart';
 
 /// Service untuk berkomunikasi dengan API Backend (PHP + MySQL XAMPP)
 /// Ganti BASE_URL jika menjalankan di perangkat Android fisik dengan IP lokal Anda.
@@ -487,11 +488,12 @@ class ApiService {
     }
   }
 
-  Future<String?> updateWithdrawalStatus(String id, String status) async {
+  Future<String?> updateWithdrawalStatus(String id, String status, {String? reason}) async {
     try {
       final res = await _put('withdrawals/index.php', {
         'id': id,
         'status': status,
+        if (reason != null) 'reason': reason,
       });
       if (res['success'] == true) return null;
       return res['message'] ?? 'Gagal mengubah status';
@@ -537,9 +539,9 @@ class ApiService {
       if (res['success'] == true && res['data'] != null) {
         return List<Map<String, dynamic>>.from(res['data']);
       }
-      return [];
+      return await DatabaseHelper.instance.getChatMessages(user1, user2);
     } catch (_) {
-      return [];
+      return await DatabaseHelper.instance.getChatMessages(user1, user2);
     }
   }
 
@@ -550,9 +552,10 @@ class ApiService {
         'receiver_id': receiverId,
         'message': message,
       });
-      return res['success'] == true;
+      if (res['success'] == true) return true;
+      return await DatabaseHelper.instance.insertChatMessage(senderId, receiverId, message);
     } catch (_) {
-      return false;
+      return await DatabaseHelper.instance.insertChatMessage(senderId, receiverId, message);
     }
   }
   // ─────────────────────────────────────────────────

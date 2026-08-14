@@ -4,6 +4,9 @@ import 'widgets/image_viewer_dialog.dart';
 import 'db_helper.dart';
 import 'map_location_screen.dart';
 import 'session_service.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'chat_page.dart';
 
 class HalamanTugas extends StatefulWidget {
   const HalamanTugas({Key? key}) : super(key: key);
@@ -37,6 +40,34 @@ class _HalamanTugasState extends State<HalamanTugas> {
     // Fallback ke local DB jika API gagal
     if (tasks.isEmpty) {
       tasks = await DatabaseHelper.instance.getPendingPickupTasks();
+    }
+
+    // Tambahkan Titipan Kurir (Pengantaran Sembako)
+    List<Map<String, dynamic>> titipan = [];
+    try {
+       final List<Map<String, dynamic>> res = await ApiService.instance.fetchWithdrawals();
+       titipan = res.where((w) {
+          return w['status'] == 'approved' && w['account_details']?.toString().contains('(Titip Kurir)') == true;
+       }).toList();
+    } catch(e) {
+       titipan = await DatabaseHelper.instance.getTitipanKurir();
+    }
+    
+    for(var t in titipan) {
+        String itemName = t['account_details']?.toString().replaceAll('(Titip Kurir)', '').trim() ?? 'Sembako';
+        String addr = t['nasabah_address']?.toString().trim() ?? '';
+        if (addr.isEmpty) addr = t['address']?.toString().trim() ?? '';
+        
+        tasks.add({
+          'id': t['id'],
+          'tipe_tugas': 'Pengantaran Sembako',
+          'status': 'siap_diantar', 
+          'nama_nasabah': t['full_name'] ?? t['nasabah_name'] ?? 'Nasabah',
+          'nasabah_address': addr.isEmpty ? 'Alamat belum diatur' : addr,
+          'jenis_sampah': 'Barang Titipan',
+          'estimasi_berat': itemName,
+          'is_pengantaran': true,
+        });
     }
 
     if (mounted) {
@@ -226,27 +257,35 @@ class _HalamanTugasState extends State<HalamanTugas> {
         .toString();
     final bool isDropIn = tipeRaw == 'Drop-in' || tipeRaw == 'drop_in';
 
-    final String tipeTugas = isDropIn ? 'Drop-in' : 'Jemput';
-    final Color tipeColor = isDropIn ? Colors.purple : greenTheme;
-    final IconData tipeIcon = isDropIn
-        ? Icons.store
-        : Icons.local_shipping_outlined;
-
-    // Drop-in dan Pickup punya alur yang sama: Menunggu -> Terima/Jemput -> Verifikasi & Timbang
-    final String mainBtnLabel = sudahMenuju 
-        ? 'Verifikasi & Timbang' 
-        : (isDropIn ? 'Terima Drop-in' : 'Menjemput');
-        
-    final IconData mainBtnIcon = sudahMenuju
-        ? Icons.fact_check_rounded
-        : (isDropIn ? Icons.check_circle_outline : Icons.local_shipping);
-        
-    final Color mainBtnColor = sudahMenuju
-        ? Colors.green.shade700
-        : greenTheme;
-
     final String txId =
         (tugas['id_transaksi'] ?? tugas['id'])?.toString() ?? '';
+    final bool isPengantaran = tugas['is_pengantaran'] == true;
+
+    final String tipeTugas = isPengantaran 
+        ? 'Pengantaran Sembako' 
+        : (isDropIn ? 'Drop-in' : 'Jemput');
+        
+    final Color tipeColor = isPengantaran 
+        ? Colors.blue.shade700 
+        : (isDropIn ? Colors.purple : greenTheme);
+        
+    final IconData tipeIcon = isPengantaran
+        ? Icons.shopping_bag_outlined
+        : (isDropIn ? Icons.store : Icons.local_shipping_outlined);
+
+    // Drop-in dan Pickup punya alur yang sama: Menunggu -> Terima/Jemput -> Verifikasi & Timbang
+    // Pengantaran Sembako punya alur: Menunggu -> Selesaikan Pengantaran
+    final String mainBtnLabel = isPengantaran 
+        ? 'Selesaikan Pengantaran' 
+        : (sudahMenuju ? 'Verifikasi & Timbang' : (isDropIn ? 'Terima Drop-in' : 'Menjemput'));
+        
+    final IconData mainBtnIcon = isPengantaran
+        ? Icons.check_circle
+        : (sudahMenuju ? Icons.fact_check_rounded : (isDropIn ? Icons.check_circle_outline : Icons.local_shipping));
+        
+    final Color mainBtnColor = isPengantaran 
+        ? Colors.blue.shade700
+        : (sudahMenuju ? Colors.green.shade700 : greenTheme);
 
     return Card(
       elevation: 3,
@@ -302,13 +341,13 @@ class _HalamanTugasState extends State<HalamanTugas> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    statusStr == 'dikonfirmasi'
-                        ? 'MENUNGGU'
+                    statusStr == 'dikonfirmasi' || statusStr == 'siap_diantar'
+                        ? (isPengantaran ? 'SIAP DIANTAR' : 'MENUNGGU')
                         : statusStr.toUpperCase().replaceAll('_', ' '),
                     style: TextStyle(
                       color: sudahMenuju
                           ? Colors.blue.shade800
-                          : Colors.orange.shade800,
+                          : (isPengantaran ? Colors.blue.shade800 : Colors.orange.shade800),
                       fontWeight: FontWeight.bold,
                       fontSize: 10,
                     ),
@@ -345,24 +384,16 @@ class _HalamanTugasState extends State<HalamanTugas> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  isDropIn ? Icons.store_mall_directory : Icons.location_on,
-                  color: isDropIn ? Colors.purple : Colors.redAccent,
+                  isPengantaran ? Icons.location_on : (isDropIn ? Icons.store_mall_directory : Icons.location_on),
+                  color: isPengantaran ? Colors.blueAccent : (isDropIn ? Colors.purple : Colors.redAccent),
                   size: 20,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     () {
-                      if (isDropIn) {
-                        if (tugas['drop_point_name'] != null && tugas['drop_point_name'].toString().trim().isNotEmpty) {
-                          return '${tugas['drop_point_name']} — ${tugas['drop_point_address'] ?? ''}';
-                        }
-                        final addr = tugas['address'] ?? tugas['alamat'] ?? tugas['nasabah_address'] ?? '';
-                        return addr.toString().trim().isEmpty ? 'Drop Point' : addr.toString();
-                      } else {
-                        final addr = tugas['address'] ?? tugas['alamat'] ?? tugas['nasabah_address'] ?? '';
-                        return addr.toString().trim().isEmpty ? '-' : addr.toString();
-                      }
+                      final addr = tugas['address'] ?? tugas['alamat'] ?? tugas['nasabah_address'] ?? '';
+                      return addr.toString().trim().isEmpty ? 'Alamat belum diatur' : addr.toString();
                     }(),
                     style: TextStyle(color: Colors.grey.shade700, height: 1.4),
                   ),
@@ -421,13 +452,25 @@ class _HalamanTugasState extends State<HalamanTugas> {
                 }).toList(),
               ),
             ],
+
+            if (isDropIn && tugas['drop_point_name'] != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Lokasi Drop Point: ${tugas['drop_point_name']}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
 
             // Tombol aksi
             Row(
               children: [
-                // Tombol Lihat Gambar (selalu muncul untuk semua tipe tugas)
-                  // Tombol Peta
+                // Tombol Lihat Gambar (selalu muncul untuk semua tipe tugas kecuali pengantaran sembako)
+                if (!isPengantaran) ...[
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () {
@@ -454,12 +497,73 @@ class _HalamanTugasState extends State<HalamanTugas> {
                     ),
                   ),
                   const SizedBox(width: 12),
+                ],
+
+                // Tombol Chat Nasabah (untuk tugas yang sudah diambil)
+                if (sudahMenuju && !isPengantaran) ...[
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        final String nasabahId = tugas['nasabah_id']?.toString() ?? 'nasabah123';
+                        final String nasabahName = tugas['nama_nasabah']?.toString() ?? tugas['nasabah_name']?.toString() ?? 'Nasabah';
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChatPage(
+                              peerId: nasabahId,
+                              peerName: nasabahName,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        color: Colors.orange,
+                        size: 18,
+                      ),
+                      label: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text('Chat Nasabah'),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.orange,
+                        side: const BorderSide(color: Colors.orange),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
 
                 // Tombol aksi utama
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      if (sudahMenuju) {
+                      if (isPengantaran) {
+                        bool success = false;
+                        try {
+                           final err = await ApiService.instance.updateWithdrawalStatus(txId, 'selesai');
+                           if (err == null) {
+                              success = true;
+                              await DatabaseHelper.instance.updateWithdrawalStatus(txId, 'selesai');
+                           }
+                        } catch (e) {
+                           success = await DatabaseHelper.instance.updateWithdrawalStatus(txId, 'selesai');
+                        }
+                        if (success && mounted) {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             SnackBar(
+                               content: const Text('Pengantaran berhasil diselesaikan!'),
+                               backgroundColor: greenTheme,
+                               behavior: SnackBarBehavior.floating,
+                             ),
+                           );
+                           _loadTasks();
+                        }
+                      } else if (sudahMenuju) {
                         // Sudah diklaim (menuju/tiba) → selesaikan dengan timbang
                         _showSelesaikanDialog(tugas);
                       } else {

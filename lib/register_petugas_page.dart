@@ -32,11 +32,11 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
 
   // Daftar Pilihan Zona Operasional
   final List<String> _zonaList = [
-    'Drop Point 01 - Pusat Kota',
-    'Drop Point 02 - Wilayah Utara',
-    'Drop Point 03 - Wilayah Selatan',
-    'Drop Point 04 - Waste Hub Timur',
-    'Drop Point 05 - Waste Hub Barat',
+    'Drop Point 01 - Pusat Parepare',
+    'Drop Point 02 - Soreang',
+    'Drop Point 03 - Lumpue',
+    'Drop Point 04 - Bacukiki',
+    'Drop Point 05 - Ujung',
   ];
 
   // Daftar Pilihan Jenis Kendaraan

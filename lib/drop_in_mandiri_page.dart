@@ -6,6 +6,9 @@ import 'api_service.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 
 class DropPoint {
   final String id;
@@ -14,6 +17,8 @@ class DropPoint {
   final String hours;
   final String distance;
   final List<String> categories;
+  final double latitude;
+  final double longitude;
 
   DropPoint({
     required this.id,
@@ -22,6 +27,8 @@ class DropPoint {
     required this.hours,
     required this.distance,
     required this.categories,
+    required this.latitude,
+    required this.longitude,
   });
 }
 
@@ -55,6 +62,11 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
   // Primary Theme Colors
   final Color _primaryGreen = const Color(0xFF268B07);
   final Color _lightGreenBg = const Color(0xFFE8F5E9);
+
+  // Map Controller
+  final MapController _mapController = MapController();
+  LatLng? _currentPosition;
+  final LatLng _defaultCenter = const LatLng(-4.0150, 119.6290);
 
   // Search controller for Drop Points
   final TextEditingController _searchController = TextEditingController();
@@ -177,6 +189,13 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
     }
   }
 
+  void _onDropPointSelected(int index, DropPoint dp) {
+    setState(() {
+      _selectedDropPointIndex = index;
+    });
+    _mapController.move(LatLng(dp.latitude, dp.longitude), 15.0);
+  }
+
   void _goToPreviousStep() {
     if (_currentStep > 0) {
       setState(() {
@@ -197,6 +216,30 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
   void initState() {
     super.initState();
     _loadData();
+    _determinePosition();
+  }
+
+  Future<void> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+    
+    if (permission == LocationPermission.deniedForever) return;
+
+    final position = await Geolocator.getCurrentPosition();
+    if (!mounted) return;
+    setState(() {
+      _currentPosition = LatLng(position.latitude, position.longitude);
+    });
+    _mapController.move(_currentPosition!, 13.0);
   }
 
   Future<void> _loadData() async {
@@ -213,6 +256,8 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
               hours: 'Buka ${m['operating_hours'] ?? '08:00-17:00'}',
               distance: '~-',
               categories: ['Semua Jenis'],
+              latitude: double.tryParse(m['latitude']?.toString() ?? '') ?? -4.0150,
+              longitude: double.tryParse(m['longitude']?.toString() ?? '') ?? 119.6290,
             ),
           )
           .toList();
@@ -378,94 +423,54 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         ),
         const SizedBox(height: 16),
 
-        // Interactive Map Placeholder Box
+        // Interactive Flutter Map
         Container(
           width: double.infinity,
-          height: 150,
-          padding: const EdgeInsets.all(12),
+          height: 180,
           decoration: BoxDecoration(
-            color: const Color(0xFFF2FBF4),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: _primaryGreen.withOpacity(0.4),
-              style: BorderStyle.solid,
-              width: 1.5,
-            ),
+            border: Border.all(color: _primaryGreen.withOpacity(0.4), width: 1.5),
           ),
-          child: Stack(
-            children: [
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.map_outlined, size: 38, color: _primaryGreen),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Peta interaktif (Google Maps API)',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: _primaryGreen,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: _currentPosition ?? _defaultCenter,
+                initialZoom: 13.0,
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.bank_sampah',
+                ),
+                MarkerLayer(
+                  markers: [
+                    ..._dropPoints.map((dp) {
+                      return Marker(
+                        point: LatLng(dp.latitude, dp.longitude),
+                        width: 40,
+                        height: 40,
+                        child: GestureDetector(
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(dp.name)),
+                            );
+                          },
+                          child: const Icon(Icons.location_on, color: Colors.green, size: 40),
+                        ),
+                      );
+                    }),
+                    if (_currentPosition != null)
+                      Marker(
+                        point: _currentPosition!,
+                        width: 40,
+                        height: 40,
+                        child: const Icon(Icons.my_location, color: Colors.blue, size: 30),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    const Text(
-                      'Placeholder — menunggu integrasi API',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                    ),
                   ],
                 ),
-              ),
-              Positioned(
-                top: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.my_location_rounded,
-                        size: 14,
-                        color: _primaryGreen,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Lokasi saya',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: _primaryGreen,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Center(
-          child: Text(
-            'Pin lokasi drop point akan tampil di sini setelah API terpasang',
-            style: TextStyle(
-              fontSize: 11,
-              color: Color(0xFF94A3B8),
-              fontStyle: FontStyle.italic,
+              ],
             ),
           ),
         ),
@@ -490,11 +495,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
           final bool isSelected = _selectedDropPointIndex == originalIndex;
 
           return GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedDropPointIndex = originalIndex;
-              });
-            },
+            onTap: () => _onDropPointSelected(originalIndex, dp),
             child: Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(14),
@@ -592,11 +593,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
                     value: originalIndex,
                     groupValue: _selectedDropPointIndex,
                     activeColor: _primaryGreen,
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedDropPointIndex = value!;
-                      });
-                    },
+                    onChanged: (value) => _onDropPointSelected(value!, dp),
                   ),
                 ],
               ),
@@ -1043,6 +1040,48 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
                 ],
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Map Lokasi Drop Point
+        Container(
+          width: double.infinity,
+          height: 140,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: IgnorePointer(
+              child: FlutterMap(
+                options: MapOptions(
+                  initialCenter: LatLng(selectedDp.latitude, selectedDp.longitude),
+                  initialZoom: 15.0,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.example.bank_sampah',
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: LatLng(selectedDp.latitude, selectedDp.longitude),
+                        width: 40,
+                        height: 40,
+                        child: const Icon(
+                          Icons.location_on,
+                          color: Colors.green,
+                          size: 40,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 30),

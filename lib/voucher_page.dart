@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'session_service.dart';
 import 'db_helper.dart';
+import 'api_service.dart';
 
 
 class VoucherItem {
@@ -43,76 +44,57 @@ class _VoucherScreenState extends State<VoucherScreen> {
   final List<VoucherItem> vouchers = const [
     VoucherItem(
       id: '1',
-      title: 'Voucher Minimarket Rp 25.000',
-      category: 'Belanja',
-      points: 2500,
-      icon: Icons.shopping_bag_outlined,
-      description: 'Potongan belanja Rp 25.000 di gerai Indomaret & Alfamart.',
-      validUntil: '31 Des 2026',
+      title: 'Indomie Goreng (1 Dus)',
+      category: 'Sembako',
+      points: 40000,
+      icon: Icons.fastfood_outlined,
+      description: 'Satu dus Indomie Goreng isi 40 bungkus.',
+      validUntil: '-',
     ),
     VoucherItem(
       id: '2',
-      title: 'Token Listrik PLN Rp 20.000',
-      category: 'Tagihan',
-      points: 2000,
-      icon: Icons.electric_bolt_outlined,
-      description: 'Voucher stroom prepaid PLN nilai nominal Rp 20.000.',
-      validUntil: '15 Des 2026',
+      title: 'Beras Premium 5 Kg',
+      category: 'Sembako',
+      points: 75000,
+      icon: Icons.rice_bowl_outlined,
+      description: 'Beras putih premium kemasan 5 Kg.',
+      validUntil: '-',
     ),
     VoucherItem(
       id: '3',
-      title: 'Diskon Ojek Online Rp 15.000',
-      category: 'Transport',
-      points: 1500,
-      icon: Icons.two_wheeler_outlined,
-      description: 'Diskon perjalanan ride/car hingga Rp 15.000.',
-      validUntil: '30 Nov 2026',
+      title: 'Minyak Goreng 2 Liter',
+      category: 'Sembako',
+      points: 35000,
+      icon: Icons.local_drink_outlined,
+      description: 'Minyak goreng kelapa sawit kemasan 2 Liter.',
+      validUntil: '-',
     ),
     VoucherItem(
       id: '4',
-      title: 'Paket Data 5 GB',
-      category: 'Internet',
-      points: 3000,
-      icon: Icons.wifi_outlined,
-      description:
-          'Paket data internet 5 GB berlaku 30 hari untuk semua operator.',
-      validUntil: '31 Des 2026',
+      title: 'Gula Pasir 1 Kg',
+      category: 'Sembako',
+      points: 18000,
+      icon: Icons.cookie_outlined,
+      description: 'Gula pasir kristal putih 1 Kg.',
+      validUntil: '-',
     ),
     VoucherItem(
       id: '5',
-      title: 'Voucher Supermarket Rp 50.000',
-      category: 'Belanja',
-      points: 4500,
-      icon: Icons.store_outlined,
-      description: 'Voucher belanja supermarket hemat Rp 50.000.',
-      validUntil: '20 Des 2026',
+      title: 'Sabun Cuci Pakaian 1 Kg',
+      category: 'Kebersihan',
+      points: 25000,
+      icon: Icons.wash_outlined,
+      description: 'Deterjen bubuk kemasan 1 Kg.',
+      validUntil: '-',
     ),
     VoucherItem(
       id: '6',
-      title: 'Voucher Pulsa Rp 10.000',
-      category: 'Internet',
-      points: 1000,
-      icon: Icons.phone_android_outlined,
-      description: 'Pulsa seluler Rp 10.000 untuk Telkomsel, Indosat, XL, Tri.',
-      validUntil: '31 Jan 2027',
-    ),
-    VoucherItem(
-      id: '7',
-      title: 'Voucher Kopi Kekinian Rp 20.000',
-      category: 'Kuliner',
-      points: 1800,
-      icon: Icons.local_cafe_outlined,
-      description: 'Diskon minuman favorit di Kopi Kenangan & Janji Jiwa.',
-      validUntil: '10 Des 2026',
-    ),
-    VoucherItem(
-      id: '8',
-      title: 'Voucher Tiket Bioskop',
-      category: 'Hiburan',
-      points: 3500,
-      icon: Icons.local_activity_outlined,
-      description: 'Tiket nonton film reguler di XXI dan CGV.',
-      validUntil: '15 Jan 2027',
+      title: 'Sabun Mandi Cair 450ml',
+      category: 'Kebersihan',
+      points: 20000,
+      icon: Icons.bathtub_outlined,
+      description: 'Sabun mandi cair isi ulang 450ml.',
+      validUntil: '-',
     ),
   ];
 
@@ -121,124 +103,174 @@ class _VoucherScreenState extends State<VoucherScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Poin tidak cukup untuk menukar ${voucher.title}'),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
         ),
       );
       return;
     }
 
+    String selectedMethod = 'Ambil di Kantor';
+
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFFFFFFFF),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
-          ),
-          title: const Text(
-            'Konfirmasi Penukaran',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF268B07),
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Apakah Anda yakin ingin menukar poin dengan:',
-                style: TextStyle(color: Colors.grey[800]),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.0),
               ),
-              const SizedBox(height: 12.0),
-              Container(
-                padding: const EdgeInsets.all(12.0),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF268B07).withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      voucher.icon,
-                      color: const Color(0xFF268B07),
-                      size: 28,
-                    ),
-                    const SizedBox(width: 12.0),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            voucher.title,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14.0,
-                            ),
-                          ),
-                          const SizedBox(height: 4.0),
-                          Text(
-                            '${voucher.points} Poin',
-                            style: const TextStyle(
-                              color: Color(0xFF268B07),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF32CD32),
-                foregroundColor: const Color(0xFFFFFFFF),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-              ),
-              onPressed: () async {
-                Navigator.of(context).pop();
-
-                int newPoints = currentPoints - voucher.points;
-                await DatabaseHelper.instance.updateUserPointBalance(
-                  SessionService.userId,
-                  newPoints,
-                );
-                await SessionService.refresh();
-
-                if (mounted) {
-                  setState(() {
-                    currentPoints = newPoints;
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Voucher berhasil ditukar!'),
-                      backgroundColor: Color(0xFF268B07),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              },
-              child: const Text(
-                'Ya, Tukar',
+              title: const Text(
+                'Konfirmasi Penukaran',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFFFFFFFF),
+                  fontSize: 18.0,
                 ),
               ),
-            ),
-          ],
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Apakah Anda yakin ingin menukar poin dengan:',
+                    style: TextStyle(color: Colors.grey[800]),
+                  ),
+                  const SizedBox(height: 12.0),
+                  Container(
+                    padding: const EdgeInsets.all(12.0),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF268B07).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          voucher.icon,
+                          color: const Color(0xFF268B07),
+                          size: 28,
+                        ),
+                        const SizedBox(width: 12.0),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                voucher.title,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14.0,
+                                ),
+                              ),
+                              const SizedBox(height: 4.0),
+                              Text(
+                                '${voucher.points} Poin',
+                                style: const TextStyle(
+                                  color: Color(0xFF268B07),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16.0),
+                  const Text(
+                    'Pilih Metode Pengambilan:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8.0),
+                  RadioListTile<String>(
+                    title: const Text('Ambil di Kantor / Drop Point', style: TextStyle(fontSize: 13)),
+                    value: 'Ambil di Kantor',
+                    groupValue: selectedMethod,
+                    activeColor: const Color(0xFF268B07),
+                    contentPadding: EdgeInsets.zero,
+                    visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                    onChanged: (value) {
+                      setStateDialog(() {
+                        selectedMethod = value!;
+                      });
+                    },
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('Titip Kurir (Sekalian Jemput)', style: TextStyle(fontSize: 13)),
+                    value: 'Titip Kurir',
+                    groupValue: selectedMethod,
+                    activeColor: const Color(0xFF268B07),
+                    contentPadding: EdgeInsets.zero,
+                    visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                    onChanged: (value) {
+                      setStateDialog(() {
+                        selectedMethod = value!;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF32CD32),
+                    foregroundColor: const Color(0xFFFFFFFF),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                  ),
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+
+                    // 1. Jangan potong poin sekarang (sesuai request)
+                    // Poin hanya akan dipotong saat admin menyetujui penarikan
+                    // int newPoints = currentPoints - voucher.points;
+                    
+                    // 2. Buat Request di Database (tunggu konfirmasi admin)
+                    // Coba ke API dulu, jika gagal fallback ke local DB
+                    String? error = await ApiService.instance.requestWithdrawal(
+                      SessionService.userId,
+                      voucher.points,
+                      'tukar_barang',
+                      '${voucher.title} ($selectedMethod)',
+                    );
+                    
+                    if (error != null) {
+                      await DatabaseHelper.instance.insertWithdrawal(
+                        SessionService.userId,
+                        voucher.points,
+                        'tukar_barang',
+                        '${voucher.title} ($selectedMethod)',
+                      );
+                    }
+
+                    await SessionService.refresh();
+
+                    if (mounted) {
+                      // Tidak perlu update currentPoints karena poin belum berubah
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Permintaan berhasil! Sedang diproses admin. Poin Anda belum terpotong.'),
+                          backgroundColor: Color(0xFF268B07),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text(
+                    'Ya, Tukar',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFFFFFFF),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -254,7 +286,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
       backgroundColor: const Color(0xFFFFFFFF),
       appBar: AppBar(
         title: const Text(
-          'Tukar Voucher',
+          'Tukar Barang / Sembako',
           style: TextStyle(
             color: Color(0xFFFFFFFF),
             fontWeight: FontWeight.bold,
@@ -376,12 +408,8 @@ class _VoucherScreenState extends State<VoucherScreen> {
                 child: Row(
                   children: [
                     _buildCategoryChip('Semua'),
-                    _buildCategoryChip('Belanja'),
-                    _buildCategoryChip('Tagihan'),
-                    _buildCategoryChip('Transport'),
-                    _buildCategoryChip('Internet'),
-                    _buildCategoryChip('Kuliner'),
-                    _buildCategoryChip('Hiburan'),
+                    _buildCategoryChip('Sembako'),
+                    _buildCategoryChip('Kebersihan'),
                   ],
                 ),
               ),
@@ -396,7 +424,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Katalog Voucher',
+                    'Katalog Barang',
                     style: TextStyle(
                       fontSize: 16.0,
                       fontWeight: FontWeight.bold,
