@@ -2,22 +2,6 @@ import 'package:flutter/material.dart';
 import 'api_service.dart';
 import 'db_helper.dart';
 
-// ============================================================================
-// Halaman Kelola Akun & Role — Admin Dashboard (Desktop/Web)
-// FR-AD-03 — Mengelola akun pengguna, petugas, dan staf beserta role &
-//             permission masing-masing.
-// FR-SH-05 — Autentikasi multi-role dengan hak akses berbeda setiap peran.
-//
-// Backend: DatabaseHelper.instance (SQLite native / in-memory web)
-//   • getAllUsers()          → load daftar akun
-//   • registerUser()         → tambah akun baru
-//   • updateUserProfile()    → edit nama/email/hp/role
-//   • toggleUserStatus()     → aktif / nonaktif
-//   • deleteUser()           → hapus permanen
-//   • getStafPermissions()   → baca permission matrix Staf Kantor
-//   • saveStafPermissions()  → simpan perubahan permission
-// ============================================================================
-
 const Color primaryGreen = Color(0xFF268B07);
 const Color limeGreen = Color(0xFF32CD32);
 const Color pageBackground = Color(0xFFF5F6F8);
@@ -26,10 +10,6 @@ const Color subtleText = Color(0xFF64748B);
 const Color mutedText = Color(0xFF94A3B8);
 const Color borderColor = Color(0xFFE2E8F0);
 const Color secondaryDarkText = Color(0xFF334155);
-
-// ---------------------------------------------------------------------------
-// Permission module definitions (ordered list displayed in matrix)
-// ---------------------------------------------------------------------------
 
 final List<Map<String, dynamic>> kPermissionModules = [
   {'key': 'Overview', 'icon': Icons.dashboard_rounded},
@@ -42,10 +22,6 @@ final List<Map<String, dynamic>> kPermissionModules = [
   {'key': 'Audit Log', 'icon': Icons.shield_rounded},
 ];
 
-// ---------------------------------------------------------------------------
-// MAIN SCREEN
-// ---------------------------------------------------------------------------
-
 class KelolaAkunRoleScreen extends StatefulWidget {
   const KelolaAkunRoleScreen({super.key});
 
@@ -57,14 +33,12 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // ── Tab 1: Daftar Akun ───────────────────────────────────────────────────
   List<Map<String, dynamic>> _allAccounts = [];
   bool _isLoading = true;
   String _searchQuery = '';
-  String? _filterRole; // null = Semua
+  String? _filterRole;
   final TextEditingController _searchController = TextEditingController();
 
-  // ── Tab 2: Role & Permission ─────────────────────────────────────────────
   Map<String, bool> _permissions = {};
   bool _permissionsLoading = true;
   bool _permissionsDirty = false;
@@ -83,8 +57,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
     _searchController.dispose();
     super.dispose();
   }
-
-  // ── DATA LOADING ─────────────────────────────────────────────────────────
 
   Future<void> _loadAccounts() async {
     setState(() => _isLoading = true);
@@ -127,8 +99,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
     }
   }
 
-  // ── FILTERED LIST ─────────────────────────────────────────────────────────
-
   List<Map<String, dynamic>> get _filteredAccounts {
     return _allAccounts.where((acc) {
       final matchRole = _filterRole == null || acc['role'] == _filterRole;
@@ -140,8 +110,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
       return matchRole && matchSearch;
     }).toList();
   }
-
-  // ── ROLE HELPERS ──────────────────────────────────────────────────────────
 
   String _roleLabel(String role) {
     switch (role) {
@@ -181,8 +149,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
     }
   }
 
-  // ── SNACKBAR ──────────────────────────────────────────────────────────────
-
   void _showSnackBar(String message, bool success) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -198,8 +164,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
       ),
     );
   }
-
-  // ── DIALOGS ───────────────────────────────────────────────────────────────
 
   void _showAddAccountDialog() {
     final nameCtrl = TextEditingController();
@@ -391,7 +355,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
                         'is_active': 1,
                       };
 
-                      // Simpan ke XAMPP dulu, fallback ke lokal
                       bool ok = false;
                       try {
                         ok = await ApiService.instance.createUser(userData);
@@ -941,13 +904,11 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
     );
 
     if (confirmed == true && mounted) {
-      // Hapus dari XAMPP MySQL
       bool apiOk = false;
       try {
         apiOk = await ApiService.instance.deleteUser(acc['id']);
       } catch (_) {}
 
-      // Selalu hapus dari local cache juga
       final localOk = await DatabaseHelper.instance.deleteUser(acc['id']);
       final ok = apiOk || localOk;
 
@@ -955,8 +916,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
       if (ok) _loadAccounts();
     }
   }
-
-  // ── DIALOG WIDGET HELPERS ─────────────────────────────────────────────────
 
   Widget _dialogField(
     String label,
@@ -1060,8 +1019,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
     );
   }
 
-  // ── BUILD ─────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1082,8 +1039,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
       ),
     );
   }
-
-  // ── HEADER ────────────────────────────────────────────────────────────────
 
   Widget _buildHeader() {
     return Padding(
@@ -1116,7 +1071,7 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
               ),
             ],
           ),
-          // Tombol berubah sesuai tab aktif
+
           AnimatedBuilder(
             animation: _tabController,
             builder: (_, __) {
@@ -1144,7 +1099,7 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
                   ),
                 );
               }
-              // Tab permission
+
               if (_permissionsDirty) {
                 return ElevatedButton.icon(
                   onPressed: _savePermissions,
@@ -1206,8 +1161,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
     );
   }
 
-  // ── TAB BAR ───────────────────────────────────────────────────────────────
-
   Widget _buildTabBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(28, 16, 28, 0),
@@ -1245,8 +1198,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
     );
   }
 
-  // ── SHARED CARD CONTAINER ─────────────────────────────────────────────────
-
   Widget _cardContainer({required Widget child, EdgeInsets? margin}) {
     return Container(
       margin: margin ?? const EdgeInsets.fromLTRB(28, 16, 28, 24),
@@ -1265,8 +1216,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
       child: child,
     );
   }
-
-  // ── TAB 1: DAFTAR AKUN ───────────────────────────────────────────────────
 
   Widget _roleFilterChip(String label, String? role) {
     final isSelected = _filterRole == role;
@@ -1309,7 +1258,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Filter chips + Search bar ─────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(28, 16, 28, 0),
             child: Row(
@@ -1390,7 +1338,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
             ),
           ),
 
-          // ── Empty state ────────────────────────────────────────────────
           if (filtered.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 56),
@@ -1421,7 +1368,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
             _cardContainer(
               child: Column(
                 children: [
-                  // Table header row
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -1461,7 +1407,7 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
                       ],
                     ),
                   ),
-                  // Data rows
+
                   ...filtered.map((acc) => _buildAccountRow(acc)),
                 ],
               ),
@@ -1487,7 +1433,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
       ),
       child: Row(
         children: [
-          // ── Nama ─────────────────────────────────────────────────────
           Expanded(
             flex: 3,
             child: Row(
@@ -1496,7 +1441,7 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
                   builder: (context) {
                     final profilePic = acc['profile_picture'] as String?;
                     final imageUrl = ApiService.getProfileImageUrl(profilePic);
-                    
+
                     Widget initialAvatar = Container(
                       width: 28,
                       height: 28,
@@ -1529,14 +1474,16 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
                             width: 28,
                             height: 28,
                             fit: BoxFit.cover,
-                            headers: const {'ngrok-skip-browser-warning': 'true'},
+                            headers: const {
+                              'ngrok-skip-browser-warning': 'true',
+                            },
                             errorBuilder: (_, __, ___) => initialAvatar,
                           ),
                         ),
                       );
                     }
                     return initialAvatar;
-                  }
+                  },
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -1554,7 +1501,7 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
               ],
             ),
           ),
-          // ── Email ─────────────────────────────────────────────────────
+
           Expanded(
             flex: 3,
             child: Text(
@@ -1568,7 +1515,7 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          // ── Role badge ────────────────────────────────────────────────
+
           Expanded(
             flex: 2,
             child: Container(
@@ -1588,7 +1535,7 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
               ),
             ),
           ),
-          // ── Platform ─────────────────────────────────────────────────
+
           Expanded(
             flex: 2,
             child: Text(
@@ -1601,7 +1548,7 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
               ),
             ),
           ),
-          // ── Status badge ─────────────────────────────────────────────
+
           Expanded(
             flex: 1,
             child: Container(
@@ -1623,7 +1570,7 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
               ),
             ),
           ),
-          // ── Action buttons ────────────────────────────────────────────
+
           Expanded(
             flex: 3,
             child: Row(
@@ -1691,8 +1638,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
     );
   }
 
-  // ── TAB 2: ROLE & PERMISSION MATRIX ──────────────────────────────────────
-
   Widget _buildRolePermissionTab() {
     if (_permissionsLoading) {
       return const Center(
@@ -1704,7 +1649,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Info banner
           Container(
             margin: const EdgeInsets.fromLTRB(28, 16, 28, 0),
             padding: const EdgeInsets.all(12),
@@ -1745,7 +1689,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
           _cardContainer(
             child: Column(
               children: [
-                // Matrix header
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -1802,7 +1745,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
                   ),
                 ),
 
-                // Module permission rows
                 ...kPermissionModules.map((mod) {
                   final key = mod['key'] as String;
                   final icon = mod['icon'] as IconData;
@@ -1820,7 +1762,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
                     ),
                     child: Row(
                       children: [
-                        // Module name + icon
                         Expanded(
                           flex: 4,
                           child: Row(
@@ -1851,7 +1792,7 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
                             ],
                           ),
                         ),
-                        // Admin: always checked, locked
+
                         const Expanded(
                           flex: 1,
                           child: Center(
@@ -1862,7 +1803,7 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
                             ),
                           ),
                         ),
-                        // Staf Kantor: togglable
+
                         Expanded(
                           flex: 1,
                           child: Center(
@@ -1890,7 +1831,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
                   );
                 }),
 
-                // Footer note
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -1923,10 +1863,6 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// SHARED TEXT STYLE
-// ---------------------------------------------------------------------------
 
 const TextStyle _headerStyle = TextStyle(
   fontFamily: 'PlusJakartaSans',

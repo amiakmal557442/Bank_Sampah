@@ -1,0 +1,214 @@
+================================================================================
+                    ALUR LENGKAP PENGGUNAAN APLIKASI BANK SAMPAH
+                       (USER/NASABAH, PETUGAS LAPANGAN, & ADMIN)
+================================================================================
+Penulis  : Muhammad Akmal Ahsan
+Aplikasi : Bank Sampah Mobile & Web System
+Versi    : 1.2.0
+
+--------------------------------------------------------------------------------
+1. ALUR AWAL MEMBUKA APLIKASI (SEMUA PENGGUNA)
+--------------------------------------------------------------------------------
+1. Pengguna membuka aplikasi Bank Sampah pada perangkat HP / Browser.
+2. Muncul Layar Pembuka (Splash Screen) berwarna hijau tua bertuliskan "Bank Sampah".
+3. Sistem secara otomatis melakukan pengecekan sesi login (Session Check):
+   - JIKA ADA SESI AKTIF (Pengguna sebelumnya belum logout):
+     Sistem langsung mengarahkan pengguna ke halaman utama masing-masing:
+     * User / Nasabah   -> Masuk ke Dashboard Utama Nasabah.
+     * Petugas Lapangan -> Masuk ke Dashboard Petugas Lapangan.
+     * Admin / Staf     -> Masuk ke Dashboard Admin Panel.
+   - JIKA TIDAK ADA SESI AKTIF (Pengguna baru atau sudah logout):
+     Sistem mengarahkan pengguna ke Halaman Login (Login Page).
+
+
+--------------------------------------------------------------------------------
+2. HALAMAN LOGIN & REGISTRASI AKUN
+--------------------------------------------------------------------------------
+Pada Halaman Login, pengguna dapat memilih tindakan sesuai status kepemilikan akun:
+
+A. JIKA SUDAH PUNYA AKUN (User, Petugas, atau Admin):
+   1. Masukkan Email yang terdaftar.
+   2. Masukkan Password.
+   3. Klik tombol hijau "Masuk".
+   4. Sistem memvalidasi akun secara berjenjang (Database Online / XAMPP API, 
+      lalu Fallback Database Lokal SQLite):
+      - Jika valid: Masuk ke halaman kerja sesuai hak akses (Role).
+      - Jika salah: Muncul notifikasi "Email atau Password salah!".
+
+B. JIKA BELUM PUNYA AKUN:
+   Di bagian paling bawah halaman login terdapat 2 pilihan registrasi:
+
+   [1] Tombol "Daftar User" (Untuk Warga / Nasabah Umum):
+       - Pengguna mengisi Nama Lengkap, Email, dan Password baru.
+       - Menyetujui Kebijakan Privasi Bank Sampah.
+       - Klik "Daftar".
+       - Akun nasabah langsung aktif dan pengguna dapat langsung login.
+
+   [2] Tombol "Daftar Petugas" (Untuk Petugas Pengumpul / Lapangan):
+       - Mengisi Nama Lengkap Petugas.
+       - Mengisi Nomor WhatsApp / HP yang aktif.
+       - Mengisi Email & Password.
+       - Memilih Drop Point / Zona Wilayah Operasional (Pusat Parepare, Soreang,
+         Lumpue, Bacukiki, atau Ujung).
+       - Memilih Jenis Armada Kendaraan (Motor Roda 2, Roda 3, Pick-up, Truk Box,
+         atau Pos Station).
+       - Mengisi Nomor Plat Kendaraan Operasional.
+       - Klik "Daftar Petugas" -> Akun petugas lapangan resmi terdaftar di sistem.
+
+
+--------------------------------------------------------------------------------
+3. ALUR LENGKAP PENGGUNAAN: USER / NASABAH (WARGA)
+--------------------------------------------------------------------------------
+Tujuan: Mengelola sampah rumah tangga, meminta penjemputan sampah, serta menukar
+sampah menjadi uang/poin tabungan.
+
+A. Menu Beranda (Home):
+   1. Nasabah memantau saldo uang tunai dan poin reward yang dimiliki.
+   2. Memeriksa daftar katalog harga sampah terbaru per kilogram (Plastik, Kertas,
+      Kardus, Logam, Kaca, Minyak Jelantah, dll).
+   3. Melihat status operasional Drop Point terdekat.
+
+B. Meminta Penjemputan Sampah (Pickup Request):
+   1. Nasabah menekan tombol "Jemput Sampah" / "Setor Sampah".
+   2. Memilih jenis kategori sampah yang akan disetor dan mengisi perkiraan berat.
+   3. Menentukan lokasi alamat penjemputan (dapat menyertakan patokan/catatan).
+   4. Memilih tanggal dan jam jadwal penjemputan yang diinginkan.
+   5. Menekan tombol "Kirim Permintaan".
+   6. Data otomatis masuk ke antrean tugas Petugas Lapangan.
+
+C. Memantau Status di Menu Riwayat:
+   1. Status Permintaan:
+      - "Menunggu Konfirmasi" -> Permintaan masuk ke sistem.
+      - "Dikonfirmasi / Menuju Lokasi" -> Petugas dalam perjalanan ke rumah nasabah.
+      - "Tiba di Lokasi" -> Petugas telah sampai dan mulai menimbang sampah.
+      - "Selesai" -> Sampah berhasil ditimbang, saldo & poin langsung masuk otomatis.
+
+D. Penukaran Poin & Penarikan Saldo:
+   1. Nasabah membuka menu "Tukar Poin" / "Tarik Saldo".
+   2. Memilih metode pencairan:
+      - Transfer Bank / E-Wallet (DANA, OVO, GoPay).
+      - Titip Kurir (Uang tunai dibawakan oleh petugas saat jadwal jemput berikutnya).
+   3. Memasukkan nominal penarikan dan mengonfirmasi pengajuan.
+   4. Permintaan akan diverifikasi dan diproses oleh Admin.
+
+E. Layanan Bantuan (Chat Admin):
+   - Nasabah dapat mengirim pesan langsung ke Admin untuk bertanya tentang jadwal,
+     klaim poin, atau komplain penjemputan.
+
+
+--------------------------------------------------------------------------------
+4. ALUR LENGKAP PENGGUNAAN: PEKERJA / PETUGAS LAPANGAN
+--------------------------------------------------------------------------------
+Tujuan: Menjemput sampah warga, menimbang sampah dengan presisi, menyerahkan
+titipan uang, dan mengangkut sampah ke Drop Point.
+
+A. Menu Beranda Petugas:
+   1. Mengaktifkan Mode Siaga Kerja:
+      - Terdapat tombol toggle "Online / Offline".
+      - Petugas mengaktifkan status menjadi "Online" untuk siap menerima tugas.
+   2. Memeriksa Kartu Tugas Aktif (Current Task):
+      - Menampilkan nama nasabah, nomor telepon, alamat, estimasi berat, dan catatan.
+      - Tombol Update Status Alur Perjalanan:
+        a. Klik "Menuju Lokasi" -> Status di HP nasabah berubah bahwa kurir OTW.
+        b. Klik "Tiba di Lokasi" -> Notifikasi bahwa petugas sudah di depan rumah.
+        c. Lakukan Penimbangan Sampah di tempat.
+        d. Klik "Selesai" -> Transaksi tersimpan, poin/saldo nasabah otomatis bertambah.
+   3. Menyerahkan Titipan Uang Nasabah (Titip Kurir):
+      - Jika ada nasabah di rute tersebut yang mencairkan saldo dengan metode "Titip Kurir",
+        petugas melihat daftar uang titipan yang harus diserahkan kepada nasabah bersangkutan.
+   4. Fitur Timbang Manual / Timbang Cepat:
+      - Jika ada nasabah yang datang langsung atau menyetor di tempat tanpa order aplikasi,
+        petugas memilih jenis sampah, memasukkan timbangan kilogram aktual,
+        lalu sistem mengkalkulasi nominal uang/poin secara real-time.
+   5. Memantau Status Kapasitas Drop Point:
+      - Petugas mengecek gudang Drop Point tujuannya apakah statusnya masih "Aman",
+        "Penuh", atau "Kritis" sebelum membongkar muatan.
+
+B. Menu Halaman Tugas (Semua Antrean Penjemputan):
+   1. Melihat seluruh daftar permintaan penjemputan sampah warga di zonanya.
+   2. Melakukan filter berdasarkan status: "Semua", "Perlu Dijemput", "Selesai".
+   3. Membuka detail tugas untuk melihat nomor kontak telepon warga atau peta rute.
+
+C. Menu Riwayat Petugas:
+   1. Rekapitulasi seluruh transaksi yang telah berhasil diselesaikan oleh petugas.
+   2. Menampilkan total kilogram sampah yang berhasil dikumpulkan hari ini/minggu ini.
+   3. Memfilter riwayat berdasarkan tanggal operasional.
+
+D. Menu Profil Petugas:
+   1. Melihat identitas diri, ID Petugas, zona penugasan, jenis armada, dan nomor plat.
+   2. Memperbarui informasi profil atau mengganti kata sandi.
+   3. Tombol "Keluar Akun" untuk mengakhiri sesi kerja.
+
+
+--------------------------------------------------------------------------------
+5. ALUR LENGKAP PENGGUNAAN: ADMIN & STAF KANTOR
+--------------------------------------------------------------------------------
+Tujuan: Manajemen master data harga, validasi keuangan, pemantauan operasional
+seluruh armada, kelola akun, dan analisis laporan audit.
+
+A. Login Akun Admin:
+   - Admin login menggunakan kredensial email & password khusus pengelola.
+   - Langsung diarahkan ke panel navigasi Admin (Web / Tablet / Mobile View).
+
+B. Menu Sidebar 1: Overview (Dashboard Utama):
+   1. Memantau Key Performance Indicator (KPI):
+      - Total Sampah Terkumpul (Kilogram/Ton).
+      - Total Nasabah Aktif.
+      - Total Transaksi Masuk.
+      - Total Saldo / Poin yang beredar.
+   2. Grafik pergerakan setoran harian dan persentase kapasitas drop point kota.
+
+C. Menu Sidebar 2: Master Data:
+   1. Mengelola Jenis & Kategori Sampah (Plastik, Kertas, Logam, Minyak, dsb).
+   2. Menambah, mengedit, atau menonaktifkan jenis sampah.
+   3. Mengatur Harga Beli (harga yang dibayarkan ke nasabah per kg) dan Poin reward.
+   4. Mengelola Data Drop Point (nama cabang, alamat, kapasitas maksimal gudang).
+
+D. Menu Sidebar 3: Manajemen Transaksi:
+   1. Memvalidasi seluruh transaksi setoran sampah dari petugas dan nasabah.
+   2. Verifikasi Penarikan Saldo (Withdrawal Approval):
+      - Memeriksa pengajuan transfer bank, e-wallet, atau titip kurir dari nasabah.
+      - Menekan tombol "Setujui" (Approved) atau "Tolak" (Rejected).
+      - Transaksi yang disetujui akan mengurangi saldo nasabah secara sah.
+
+E. Menu Sidebar 4: Operasional Lapangan:
+   1. Memonitor pergerakan petugas penjemput sampah secara langsung.
+   2. Memantau keterisian gudang pada masing-masing Drop Point agar tidak overload.
+   3. Mengatur penjadwalan ulang jika terjadi kendala pada armada di lapangan.
+
+F. Menu Sidebar 5: Laporan & Analitik:
+   1. Melihat laporan neraca perputaran uang dan tonase sampah masuk/keluar.
+   2. Mengunduh / mencetak laporan operasional harian, mingguan, maupun bulanan.
+   3. Analisis statistik nasabah teraktif dan sampah terbanyak yang didaur ulang.
+
+G. Menu Sidebar 6: Konfigurasi Sistem:
+   1. Mengatur parameter umum aplikasi (kebijakan poin, jam layanan operasional).
+   2. Mengatur batas minimal penarikan saldo dan biaya operasional jika ada.
+
+H. Menu Sidebar 7: Kelola Akun & Role:
+   1. Manajemen data seluruh pengguna aplikasi (User, Petugas, Staf, Admin).
+   2. Mengaktifkan, menonaktifkan, atau mereset password akun pengguna yang bermasalah.
+   3. Memberikan hak akses / role kepada staf kantor baru.
+
+I. Menu Sidebar 8: Audit Log:
+   1. Memeriksa jejak rekam keamanan sistem secara menyeluruh.
+   2. Mencatat waktu, nama user, role, alamat IP, aksi yang dilakukan, dan statusnya
+      (misal: Percobaan login gagal, perubahan master data harga, persetujuan penarikan).
+
+J. Floating Action Button: Chat Pengguna & Petugas (Pusat Bantuan Admin):
+   1. Admin dapat membuka daftar percakapan aktif dari nasabah maupun petugas.
+   2. Membalas pertanyaan, keluhan, atau koordinasi penjemputan sampah secara real-time.
+
+K. Profil Admin & Keluar Akun:
+   - Terletak di pojok kiri bawah sidebar untuk melihat profil admin dan melakukan Logout.
+
+
+================================================================================
+                    RINGKASAN SINGKAT HUBUNGAN KETIGA ROLE
+================================================================================
+1. NASABAH membuat permintaan jemput sampah di rumahnya lewat aplikasi.
+2. PETUGAS LAPANGAN menerima notifikasi tugas, mendatangi rumah nasabah, menimbang
+   sampah secara akurat, dan menekan tombol selesai. Saldo & poin nasabah bertambah.
+3. ADMIN memantau seluruh proses tersebut, mengatur harga sampah, menyetujui
+   pencairan saldo nasabah, serta memantau laporan operasional kota secara utuh.
+================================================================================

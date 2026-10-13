@@ -3,13 +3,6 @@ import 'api_service.dart';
 import 'db_helper.dart';
 import 'session_service.dart';
 
-// ============================================================================
-// Halaman Riwayat — Mobile Dashboard Petugas / Pekerja Lapangan
-// Menampilkan rincian riwayat tugas yang sudah diterima dan diselesaikan
-// (Drop-in Mandiri maupun Jemput Sampah) beserta rincian user, jenis sampah,
-// berat aktual, dan poin yang dihasilkan.
-// ============================================================================
-
 const Color primaryGreen = Color(0xFF268B07);
 const Color limeGreen = Color(0xFF32CD32);
 const Color pageBackground = Color(0xFFF5F6F8);
@@ -26,7 +19,7 @@ class PetugasRiwayatScreen extends StatefulWidget {
 }
 
 class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
-  bool isMingguan = false; // false = Harian, true = Mingguan
+  bool isMingguan = false;
   bool _isLoading = true;
 
   List<Map<String, dynamic>> _allTransactions = [];
@@ -41,7 +34,6 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
-    // 1. Ambil kategori sampah untuk mapping ID -> Nama Kategori
     try {
       final cats = await DatabaseHelper.instance.getWasteCategories();
       final Map<int, String> map = {};
@@ -52,7 +44,6 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
       _categoryMap = map;
     } catch (_) {}
 
-    // 2. Ambil riwayat dari API
     List<Map<String, dynamic>> list = [];
     try {
       final petugasId = SessionService.currentUser?['id'] as String?;
@@ -62,7 +53,6 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
       );
     } catch (_) {}
 
-    // 3. Fallback ke database lokal jika API kosong
     if (list.isEmpty) {
       try {
         final allLocal = await DatabaseHelper.instance.getAllTransactions();
@@ -81,7 +71,6 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
     }
   }
 
-  // Filter transaksi berdasarkan periode terpilih (Harian = Hari Ini, Mingguan = 7 hari terakhir)
   List<Map<String, dynamic>> get _filteredTransactions {
     final now = DateTime.now();
     final list = _allTransactions.where((tx) {
@@ -97,11 +86,12 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
         final diff = now.difference(dt).inDays;
         return diff >= 0 && diff <= 7;
       } else {
-        return dt.year == now.year && dt.month == now.month && dt.day == now.day;
+        return dt.year == now.year &&
+            dt.month == now.month &&
+            dt.day == now.day;
       }
     }).toList();
 
-    // Jika filter spesifik kosong tetapi ada riwayat transaksi, fallback tampilkan semua agar tidak kosong
     if (list.isEmpty && _allTransactions.isNotEmpty) {
       return _allTransactions;
     }
@@ -129,7 +119,8 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
     int total = 0;
     for (var tx in _filteredTransactions) {
       if ((tx['status'] ?? '').toString().toLowerCase() == 'selesai') {
-        final pts = (tx['total_actual_points'] ?? tx['total_est_points'] ?? 0) as num;
+        final pts =
+            (tx['total_actual_points'] ?? tx['total_est_points'] ?? 0) as num;
         total += pts.toInt();
       }
     }
@@ -140,7 +131,8 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
     final items = List<Map<String, dynamic>>.from(tx['items'] ?? []);
     double sum = 0.0;
     for (var item in items) {
-      final w = double.tryParse(
+      final w =
+          double.tryParse(
             (item['actual_weight'] ?? item['estimated_weight'] ?? '0')
                 .toString(),
           ) ??
@@ -160,7 +152,8 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
     final items = List<Map<String, dynamic>>.from(tx['items'] ?? []);
     List<String> names = [];
     for (var item in items) {
-      String? catName = item['category_name']?.toString() ?? item['name']?.toString();
+      String? catName =
+          item['category_name']?.toString() ?? item['name']?.toString();
       if (catName == null || catName.isEmpty) {
         final catId = int.tryParse(
           (item['waste_category_id'] ?? item['id'] ?? '0').toString(),
@@ -174,7 +167,9 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
       }
     }
 
-    if (names.isEmpty && tx['jenis_sampah'] != null && tx['jenis_sampah'].toString().isNotEmpty) {
+    if (names.isEmpty &&
+        tx['jenis_sampah'] != null &&
+        tx['jenis_sampah'].toString().isNotEmpty) {
       return tx['jenis_sampah'].toString();
     }
     return names.isNotEmpty ? names.join(', ') : 'Sampah Daur Ulang';
@@ -187,7 +182,8 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
     try {
       final dt = DateTime.parse(str);
       final now = DateTime.now();
-      final isToday = dt.year == now.year && dt.month == now.month && dt.day == now.day;
+      final isToday =
+          dt.year == now.year && dt.month == now.month && dt.day == now.day;
       final months = [
         '',
         'Jan',
@@ -201,10 +197,11 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
         'Sep',
         'Okt',
         'Nov',
-        'Des'
+        'Des',
       ];
       final days = ['', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-      final timeStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      final timeStr =
+          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
       if (isToday) {
         return 'Hari ini • $timeStr';
@@ -214,10 +211,6 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
       return str;
     }
   }
-
-  // ------------------------------------------------------------------------
-  // HEADER
-  // ------------------------------------------------------------------------
 
   Widget _buildHeader() {
     final String petugasName = SessionService.fullName.isNotEmpty
@@ -248,13 +241,10 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
           const SizedBox(height: 2),
           Text(
             '$petugasName · Petugas Lapangan',
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.white70,
-            ),
+            style: const TextStyle(fontSize: 12, color: Colors.white70),
           ),
           const SizedBox(height: 16),
-          // Filter Harian / Mingguan
+
           Container(
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
@@ -294,10 +284,6 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
       ),
     );
   }
-
-  // ------------------------------------------------------------------------
-  // SUMMARY STATS
-  // ------------------------------------------------------------------------
 
   Widget _buildSummaryStats() {
     return Padding(
@@ -377,10 +363,6 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
     );
   }
 
-  // ------------------------------------------------------------------------
-  // LIST RIWAYAT CARD
-  // ------------------------------------------------------------------------
-
   Widget _buildRiwayatList() {
     final list = _filteredTransactions;
     if (list.isEmpty) {
@@ -396,7 +378,11 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.history_toggle_off_rounded, size: 48, color: Colors.grey[400]),
+              Icon(
+                Icons.history_toggle_off_rounded,
+                size: 48,
+                color: Colors.grey[400],
+              ),
               const SizedBox(height: 12),
               const Text(
                 'Belum Ada Riwayat Tugas',
@@ -430,22 +416,38 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
   }
 
   Widget _buildRiwayatCard(Map<String, dynamic> tx) {
-    final String typeRaw = (tx['type'] ?? tx['tipe_tugas'] ?? '').toString().toLowerCase();
+    final String typeRaw = (tx['type'] ?? tx['tipe_tugas'] ?? '')
+        .toString()
+        .toLowerCase();
     final bool isDropIn = typeRaw == 'drop_in' || typeRaw == 'drop-in';
     final String tipeLabel = isDropIn ? 'Drop-in Mandiri' : 'Jemput Sampah';
 
-    final Color badgeBg = isDropIn ? const Color(0xFFF3E8FF) : const Color(0xFFE8F5E9);
-    final Color badgeTextColor = isDropIn ? const Color(0xFF7E22CE) : primaryGreen;
-    final IconData tipeIcon = isDropIn ? Icons.store_rounded : Icons.local_shipping_rounded;
+    final Color badgeBg = isDropIn
+        ? const Color(0xFFF3E8FF)
+        : const Color(0xFFE8F5E9);
+    final Color badgeTextColor = isDropIn
+        ? const Color(0xFF7E22CE)
+        : primaryGreen;
+    final IconData tipeIcon = isDropIn
+        ? Icons.store_rounded
+        : Icons.local_shipping_rounded;
 
-    final String statusStr = (tx['status'] ?? 'selesai').toString().toLowerCase();
-    final bool isSelesai = statusStr == 'selesai' || statusStr == 'terverifikasi';
+    final String statusStr = (tx['status'] ?? 'selesai')
+        .toString()
+        .toLowerCase();
+    final bool isSelesai =
+        statusStr == 'selesai' || statusStr == 'terverifikasi';
 
-    final String namaUser = (tx['nasabah_name'] ?? tx['full_name'] ?? 'Nasabah').toString();
+    final String namaUser = (tx['nasabah_name'] ?? tx['full_name'] ?? 'Nasabah')
+        .toString();
     final String kategoriStr = _extractCategoryString(tx);
     final double beratKg = _extractTotalWeight(tx);
-    final int poin = ((tx['total_actual_points'] ?? tx['total_est_points'] ?? 0) as num).toInt();
-    final String waktuStr = _formatDateTime(tx['created_at'] ?? tx['pickup_date']);
+    final int poin =
+        ((tx['total_actual_points'] ?? tx['total_est_points'] ?? 0) as num)
+            .toInt();
+    final String waktuStr = _formatDateTime(
+      tx['created_at'] ?? tx['pickup_date'],
+    );
 
     return Card(
       elevation: 2,
@@ -459,12 +461,14 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Baris Header: Tipe Request + Badge & Waktu
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: badgeBg,
                     borderRadius: BorderRadius.circular(8),
@@ -486,20 +490,20 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
                 ),
                 Text(
                   waktuStr,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: mutedText,
-                  ),
+                  style: const TextStyle(fontSize: 11, color: mutedText),
                 ),
               ],
             ),
 
             const SizedBox(height: 10),
 
-            // Baris User Siapa Yang Melakukan Request
             Row(
               children: [
-                const Icon(Icons.person_outline_rounded, size: 16, color: subtleText),
+                const Icon(
+                  Icons.person_outline_rounded,
+                  size: 16,
+                  color: subtleText,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   'User: ',
@@ -521,7 +525,6 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
 
             const SizedBox(height: 8),
 
-            // Container Rincian Sampah (Jenis + Berat + Poin)
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
@@ -530,7 +533,11 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.recycling_rounded, size: 20, color: primaryGreen),
+                  const Icon(
+                    Icons.recycling_rounded,
+                    size: 20,
+                    color: primaryGreen,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -570,10 +577,7 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
                       ] else ...[
                         const Text(
                           '0 poin',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: mutedText,
-                          ),
+                          style: TextStyle(fontSize: 12, color: mutedText),
                         ),
                       ],
                     ],
@@ -584,7 +588,6 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
 
             const SizedBox(height: 10),
 
-            // Baris Status Pengerjaan (Selesai / Dibatalkan)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -593,9 +596,14 @@ class _PetugasRiwayatScreenState extends State<PetugasRiwayatScreen> {
                   style: const TextStyle(fontSize: 11, color: mutedText),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
-                    color: isSelesai ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
+                    color: isSelesai
+                        ? const Color(0xFFE8F5E9)
+                        : const Color(0xFFFFEBEE),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(

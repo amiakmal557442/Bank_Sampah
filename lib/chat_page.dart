@@ -46,14 +46,12 @@ class _ChatPageState extends State<ChatPage> {
       widget.peerId,
     );
 
-    // Convert API format to UI format
     final List<Map<String, dynamic>> formatted = data.map((e) {
       bool isMe = e['sender_id'] == currentUserId;
-      // Extract time from created_at
+
       String rawDate = e['created_at'] ?? '';
       String timeStr = '';
       if (rawDate.length >= 16) {
-        // e.g. "2023-10-15 14:30:00" -> "14:30"
         timeStr = rawDate.substring(11, 16);
       }
       return {'isMe': isMe, 'text': e['message'] ?? '', 'time': timeStr};
@@ -89,7 +87,6 @@ class _ChatPageState extends State<ChatPage> {
     final currentUserId = SessionService.userId;
     if (currentUserId.isEmpty) return;
 
-    // Optimistic UI update
     setState(() {
       _messages.add({
         'isMe': true,
@@ -101,13 +98,12 @@ class _ChatPageState extends State<ChatPage> {
     _messageController.clear();
     _scrollToBottom();
 
-    // Call API
     await ApiService.instance.sendChatMessage(
       currentUserId,
       widget.peerId,
       text,
     );
-    // Refresh to get actual data
+
     _fetchMessages();
   }
 

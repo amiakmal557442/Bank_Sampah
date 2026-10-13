@@ -32,42 +32,47 @@ class _HalamanTugasState extends State<HalamanTugas> {
 
     List<Map<String, dynamic>> tasks = [];
     try {
-      // Ambil semua tugas yang masih aktif dari XAMPP API
       tasks = await ApiService.instance.getPendingTasks(
         statuses: ['dikonfirmasi', 'menuju_lokasi', 'tiba'],
       );
     } catch (_) {}
-    // Fallback ke local DB jika API gagal
+
     if (tasks.isEmpty) {
       tasks = await DatabaseHelper.instance.getPendingPickupTasks();
     }
 
-    // Tambahkan Titipan Kurir (Pengantaran Sembako)
     List<Map<String, dynamic>> titipan = [];
     try {
-       final List<Map<String, dynamic>> res = await ApiService.instance.fetchWithdrawals();
-       titipan = res.where((w) {
-          return w['status'] == 'approved' && w['account_details']?.toString().contains('(Titip Kurir)') == true;
-       }).toList();
-    } catch(e) {
-       titipan = await DatabaseHelper.instance.getTitipanKurir();
+      final List<Map<String, dynamic>> res = await ApiService.instance
+          .fetchWithdrawals();
+      titipan = res.where((w) {
+        return w['status'] == 'approved' &&
+            w['account_details']?.toString().contains('(Titip Kurir)') == true;
+      }).toList();
+    } catch (e) {
+      titipan = await DatabaseHelper.instance.getTitipanKurir();
     }
-    
-    for(var t in titipan) {
-        String itemName = t['account_details']?.toString().replaceAll('(Titip Kurir)', '').trim() ?? 'Sembako';
-        String addr = t['nasabah_address']?.toString().trim() ?? '';
-        if (addr.isEmpty) addr = t['address']?.toString().trim() ?? '';
-        
-        tasks.add({
-          'id': t['id'],
-          'tipe_tugas': 'Pengantaran Sembako',
-          'status': 'siap_diantar', 
-          'nama_nasabah': t['full_name'] ?? t['nasabah_name'] ?? 'Nasabah',
-          'nasabah_address': addr.isEmpty ? 'Alamat belum diatur' : addr,
-          'jenis_sampah': 'Barang Titipan',
-          'estimasi_berat': itemName,
-          'is_pengantaran': true,
-        });
+
+    for (var t in titipan) {
+      String itemName =
+          t['account_details']
+              ?.toString()
+              .replaceAll('(Titip Kurir)', '')
+              .trim() ??
+          'Sembako';
+      String addr = t['nasabah_address']?.toString().trim() ?? '';
+      if (addr.isEmpty) addr = t['address']?.toString().trim() ?? '';
+
+      tasks.add({
+        'id': t['id'],
+        'tipe_tugas': 'Pengantaran Sembako',
+        'status': 'siap_diantar',
+        'nama_nasabah': t['full_name'] ?? t['nasabah_name'] ?? 'Nasabah',
+        'nasabah_address': addr.isEmpty ? 'Alamat belum diatur' : addr,
+        'jenis_sampah': 'Barang Titipan',
+        'estimasi_berat': itemName,
+        'is_pengantaran': true,
+      });
     }
 
     if (mounted) {
@@ -78,7 +83,6 @@ class _HalamanTugasState extends State<HalamanTugas> {
     }
   }
 
-  // Update status ke menuju_lokasi (sekaligus claim)
   Future<void> _updateStatusMenuju(String id) async {
     final petugasId = SessionService.currentUser?['id']?.toString() ?? '';
     bool success = false;
@@ -90,11 +94,8 @@ class _HalamanTugasState extends State<HalamanTugas> {
       errorMessage = e.toString().replaceAll('Exception: ', '');
     }
 
-    // Jika API gagal tapi bukan karena direbut (misal offline), kita bisa fallback.
-    // Tapi karena ini sistem claim, lebih aman tolak jika gagal terkoneksi atau direbut.
     if (!success && errorMessage == null) {
-       // Fallback local db (hanya jika API benar2 mati, tapi claim local db tidak akan tersinkron anti-rebutan)
-       success = await DatabaseHelper.instance.updateTransactionStatus(
+      success = await DatabaseHelper.instance.updateTransactionStatus(
         id,
         'menuju_lokasi',
       );
@@ -111,7 +112,6 @@ class _HalamanTugasState extends State<HalamanTugas> {
         ),
       );
     } else if (errorMessage != null) {
-      // Menampilkan pesan error dari backend (misal "Tugas sudah diambil oleh ...")
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
@@ -121,18 +121,16 @@ class _HalamanTugasState extends State<HalamanTugas> {
         ),
       );
     }
-    
-    _loadTasks(); // refresh data, agar tugas yg hilang terhapus
+
+    _loadTasks();
   }
 
-  // Dialog timbang untuk menyelesaikan tugas dan menambah poin nasabah
   Future<void> _showSelesaikanDialog(Map<String, dynamic> tugas) async {
     final txId = (tugas['id_transaksi'] ?? tugas['id'])?.toString() ?? '';
     final namaNasabah =
         (tugas['nama_nasabah'] ?? tugas['nasabah_name'] ?? 'Nasabah')
             .toString();
 
-    // Extract kategori yang dipilih nasabah dari API/database
     final String selectedJenis = (tugas['jenis_sampah'] ?? '').toString();
     final List<Map<String, dynamic>> rawItems = List<Map<String, dynamic>>.from(
       tugas['items'] ?? [],
@@ -144,7 +142,6 @@ class _HalamanTugasState extends State<HalamanTugas> {
         .where((id) => id > 0)
         .toSet();
 
-    // Daftar jenis sampah & poin per kg dari database
     final categories = await DatabaseHelper.instance.getWasteCategories();
     final List<Map<String, dynamic>> wasteItems = categories.map((c) {
       final catId = (c['id'] as num).toInt();
@@ -185,7 +182,6 @@ class _HalamanTugasState extends State<HalamanTugas> {
               double totalBerat,
               List<Map<String, dynamic>> itemsToSend,
             ) async {
-              // 1. Update API
               try {
                 await ApiService.instance.updateTransaction(txId, {
                   'status': 'selesai',
@@ -194,14 +190,12 @@ class _HalamanTugasState extends State<HalamanTugas> {
                 });
               } catch (_) {}
 
-              // 2. Selalu update lokal — ini yang menambah saldo poin nasabah
               await DatabaseHelper.instance.completeTransaction(
                 txId,
                 totalPoin,
                 items: itemsToSend,
               );
 
-              // 3. Refresh session petugas (kalau petugas juga punya poin)
               await SessionService.refresh();
 
               if (mounted) {
@@ -215,7 +209,7 @@ class _HalamanTugasState extends State<HalamanTugas> {
                     duration: const Duration(seconds: 4),
                   ),
                 );
-                // Refresh data via API/Database so user sees the loading spinner
+
                 _loadTasks();
               }
             },
@@ -245,8 +239,6 @@ class _HalamanTugasState extends State<HalamanTugas> {
     );
   }
 
-  // Image viewer dihilangkan karena diganti komponen global ImageViewerDialog
-
   Widget _buildTaskCard(Map<String, dynamic> tugas) {
     final String statusStr = tugas['status']?.toString() ?? 'dikonfirmasi';
     final bool isMenuju = statusStr == 'menuju_lokasi';
@@ -261,29 +253,31 @@ class _HalamanTugasState extends State<HalamanTugas> {
         (tugas['id_transaksi'] ?? tugas['id'])?.toString() ?? '';
     final bool isPengantaran = tugas['is_pengantaran'] == true;
 
-    final String tipeTugas = isPengantaran 
-        ? 'Pengantaran Sembako' 
+    final String tipeTugas = isPengantaran
+        ? 'Pengantaran Sembako'
         : (isDropIn ? 'Drop-in' : 'Jemput');
-        
-    final Color tipeColor = isPengantaran 
-        ? Colors.blue.shade700 
+
+    final Color tipeColor = isPengantaran
+        ? Colors.blue.shade700
         : (isDropIn ? Colors.purple : greenTheme);
-        
+
     final IconData tipeIcon = isPengantaran
         ? Icons.shopping_bag_outlined
         : (isDropIn ? Icons.store : Icons.local_shipping_outlined);
 
-    // Drop-in dan Pickup punya alur yang sama: Menunggu -> Terima/Jemput -> Verifikasi & Timbang
-    // Pengantaran Sembako punya alur: Menunggu -> Selesaikan Pengantaran
-    final String mainBtnLabel = isPengantaran 
-        ? 'Selesaikan Pengantaran' 
-        : (sudahMenuju ? 'Verifikasi & Timbang' : (isDropIn ? 'Terima Drop-in' : 'Menjemput'));
-        
+    final String mainBtnLabel = isPengantaran
+        ? 'Selesaikan Pengantaran'
+        : (sudahMenuju
+              ? 'Verifikasi & Timbang'
+              : (isDropIn ? 'Terima Drop-in' : 'Menjemput'));
+
     final IconData mainBtnIcon = isPengantaran
         ? Icons.check_circle
-        : (sudahMenuju ? Icons.fact_check_rounded : (isDropIn ? Icons.check_circle_outline : Icons.local_shipping));
-        
-    final Color mainBtnColor = isPengantaran 
+        : (sudahMenuju
+              ? Icons.fact_check_rounded
+              : (isDropIn ? Icons.check_circle_outline : Icons.local_shipping));
+
+    final Color mainBtnColor = isPengantaran
         ? Colors.blue.shade700
         : (sudahMenuju ? Colors.green.shade700 : greenTheme);
 
@@ -296,7 +290,6 @@ class _HalamanTugasState extends State<HalamanTugas> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: Tipe + ID + Status badge
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -347,7 +340,9 @@ class _HalamanTugasState extends State<HalamanTugas> {
                     style: TextStyle(
                       color: sudahMenuju
                           ? Colors.blue.shade800
-                          : (isPengantaran ? Colors.blue.shade800 : Colors.orange.shade800),
+                          : (isPengantaran
+                                ? Colors.blue.shade800
+                                : Colors.orange.shade800),
                       fontWeight: FontWeight.bold,
                       fontSize: 10,
                     ),
@@ -360,7 +355,6 @@ class _HalamanTugasState extends State<HalamanTugas> {
               child: Divider(height: 1, thickness: 1),
             ),
 
-            // Nama Nasabah
             Row(
               children: [
                 Icon(Icons.person, color: greenTheme, size: 22),
@@ -379,21 +373,32 @@ class _HalamanTugasState extends State<HalamanTugas> {
             ),
             const SizedBox(height: 10),
 
-            // Lokasi
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  isPengantaran ? Icons.location_on : (isDropIn ? Icons.store_mall_directory : Icons.location_on),
-                  color: isPengantaran ? Colors.blueAccent : (isDropIn ? Colors.purple : Colors.redAccent),
+                  isPengantaran
+                      ? Icons.location_on
+                      : (isDropIn
+                            ? Icons.store_mall_directory
+                            : Icons.location_on),
+                  color: isPengantaran
+                      ? Colors.blueAccent
+                      : (isDropIn ? Colors.purple : Colors.redAccent),
                   size: 20,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     () {
-                      final addr = tugas['address'] ?? tugas['alamat'] ?? tugas['nasabah_address'] ?? '';
-                      return addr.toString().trim().isEmpty ? 'Alamat belum diatur' : addr.toString();
+                      final addr =
+                          tugas['address'] ??
+                          tugas['alamat'] ??
+                          tugas['nasabah_address'] ??
+                          '';
+                      return addr.toString().trim().isEmpty
+                          ? 'Alamat belum diatur'
+                          : addr.toString();
                     }(),
                     style: TextStyle(color: Colors.grey.shade700, height: 1.4),
                   ),
@@ -402,7 +407,6 @@ class _HalamanTugasState extends State<HalamanTugas> {
             ),
             const SizedBox(height: 10),
 
-            // Jenis & Estimasi
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -416,8 +420,9 @@ class _HalamanTugasState extends State<HalamanTugas> {
                 ),
               ],
             ),
-            
-            if (tugas['photo_evidence'] != null && tugas['photo_evidence'].toString().isNotEmpty) ...[
+
+            if (tugas['photo_evidence'] != null &&
+                tugas['photo_evidence'].toString().isNotEmpty) ...[
               const SizedBox(height: 12),
               const Text(
                 'Foto Sampah:',
@@ -431,8 +436,11 @@ class _HalamanTugasState extends State<HalamanTugas> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: tugas['photo_evidence'].toString().split(',').map((filename) {
-                  final url = '${ApiService.baseUrl}/uploads/transactions/${filename.trim()}';
+                children: tugas['photo_evidence'].toString().split(',').map((
+                  filename,
+                ) {
+                  final url =
+                      '${ApiService.baseUrl}/uploads/transactions/${filename.trim()}';
                   return ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
@@ -445,7 +453,10 @@ class _HalamanTugasState extends State<HalamanTugas> {
                         width: 80,
                         height: 80,
                         color: Colors.grey.shade300,
-                        child: const Icon(Icons.broken_image, color: Colors.grey),
+                        child: const Icon(
+                          Icons.broken_image,
+                          color: Colors.grey,
+                        ),
                       ),
                     ),
                   );
@@ -466,18 +477,24 @@ class _HalamanTugasState extends State<HalamanTugas> {
             ],
             const SizedBox(height: 20),
 
-            // Tombol aksi
             Row(
               children: [
-                // Tombol Lihat Gambar (selalu muncul untuk semua tipe tugas kecuali pengantaran sembako)
                 if (!isPengantaran) ...[
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () {
-                        if (tugas['photo_evidence'] != null && tugas['photo_evidence'].toString().isNotEmpty) {
-                          ImageViewerDialog.show(context, tugas['photo_evidence'].toString());
+                        if (tugas['photo_evidence'] != null &&
+                            tugas['photo_evidence'].toString().isNotEmpty) {
+                          ImageViewerDialog.show(
+                            context,
+                            tugas['photo_evidence'].toString(),
+                          );
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tidak ada gambar foto sampah.')));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Tidak ada gambar foto sampah.'),
+                            ),
+                          );
                         }
                       },
                       icon: Icon(
@@ -499,13 +516,16 @@ class _HalamanTugasState extends State<HalamanTugas> {
                   const SizedBox(width: 12),
                 ],
 
-                // Tombol Chat Nasabah (untuk tugas yang sudah diambil)
                 if (sudahMenuju && !isPengantaran) ...[
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () {
-                        final String nasabahId = tugas['nasabah_id']?.toString() ?? 'nasabah123';
-                        final String nasabahName = tugas['nama_nasabah']?.toString() ?? tugas['nasabah_name']?.toString() ?? 'Nasabah';
+                        final String nasabahId =
+                            tugas['nasabah_id']?.toString() ?? 'nasabah123';
+                        final String nasabahName =
+                            tugas['nama_nasabah']?.toString() ??
+                            tugas['nasabah_name']?.toString() ??
+                            'Nasabah';
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -538,36 +558,38 @@ class _HalamanTugasState extends State<HalamanTugas> {
                   const SizedBox(width: 12),
                 ],
 
-                // Tombol aksi utama
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       if (isPengantaran) {
                         bool success = false;
                         try {
-                           final err = await ApiService.instance.updateWithdrawalStatus(txId, 'selesai');
-                           if (err == null) {
-                              success = true;
-                              await DatabaseHelper.instance.updateWithdrawalStatus(txId, 'selesai');
-                           }
+                          final err = await ApiService.instance
+                              .updateWithdrawalStatus(txId, 'selesai');
+                          if (err == null) {
+                            success = true;
+                            await DatabaseHelper.instance
+                                .updateWithdrawalStatus(txId, 'selesai');
+                          }
                         } catch (e) {
-                           success = await DatabaseHelper.instance.updateWithdrawalStatus(txId, 'selesai');
+                          success = await DatabaseHelper.instance
+                              .updateWithdrawalStatus(txId, 'selesai');
                         }
                         if (success && mounted) {
-                           ScaffoldMessenger.of(context).showSnackBar(
-                             SnackBar(
-                               content: const Text('Pengantaran berhasil diselesaikan!'),
-                               backgroundColor: greenTheme,
-                               behavior: SnackBarBehavior.floating,
-                             ),
-                           );
-                           _loadTasks();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text(
+                                'Pengantaran berhasil diselesaikan!',
+                              ),
+                              backgroundColor: greenTheme,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          _loadTasks();
                         }
                       } else if (sudahMenuju) {
-                        // Sudah diklaim (menuju/tiba) → selesaikan dengan timbang
                         _showSelesaikanDialog(tugas);
                       } else {
-                        // Belum diklaim → ambil tugas (update ke menuju_lokasi)
                         _updateStatusMenuju(txId);
                       }
                     },
@@ -627,9 +649,6 @@ class _HalamanTugasState extends State<HalamanTugas> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-//  Sheet Timbang & Selesaikan Tugas
-// ─────────────────────────────────────────────────────────────
 class _TimbangSheet extends StatefulWidget {
   final String txId;
   final String namaNasabah;
@@ -661,7 +680,7 @@ class _TimbangSheetState extends State<_TimbangSheet> {
   @override
   void initState() {
     super.initState();
-    // Deep copy agar tidak mengubah data asli
+
     _items = widget.wasteItems
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
@@ -704,7 +723,6 @@ class _TimbangSheetState extends State<_TimbangSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle
             Container(
               width: 40,
               height: 4,
@@ -715,7 +733,6 @@ class _TimbangSheetState extends State<_TimbangSheet> {
               ),
             ),
 
-            // Header
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
@@ -763,7 +780,6 @@ class _TimbangSheetState extends State<_TimbangSheet> {
               ),
             ),
 
-            // Daftar sampah
             Flexible(
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -773,7 +789,6 @@ class _TimbangSheetState extends State<_TimbangSheet> {
               ),
             ),
 
-            // Total & Konfirmasi
             Container(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
               decoration: BoxDecoration(
@@ -789,7 +804,6 @@ class _TimbangSheetState extends State<_TimbangSheet> {
               ),
               child: Column(
                 children: [
-                  // Summary berat & poin
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(

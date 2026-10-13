@@ -1,18 +1,6 @@
 import 'package:flutter/material.dart';
 import 'db_helper.dart';
 
-// ============================================================================
-// Halaman Master Data — Admin Dashboard (Desktop/Web)
-// Berdasarkan SRS 3.3.1 Manajemen Master Data:
-//   FR-AD-01 — Kelola kategori sampah & harga/poin per kg
-//   FR-AD-02 — Kelola lokasi drop point (tambah, edit, jam operasional)
-//   FR-AD-03 — Kelola akun user/petugas/staf beserta role & permission
-//
-// Catatan: halaman ini didesain untuk layar desktop (sesuai SRS 2.1 —
-// dashboard web admin/staf), bukan mobile. Konsisten dengan RBAC: akses
-// halaman ini hanya untuk role Admin (Staf Kantor tidak bisa masuk ke sini).
-// ============================================================================
-
 const Color primaryGreen = Color(0xFF268B07);
 const Color limeGreen = Color(0xFF32CD32);
 const Color pageBackground = Color(0xFFF5F6F8);
@@ -21,10 +9,6 @@ const Color subtleText = Color(0xFF64748B);
 const Color mutedText = Color(0xFF94A3B8);
 const Color borderColor = Color(0xFFE2E8F0);
 const Color secondaryDarkText = Color(0xFF334155);
-
-// --------------------------------------------------------------------------
-// MODELS
-// --------------------------------------------------------------------------
 
 class WasteCategoryModel {
   final int? id;
@@ -47,7 +31,7 @@ class WasteCategoryModel {
       name: map['name'] as String,
       pointsPerKg: (map['point_per_kg'] as int?) ?? 0,
       isActive: (map['is_active'] as int?) == 1,
-      icon: Icons.recycling_rounded, // default icon
+      icon: Icons.recycling_rounded,
     );
   }
 
@@ -100,7 +84,6 @@ class DropPointModel {
   };
 }
 
-// Icon options for category picker
 const Map<String, IconData> categoryIconOptions = {
   'Plastik': Icons.local_drink_rounded,
   'Kertas': Icons.description_rounded,
@@ -113,10 +96,6 @@ const Map<String, IconData> categoryIconOptions = {
   'Minyak': Icons.water_drop_rounded,
   'Lainnya': Icons.category_rounded,
 };
-
-// --------------------------------------------------------------------------
-// MAIN SCREEN
-// --------------------------------------------------------------------------
 
 class MasterDataScreen extends StatefulWidget {
   const MasterDataScreen({super.key});
@@ -131,7 +110,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
 
   final List<String> tabs = ['Kategori Sampah', 'Drop Point'];
 
-  // Dynamic data lists loaded from SQLite
   List<WasteCategoryModel> _categories = [];
   List<DropPointModel> _dropPoints = [];
   bool _isLoading = true;
@@ -173,10 +151,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
         return 'Tambah Drop Point';
     }
   }
-
-  // ------------------------------------------------------------------------
-  // HEADER
-  // ------------------------------------------------------------------------
 
   Widget _buildHeader() {
     return Padding(
@@ -272,10 +246,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
       ),
     );
   }
-
-  // ------------------------------------------------------------------------
-  // SHARED TABLE HELPERS
-  // ------------------------------------------------------------------------
 
   Widget _tableContainer({required List<Widget> children}) {
     return Container(
@@ -424,10 +394,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
     );
   }
 
-  // ------------------------------------------------------------------------
-  // DIALOG: TAMBAH KATEGORI
-  // ------------------------------------------------------------------------
-
   void _showKategoriFormDialog({WasteCategoryModel? category, int? index}) {
     final isEdit = category != null && index != null;
     final nameController = TextEditingController(text: category?.name ?? '');
@@ -453,7 +419,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Dialog Header
                     Row(
                       children: [
                         Container(
@@ -494,7 +459,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                     ),
                     const SizedBox(height: 24),
 
-                    // Nama Kategori
                     _dialogLabel('Nama Kategori'),
                     const SizedBox(height: 6),
                     _dialogTextField(
@@ -503,7 +467,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                     ),
                     const SizedBox(height: 16),
 
-                    // Poin per Kg
                     _dialogLabel('Poin per Kg'),
                     const SizedBox(height: 6),
                     _dialogTextField(
@@ -513,7 +476,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                     ),
                     const SizedBox(height: 16),
 
-                    // Pilih Ikon
                     _dialogLabel('Ikon'),
                     const SizedBox(height: 8),
                     Wrap(
@@ -553,7 +515,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                     ),
                     const SizedBox(height: 16),
 
-                    // Status
                     Row(
                       children: [
                         _dialogLabel('Status'),
@@ -576,7 +537,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                     ),
                     const SizedBox(height: 24),
 
-                    // Actions
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -643,10 +603,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
     );
   }
 
-  // ------------------------------------------------------------------------
-  // DIALOG: TAMBAH DROP POINT
-  // ------------------------------------------------------------------------
-
   void _showDropPointFormDialog({DropPointModel? dropPoint, int? index}) {
     final isEdit = dropPoint != null && index != null;
     final nameController = TextEditingController(text: dropPoint?.name ?? '');
@@ -678,7 +634,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Dialog Header
                       Row(
                         children: [
                           Container(
@@ -717,7 +672,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                       ),
                       const SizedBox(height: 24),
 
-                      // Nama Lokasi
                       _dialogLabel('Nama Lokasi'),
                       const SizedBox(height: 6),
                       _dialogTextField(
@@ -726,7 +680,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                       ),
                       const SizedBox(height: 16),
 
-                      // Alamat
                       _dialogLabel('Alamat'),
                       const SizedBox(height: 6),
                       _dialogTextField(
@@ -735,13 +688,11 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                       ),
                       const SizedBox(height: 16),
 
-                      // Jam Operasional
                       _dialogLabel('Jam Operasional'),
                       const SizedBox(height: 6),
                       _dialogTextField(hoursController, 'Contoh: 08.00–17.00'),
                       const SizedBox(height: 16),
 
-                      // Kapasitas
                       _dialogLabel('Kapasitas (%)'),
                       const SizedBox(height: 6),
                       _dialogTextField(
@@ -751,7 +702,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                       ),
                       const SizedBox(height: 16),
 
-                      // Status
                       Row(
                         children: [
                           _dialogLabel('Status'),
@@ -775,7 +725,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
                       ),
                       const SizedBox(height: 24),
 
-                      // Actions
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -851,10 +800,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
       },
     );
   }
-
-  // ------------------------------------------------------------------------
-  // DIALOG SHARED WIDGETS
-  // ------------------------------------------------------------------------
 
   Widget _dialogLabel(String text) {
     return Text(
@@ -951,10 +896,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
     );
   }
 
-  // ------------------------------------------------------------------------
-  // TAB 1: KATEGORI SAMPAH (FR-AD-01)
-  // ------------------------------------------------------------------------
-
   Widget _buildKategoriSampahTab() {
     return SingleChildScrollView(
       child: _tableContainer(
@@ -1041,10 +982,6 @@ class _MasterDataScreenState extends State<MasterDataScreen>
       ),
     );
   }
-
-  // ------------------------------------------------------------------------
-  // TAB 2: DROP POINT (FR-AD-02)
-  // ------------------------------------------------------------------------
 
   Widget _buildDropPointTab() {
     return SingleChildScrollView(

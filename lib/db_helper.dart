@@ -11,7 +11,6 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
 
-  // In-memory fallback database for Web (Chrome) & default seed users
   static final List<Map<String, dynamic>> _webUsers = [
     {
       'id': 'USR-001',
@@ -19,7 +18,7 @@ class DatabaseHelper {
       'email': 'admin@banksampah.com',
       'full_name': 'Akmal Ahsan',
       'password':
-          '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', // 123456
+          '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92',
       'role': 'admin',
       'address': 'Kantor Pusat Bank Sampah',
       'default_setor_method': null,
@@ -33,7 +32,7 @@ class DatabaseHelper {
       'email': 'tokan@banksampah.com',
       'full_name': 'Tokan Shimada',
       'password':
-          '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', // 123456
+          '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92',
       'role': 'petugas',
       'address': 'Jl. Petugas No. 1',
       'default_setor_method': null,
@@ -43,7 +42,6 @@ class DatabaseHelper {
     },
   ];
 
-  // In-memory permissions for Staf Kantor (web & native fallback)
   static final Map<String, bool> _webPermissions = {
     'Overview': true,
     'Master Data': false,
@@ -55,7 +53,6 @@ class DatabaseHelper {
     'Audit Log': false,
   };
 
-  // In-memory system configuration for Web (Chrome fallback)
   static Map<String, dynamic> _webSystemConfig = {
     'min_weight': 1.0,
     'max_radius': 5.0,
@@ -127,71 +124,58 @@ class DatabaseHelper {
 
   DatabaseHelper._init();
 
-  // Initialize Web Data — prioritize XAMPP API, fallback ke SharedPreferences
   Future<void> initWebStorage() async {
     if (!kIsWeb) return;
 
-    // Coba ambil data users dari XAMPP API terlebih dahulu
     try {
-      // Import ApiService secara inline tidak bisa (circular), gunakan http langsung
       final prefs = await SharedPreferences.getInstance();
 
-      // Cek apakah ada SharedPreferences data dulu
       final usersJson = prefs.getString('web_users');
       if (usersJson != null) {
         try {
           final List<dynamic> decoded = jsonDecode(usersJson);
           _webUsers.clear();
           _webUsers.addAll(decoded.cast<Map<String, dynamic>>());
-        } catch (e) {
-          // Fallback to default if decoding fails
-        }
+        } catch (e) {}
       } else {
-        // Simpan default users sebagai fallback pertama kali
         await _saveWebUsers();
       }
 
-      // Muat web_system_config
       final configJson = prefs.getString('web_system_config');
       if (configJson != null) {
         try {
           final Map<String, dynamic> decoded = jsonDecode(configJson);
           _webSystemConfig.addAll(decoded);
-        } catch (e) {
-          // Fallback to default if decoding fails
-        }
+        } catch (e) {}
       } else {
         await _saveWebSystemConfig();
       }
 
-      // Muat web_audit_logs
       final logsJson = prefs.getString('web_audit_logs');
       if (logsJson != null) {
         try {
           final List<dynamic> decoded = jsonDecode(logsJson);
           _webAuditLogs.clear();
           _webAuditLogs.addAll(decoded.cast<Map<String, dynamic>>());
-        } catch (e) {
-          // Fallback
-        }
+        } catch (e) {}
       } else {
-        // Initial mock logs
         _webAuditLogs.addAll([
           {
-            'time': DateTime.now().subtract(const Duration(minutes: 5)).toString().substring(0, 16),
+            'time': DateTime.now()
+                .subtract(const Duration(minutes: 5))
+                .toString()
+                .substring(0, 16),
             'user_name': 'Akmal Ahsan',
             'role': 'Administrator',
             'module': 'Authentication',
             'action': 'Login ke dalam sistem',
             'ip_address': '192.168.1.5',
-            'status': 'BERHASIL'
-          }
+            'status': 'BERHASIL',
+          },
         ]);
         await _saveWebAuditLogs();
       }
-    } catch (e) {
-      // Jika gagal total, biarkan default seed
-    }
+    } catch (e) {}
   }
 
   Future<void> _saveWebUsers() async {
@@ -213,7 +197,7 @@ class DatabaseHelper {
   }
 
   Future<Database?> get database async {
-    if (kIsWeb) return null; // SQLite is not supported on web
+    if (kIsWeb) return null;
     if (_database != null) return _database!;
     _database = await _initDB('bank_sampah.db');
     return _database!;
@@ -249,7 +233,6 @@ class DatabaseHelper {
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      // Add is_active column if upgrading from v1
       try {
         await db.execute(
           'ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1',
@@ -258,7 +241,6 @@ class DatabaseHelper {
       } catch (_) {}
     }
     if (oldVersion < 3) {
-      // Create system_configs table
       try {
         await db.execute('''
           CREATE TABLE system_configs (
@@ -269,7 +251,6 @@ class DatabaseHelper {
       } catch (_) {}
     }
     if (oldVersion < 4) {
-      // Create audit_logs table
       try {
         await db.execute('''
           CREATE TABLE audit_logs (
@@ -284,25 +265,20 @@ class DatabaseHelper {
           )
         ''');
 
-        // Insert sample data
         await db.execute('''
-          INSERT INTO audit_logs (time, user_name, role, module, action, ip_address, status) 
+          INSERT INTO audit_logs (time, user_name, role, module, action, ip_address, status)
           VALUES ('04 Aug 2026 - 10:42', 'Akmal Ahsan', 'Administrator', 'Konfigurasi Sistem', 'Mengubah Rasio Poin dari Rp 1 ke Rp 1.2/Poin', '192.168.1.10', 'SUKSES')
         ''');
       } catch (_) {}
     }
     if (oldVersion < 5) {
-      // Add profile_picture column
       try {
-        await db.execute(
-          'ALTER TABLE users ADD COLUMN profile_picture TEXT',
-        );
+        await db.execute('ALTER TABLE users ADD COLUMN profile_picture TEXT');
       } catch (_) {}
     }
   }
 
   Future _createDB(Database db, int version) async {
-    // 1. Table users
     await db.execute('''
       CREATE TABLE users (
         id TEXT PRIMARY KEY,
@@ -320,7 +296,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 2. Table drop_points
     await db.execute('''
       CREATE TABLE drop_points (
         id TEXT PRIMARY KEY,
@@ -333,7 +308,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 3. Table waste_categories
     await db.execute('''
       CREATE TABLE waste_categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -344,7 +318,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 4. Table transactions
     await db.execute('''
       CREATE TABLE transactions (
         id TEXT PRIMARY KEY,
@@ -367,7 +340,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 5. Table transaction_items
     await db.execute('''
       CREATE TABLE transaction_items (
         id TEXT PRIMARY KEY,
@@ -381,7 +353,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 6. Table withdrawals
     await db.execute('''
       CREATE TABLE withdrawals (
         id TEXT PRIMARY KEY,
@@ -395,7 +366,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 7. Table worker_logs
     await db.execute('''
       CREATE TABLE worker_logs (
         id TEXT PRIMARY KEY,
@@ -409,7 +379,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 8. Table b2b_sales
     await db.execute('''
       CREATE TABLE b2b_sales (
         id TEXT PRIMARY KEY,
@@ -421,7 +390,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 9. Table system_configs
     await db.execute('''
       CREATE TABLE system_configs (
         key TEXT PRIMARY KEY,
@@ -429,7 +397,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 10. Table audit_logs
     await db.execute('''
       CREATE TABLE audit_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -443,7 +410,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 11. Table chat_messages
     await db.execute('''
       CREATE TABLE chat_messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -454,12 +420,10 @@ class DatabaseHelper {
       )
     ''');
 
-    // Seed mock audit logs
     for (var log in _webAuditLogs) {
       await db.insert('audit_logs', log);
     }
 
-    // Seeding default users
     for (var u in _webUsers) {
       await db.insert('users', u);
     }
@@ -477,50 +441,57 @@ class DatabaseHelper {
     }
   }
 
-  // Helper for password hashing
   String _hashPassword(String password) {
     final bytes = utf8.encode(password);
     final digest = sha256.convert(bytes);
     return digest.toString();
   }
 
-  // User auth and operations
   Future<bool> verifyAdminPassword(String email, String password) async {
-    final List<Map<String, dynamic>> res = await _webUsers.where((u) => u['email'] == email && u['password'] == password && u['role'] == 'admin').toList();
+    final List<Map<String, dynamic>> res = await _webUsers
+        .where(
+          (u) =>
+              u['email'] == email &&
+              u['password'] == password &&
+              u['role'] == 'admin',
+        )
+        .toList();
     return res.isNotEmpty;
   }
 
-  // ==========================================
-  // CHAT SYSTEM FALLBACK
-  // ==========================================
-  
-  Future<List<Map<String, dynamic>>> getChatMessages(String user1, String user2) async {
+  Future<List<Map<String, dynamic>>> getChatMessages(
+    String user1,
+    String user2,
+  ) async {
     if (kIsWeb) {
-      // In web fallback, we might not have a table, so return empty for now
       return [];
     }
     final db = await instance.database;
     if (db == null) return [];
-    
+
     final List<Map<String, dynamic>> maps = await db.query(
       'chat_messages',
-      where: '(sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)',
+      where:
+          '(sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)',
       whereArgs: [user1, user2, user2, user1],
       orderBy: 'created_at ASC',
     );
     return maps;
   }
 
-  Future<bool> insertChatMessage(String senderId, String receiverId, String message) async {
+  Future<bool> insertChatMessage(
+    String senderId,
+    String receiverId,
+    String message,
+  ) async {
     if (kIsWeb) return false;
     final db = await instance.database;
     if (db == null) return false;
-    
+
     final int res = await db.insert('chat_messages', {
       'sender_id': senderId,
       'receiver_id': receiverId,
       'message': message,
-      // created_at is default CURRENT_TIMESTAMP
     });
     return res > 0;
   }
@@ -556,7 +527,6 @@ class DatabaseHelper {
   }
 
   Future<bool> registerUser(Map<String, dynamic> user) async {
-    // Hash password before saving
     final userToSave = Map<String, dynamic>.from(user);
     if (userToSave.containsKey('password')) {
       userToSave['password'] = _hashPassword(userToSave['password']);
@@ -575,7 +545,7 @@ class DatabaseHelper {
       if (exists) return false;
 
       _webUsers.add(userToSave);
-      await _saveWebUsers(); // Persist for Web
+      await _saveWebUsers();
       return true;
     }
 
@@ -583,7 +553,7 @@ class DatabaseHelper {
     if (db == null) return false;
     try {
       await db.insert('users', userToSave);
-      // Record audit log for account creation
+
       final auditLog = {
         'time':
             '${DateTime.now().day.toString().padLeft(2, '0')} ${_getMonthName(DateTime.now().month)} ${DateTime.now().year} - ${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
@@ -656,14 +626,12 @@ class DatabaseHelper {
   }
 
   Future<int> updateUserPointBalance(String userId, int newBalance) async {
-    // 1. Update XAMPP API jika tersedia
     try {
       await ApiService.instance.updateUser(userId, {
         'point_balance': newBalance,
       });
     } catch (_) {}
 
-    // 2. Update lokal (in-memory)
     if (kIsWeb) {
       final index = _webUsers.indexWhere((u) => u['id'] == userId);
       if (index != -1) {
@@ -672,10 +640,9 @@ class DatabaseHelper {
         _webUsers[index] = updated;
         return 1;
       }
-      return 1; // Anggap sukses jika update API berhasil
+      return 1;
     }
 
-    // 3. Update lokal (SQLite)
     final db = await instance.database;
     if (db == null) return 0;
     return await db.update(
@@ -711,8 +678,6 @@ class DatabaseHelper {
     required String accountDetails,
   }) async {
     if (kIsWeb) {
-      // In-memory fallback untuk web
-      // TODO: implement web behavior if needed
       return true;
     }
 
@@ -726,7 +691,7 @@ class DatabaseHelper {
         'points_deducted': pointsDeducted,
         'method': method,
         'account_details': accountDetails,
-        'status': 'menunggu', 
+        'status': 'menunggu',
         'created_at': DateTime.now().toIso8601String(),
       });
       return true;
@@ -734,8 +699,6 @@ class DatabaseHelper {
       return false;
     }
   }
-
-  // --- Operasional Lapangan Methods ---
 
   Future<Map<String, dynamic>> getOperasionalSummary() async {
     int totalPetugas = 0;
@@ -799,7 +762,6 @@ class DatabaseHelper {
     if (db == null) return [];
     final res = await db.query('drop_points');
     if (res.isEmpty) {
-      // Mock Data if db is empty
       return [
         {'name': 'DP Margonda', 'capacityPercent': 92, 'isCritical': true},
         {'name': 'DP Kemang', 'capacityPercent': 88, 'isCritical': true},
@@ -839,7 +801,7 @@ class DatabaseHelper {
     if (db == null) return [];
 
     final query = '''
-      SELECT 
+      SELECT
         u.full_name as petugas_name,
         u.address as vehicle_info,
         t.pickup_lat, t.pickup_lng,
@@ -905,13 +867,10 @@ class DatabaseHelper {
     }).toList();
   }
 
-  // --- Laporan & Analitik Methods ---
-
   Future<Map<String, dynamic>> getLaporanAnalitikData({
-    int bulan = 0, // 0 = semua
+    int bulan = 0,
     int tahun = 0,
   }) async {
-    // ---- WEB / MOCK FALLBACK ----
     if (kIsWeb) {
       return _getMockLaporanData(bulan, tahun);
     }
@@ -919,7 +878,6 @@ class DatabaseHelper {
     final db = await instance.database;
     if (db == null) return _getMockLaporanData(bulan, tahun);
 
-    // Build WHERE clause
     String whereClause = '';
     if (bulan > 0 && tahun > 0) {
       whereClause =
@@ -928,7 +886,6 @@ class DatabaseHelper {
       whereClause = "WHERE strftime('%Y', created_at) = '$tahun'";
     }
 
-    // Total transaksi selesai
     final txRes = await db.rawQuery(
       "SELECT COUNT(*) as cnt, SUM(total_actual_points) as total_pts FROM transactions $whereClause AND status = 'selesai'"
           .replaceAll('WHERE  AND', 'WHERE'),
@@ -936,26 +893,22 @@ class DatabaseHelper {
     final totalTx = Sqflite.firstIntValue(txRes) ?? 0;
     final totalPoints = (txRes.first['total_pts'] as int?) ?? 0;
 
-    // Total volume sampah dari transaction_items
     final volRes = await db.rawQuery(
       "SELECT SUM(ti.actual_weight) as total_kg FROM transaction_items ti JOIN transactions t ON ti.transaction_id = t.id ${whereClause.isNotEmpty ? '$whereClause AND t.status' : "WHERE t.status"} = 'selesai'",
     );
     final totalKg = (volRes.first['total_kg'] as double?) ?? 0.0;
 
-    // Nasabah unik yang menyetor
     final nasabahRes = await db.rawQuery(
       "SELECT COUNT(DISTINCT nasabah_id) as cnt FROM transactions $whereClause ${whereClause.isNotEmpty ? 'AND' : 'WHERE'} status = 'selesai'"
           .replaceAll('WHERE  AND', 'WHERE'),
     );
     final totalNasabah = Sqflite.firstIntValue(nasabahRes) ?? 0;
 
-    // Total user nasabah
     final allNasabahRes = await db.rawQuery(
       "SELECT COUNT(*) as cnt FROM users WHERE role = 'nasabah'",
     );
     final allNasabah = Sqflite.firstIntValue(allNasabahRes) ?? 1;
 
-    // Volume per kategori sampah
     final catRes = await db.rawQuery('''
       SELECT wc.name, SUM(ti.actual_weight) as total_kg
       FROM transaction_items ti
@@ -965,7 +918,6 @@ class DatabaseHelper {
       GROUP BY wc.name ORDER BY total_kg DESC
     ''');
 
-    // Tren mingguan (ambil 7 hari terakhir)
     final trendRes = await db.rawQuery('''
       SELECT strftime('%d/%m', created_at) as day, SUM(total_actual_points) as pts, COUNT(*) as cnt
       FROM transactions
@@ -974,9 +926,8 @@ class DatabaseHelper {
       ORDER BY created_at ASC
     ''');
 
-    // Data rekap per bulan (3 bulan terakhir)
     final rekapRes = await db.rawQuery('''
-      SELECT 
+      SELECT
         strftime('%m/%Y', created_at) as periode,
         COUNT(*) as total_tx,
         SUM(total_actual_points) as total_pts
@@ -991,7 +942,6 @@ class DatabaseHelper {
         ? (totalKg / (totalKg * 1.06)) * 100
         : 0;
 
-    // If DB has no data, use mock
     if (totalTx == 0) return _getMockLaporanData(bulan, tahun);
 
     List<Map<String, dynamic>> kategoriData = catRes.isEmpty
@@ -1060,9 +1010,6 @@ class DatabaseHelper {
     {'label': 'Min', 'pts': 3900, 'cnt': 55},
   ];
 
-  // ── ACCOUNT MANAGEMENT CRUD ─────────────────────────────────────────────
-
-  /// Returns all users, optionally filtered by role.
   Future<List<Map<String, dynamic>>> getAllUsers({String? roleFilter}) async {
     if (kIsWeb) {
       final list = roleFilter == null
@@ -1085,7 +1032,6 @@ class DatabaseHelper {
     return await db.query('users', orderBy: 'role ASC, full_name ASC');
   }
 
-  /// Updates arbitrary fields on a user record.
   Future<bool> updateUserProfile(
     String userId,
     Map<String, dynamic> data,
@@ -1115,27 +1061,24 @@ class DatabaseHelper {
     }
   }
 
-  /// Toggles the active/inactive status of a user.
   Future<bool> toggleUserStatus(String userId, bool isActive) async {
     return updateUserProfile(userId, {'is_active': isActive ? 1 : 0});
   }
 
-  /// Updates only the role field of a user.
   Future<bool> updateUserRole(String userId, String newRole) async {
     return updateUserProfile(userId, {'role': newRole});
   }
 
-  /// Permanently deletes a user account (both local cache & XAMPP API).
   Future<bool> deleteUser(String userId) async {
     if (kIsWeb) {
       final idx = _webUsers.indexWhere((u) => u['id'] == userId);
       if (idx == -1) return false;
       _webUsers.removeAt(idx);
       await _saveWebUsers();
-      // Juga hapus dari XAMPP MySQL jika tersedia
+
       try {
         final prefs = await SharedPreferences.getInstance();
-        // Simpan daftar ID yang dihapus agar tidak muncul kembali
+
         final deleted = prefs.getStringList('deleted_user_ids') ?? [];
         deleted.add(userId);
         await prefs.setStringList('deleted_user_ids', deleted);
@@ -1157,28 +1100,20 @@ class DatabaseHelper {
     }
   }
 
-  // ── STAF KANTOR PERMISSIONS ───────────────────────────────────────────────
-
-  /// Returns the current permission map for Staf Kantor role.
   Future<Map<String, bool>> getStafPermissions() async {
-    // Returns a copy so mutations don't affect the source directly
     return Map<String, bool>.from(_webPermissions);
   }
 
-  /// Persists the Staf Kantor permission map (in-memory for web/native).
   Future<bool> saveStafPermissions(Map<String, bool> permissions) async {
     try {
       _webPermissions.addAll(permissions);
-      // TODO: persist to a DB table (e.g. staf_permissions) for production
+
       return true;
     } catch (_) {
       return false;
     }
   }
 
-  // ── SYSTEM CONFIGURATION ──────────────────────────────────────────────────
-
-  /// Fetches system configuration settings
   Future<Map<String, dynamic>> getSystemConfig() async {
     if (kIsWeb) {
       return Map<String, dynamic>.from(_webSystemConfig);
@@ -1197,7 +1132,6 @@ class DatabaseHelper {
       String key = row['key'] as String;
       String valStr = row['value'] as String;
 
-      // Try parsing numeric or bool types
       if (['jam_buka', 'jam_tutup'].contains(key)) {
         config[key] = valStr;
       } else if (['auto_assign', 'wa_notif', 'push_notif'].contains(key)) {
@@ -1209,9 +1143,7 @@ class DatabaseHelper {
     return config;
   }
 
-  /// Saves system configuration settings
   Future<bool> saveSystemConfig(Map<String, dynamic> config) async {
-    // Insert Audit Log
     await insertAuditLog({
       'time': DateTime.now().toString().substring(0, 16),
       'user_name': 'Administrator',
@@ -1246,8 +1178,6 @@ class DatabaseHelper {
     }
   }
 
-  // ── AUDIT LOGS ────────────────────────────────────────────────────────────
-
   static final List<Map<String, dynamic>> _webAuditLogs = [];
 
   Future<List<Map<String, dynamic>>> getAuditLogs({
@@ -1264,7 +1194,6 @@ class DatabaseHelper {
       }
     }
 
-    // Apply filters
     if (modul != null && modul != 'Semua Modul') {
       logs = logs.where((log) => log['module'] == modul).toList();
     }
@@ -1282,13 +1211,11 @@ class DatabaseHelper {
   }
 
   Future<bool> insertAuditLog(Map<String, dynamic> log) async {
-    // Coba kirim ke API terlebih dahulu
     bool apiSuccess = await ApiService.instance.insertAuditLog(log);
     if (apiSuccess) {
       return true;
     }
 
-    // Fallback ke lokal
     if (kIsWeb) {
       _webAuditLogs.insert(0, log);
       await _saveWebAuditLogs();
@@ -1303,8 +1230,6 @@ class DatabaseHelper {
       return false;
     }
   }
-
-  // ── MOCK DATA ─────────────────────────────────────────────────────────────
 
   List<Map<String, dynamic>> _mockRekapData() => [
     {
@@ -1333,7 +1258,6 @@ class DatabaseHelper {
     },
   ];
 
-  // ── DROP POINTS CRUD ──────────────────────────────────────────────────────
   Future<List<Map<String, dynamic>>> getDropPoints() async {
     if (kIsWeb) return List.from(_webDropPoints);
     final db = await instance.database;
@@ -1390,7 +1314,6 @@ class DatabaseHelper {
     }
   }
 
-  // ── WASTE CATEGORIES CRUD ─────────────────────────────────────────────────
   Future<List<Map<String, dynamic>>> getWasteCategories() async {
     if (kIsWeb) return List.from(_webWasteCategories);
     final db = await instance.database;
@@ -1450,10 +1373,6 @@ class DatabaseHelper {
     }
   }
 
-  // ==========================================
-  // TRANSACTIONS
-  // ==========================================
-
   Future<bool> createTransaction(
     Map<String, dynamic> txData,
     List<Map<String, dynamic>> items,
@@ -1488,7 +1407,7 @@ class DatabaseHelper {
       return _webTransactions.map((tx) {
         final user = _webUsers.firstWhere(
           (u) => u['id'] == tx['nasabah_id'],
-          // Gunakan nama yang disimpan langsung di transaksi sebagai fallback
+
           orElse: () => {
             'full_name': tx['full_name'] ?? 'Unknown',
             'address': tx['address'] ?? '',
@@ -1508,8 +1427,8 @@ class DatabaseHelper {
     if (db == null) return [];
 
     final List<Map<String, dynamic>> txs = await db.rawQuery('''
-      SELECT t.*, u.full_name as nasabah_name 
-      FROM transactions t 
+      SELECT t.*, u.full_name as nasabah_name
+      FROM transactions t
       LEFT JOIN users u ON t.nasabah_id = u.id
       ORDER BY t.created_at DESC
     ''');
@@ -1540,7 +1459,6 @@ class DatabaseHelper {
           'items': _webTransactionItems
               .where((i) => i['transaction_id'] == tx['id'])
               .map((item) {
-                // Find category name from _webWasteCategories
                 final catId = item['waste_category_id'];
                 final cat = _webWasteCategories.firstWhere(
                   (c) => c['id'] == catId,
@@ -1620,10 +1538,8 @@ class DatabaseHelper {
         if (items.isNotEmpty) {
           _webTransactions[txIdx]['items'] = items;
 
-          // Hapus item lama jika ada
           _webTransactionItems.removeWhere((i) => i['transaction_id'] == id);
 
-          // Tambahkan item baru ke _webTransactionItems
           for (var item in items) {
             final dbItem = Map<String, dynamic>.from(item);
             dbItem.remove('name');
@@ -1631,7 +1547,6 @@ class DatabaseHelper {
           }
         }
 
-        // Tambah poin ke user di in-memory list
         final userId = _webTransactions[txIdx]['nasabah_id'];
         final userIdx = _webUsers.indexWhere((u) => u['id'] == userId);
         if (userIdx != -1) {
@@ -1642,8 +1557,7 @@ class DatabaseHelper {
         }
         return true;
       }
-      // Transaksi ada di XAMPP tapi tidak di in-memory — tetap return true
-      // karena ApiService sudah handle update sebelum fungsi ini dipanggil
+
       return true;
     }
 
@@ -1652,7 +1566,6 @@ class DatabaseHelper {
 
     try {
       await db.transaction((txn) async {
-        // Update transaction
         await txn.update(
           'transactions',
           {'status': 'selesai', 'total_actual_points': earnedPoints},
@@ -1673,7 +1586,6 @@ class DatabaseHelper {
           }
         }
 
-        // Get user ID
         final txRes = await txn.query(
           'transactions',
           columns: ['nasabah_id'],
@@ -1684,7 +1596,6 @@ class DatabaseHelper {
         if (txRes.isNotEmpty) {
           final userId = txRes.first['nasabah_id'] as String?;
           if (userId != null) {
-            // Update user balance
             await txn.rawUpdate(
               'UPDATE users SET point_balance = point_balance + ? WHERE id = ?',
               [earnedPoints, userId],
@@ -1702,7 +1613,6 @@ class DatabaseHelper {
     String? type,
   }) async {
     if (kIsWeb) {
-      // Tampilkan tugas pickup DAN/atau drop_in yang sudah dikonfirmasi admin
       final pendingTxs = _webTransactions
           .where(
             (tx) =>
@@ -1721,7 +1631,6 @@ class DatabaseHelper {
           (u) => u['id'] == tx['nasabah_id'],
         );
         if (userIndex == -1) {
-          // Akun sudah dihapus, sembunyikan transaksi ini
           continue;
         }
         final user = _webUsers[userIndex];
@@ -1729,7 +1638,6 @@ class DatabaseHelper {
             .where((i) => i['transaction_id'] == tx['id'])
             .toList();
 
-        // Sum estimated weight and join category names
         double estWeight = 0.0;
         List<String> categories = [];
         for (var item in items) {
@@ -1744,7 +1652,6 @@ class DatabaseHelper {
           }
         }
 
-        // Untuk drop_in: tampilkan drop point; untuk pickup: alamat nasabah
         String alamat = user['address'] ?? 'Alamat tidak tersedia';
         if (tx['type'] == 'drop_in') {
           final dropPoint = _webDropPoints.firstWhere(
@@ -1774,16 +1681,15 @@ class DatabaseHelper {
     final db = await instance.database;
     if (db == null) return [];
 
-    // Ambil tugas pickup DAN/atau drop_in yang sudah dikonfirmasi admin
     final String typeClause = type != null
         ? "t.type = '$type'"
         : "t.type IN ('pickup', 'drop_in')";
     final List<Map<String, dynamic>> txs = await db.rawQuery('''
-      SELECT 
+      SELECT
         t.id, t.type, t.status,
         u.full_name, u.address,
         dp.name as drop_point_name, dp.address as drop_point_address
-      FROM transactions t 
+      FROM transactions t
       LEFT JOIN users u ON t.nasabah_id = u.id
       LEFT JOIN drop_points dp ON t.drop_point_id = dp.id
       WHERE $typeClause
@@ -1794,7 +1700,6 @@ class DatabaseHelper {
     List<Map<String, dynamic>> result = [];
     for (var tx in txs) {
       if (tx['full_name'] == null) {
-        // Akun sudah dihapus, sembunyikan transaksi ini
         continue;
       }
       final items = await db.rawQuery(
@@ -1817,7 +1722,6 @@ class DatabaseHelper {
         }
       }
 
-      // Untuk drop_in: tampilkan lokasi drop point; pickup: alamat nasabah
       final bool isDropIn = tx['type']?.toString() == 'drop_in';
       final String alamat = isDropIn
           ? '${tx['drop_point_name'] ?? 'Drop Point'} — ${tx['drop_point_address'] ?? '-'}'
@@ -1840,34 +1744,38 @@ class DatabaseHelper {
     return result;
   }
 
-  // --- Penarikan Saldo & Tukar Barang Sembako ---
-
   Future<void> insertWithdrawal(
-      String nasabahId, int pointsDeducted, String method, String accountDetails) async {
+    String nasabahId,
+    int pointsDeducted,
+    String method,
+    String accountDetails,
+  ) async {
     final String newId = 'WD-${DateTime.now().millisecondsSinceEpoch}';
     final now = DateTime.now().toIso8601String();
-    
+
     if (kIsWeb) {
-       _webWithdrawals.add({
-         'id': newId,
-         'nasabah_id': nasabahId,
-         'points_deducted': pointsDeducted,
-         'method': method,
-         'account_details': accountDetails,
-         'status': 'pending',
-         'created_at': now,
-       });
-       // Potong poin langsung sebagai 'escrow' / tertahan
-       var userIndex = _webUsers.indexWhere((u) => u['id'] == nasabahId);
-       if (userIndex != -1) {
-         _webUsers[userIndex]['point_balance'] = ((_webUsers[userIndex]['point_balance'] as num?)?.toInt() ?? 0) - pointsDeducted;
-       }
-       return;
+      _webWithdrawals.add({
+        'id': newId,
+        'nasabah_id': nasabahId,
+        'points_deducted': pointsDeducted,
+        'method': method,
+        'account_details': accountDetails,
+        'status': 'pending',
+        'created_at': now,
+      });
+
+      var userIndex = _webUsers.indexWhere((u) => u['id'] == nasabahId);
+      if (userIndex != -1) {
+        _webUsers[userIndex]['point_balance'] =
+            ((_webUsers[userIndex]['point_balance'] as num?)?.toInt() ?? 0) -
+            pointsDeducted;
+      }
+      return;
     }
 
     final db = await instance.database;
     if (db == null) return;
-    
+
     await db.insert('withdrawals', {
       'id': newId,
       'nasabah_id': nasabahId,
@@ -1877,12 +1785,15 @@ class DatabaseHelper {
       'status': 'pending',
     });
 
-    // Potong poin langsung sebagai 'escrow' / tertahan
-    final user = await db.query('users', where: 'id = ?', whereArgs: [nasabahId]);
+    final user = await db.query(
+      'users',
+      where: 'id = ?',
+      whereArgs: [nasabahId],
+    );
     if (user.isNotEmpty) {
       int currentPoints = (user.first['point_balance'] as num?)?.toInt() ?? 0;
       await db.update(
-        'users', 
+        'users',
         {'point_balance': currentPoints - pointsDeducted},
         where: 'id = ?',
         whereArgs: [nasabahId],
@@ -1896,10 +1807,13 @@ class DatabaseHelper {
       if (status != null) {
         filtered = filtered.where((w) => w['status'] == status).toList();
       }
-      
+
       List<Map<String, dynamic>> result = [];
       for (var w in filtered) {
-        var user = _webUsers.firstWhere((u) => u['id'] == w['nasabah_id'], orElse: () => {});
+        var user = _webUsers.firstWhere(
+          (u) => u['id'] == w['nasabah_id'],
+          orElse: () => {},
+        );
         result.add({
           ...w,
           'full_name': user['full_name'] ?? 'Unknown',
@@ -1911,47 +1825,58 @@ class DatabaseHelper {
 
     final db = await instance.database;
     if (db == null) return [];
-    
+
     String query = '''
-      SELECT w.*, u.full_name, u.phone_number 
+      SELECT w.*, u.full_name, u.phone_number
       FROM withdrawals w
       LEFT JOIN users u ON w.nasabah_id = u.id
     ''';
     List<dynamic> args = [];
-    
+
     if (status != null) {
       query += ' WHERE w.status = ?';
       args.add(status);
     }
-    
+
     query += ' ORDER BY w.created_at DESC';
-    
+
     return await db.rawQuery(query, args);
   }
 
-  Future<bool> updateWithdrawalStatus(String id, String newStatus, {int? pointsToRefund, String? nasabahId, String? reason}) async {
+  Future<bool> updateWithdrawalStatus(
+    String id,
+    String newStatus, {
+    int? pointsToRefund,
+    String? nasabahId,
+    String? reason,
+  }) async {
     if (kIsWeb) {
       var index = _webWithdrawals.indexWhere((w) => w['id'] == id);
       if (index != -1) {
         _webWithdrawals[index]['status'] = newStatus;
         if (newStatus == 'rejected') {
           if (reason != null) {
-            _webWithdrawals[index]['account_details'] = '${_webWithdrawals[index]['account_details']} (Ditolak: $reason)';
+            _webWithdrawals[index]['account_details'] =
+                '${_webWithdrawals[index]['account_details']} (Ditolak: $reason)';
           }
           if (pointsToRefund != null && nasabahId != null) {
             var userIndex = _webUsers.indexWhere((u) => u['id'] == nasabahId);
             if (userIndex != -1) {
-               _webUsers[userIndex]['point_balance'] = ((_webUsers[userIndex]['point_balance'] as num?)?.toInt() ?? 0) + pointsToRefund;
+              _webUsers[userIndex]['point_balance'] =
+                  ((_webUsers[userIndex]['point_balance'] as num?)?.toInt() ??
+                      0) +
+                  pointsToRefund;
             }
           }
         }
+        return true;
       }
-      return true;
+      return false;
     }
 
     final db = await instance.database;
     if (db == null) return false;
-    
+
     await db.update(
       'withdrawals',
       {'status': newStatus},
@@ -1960,23 +1885,35 @@ class DatabaseHelper {
     );
     if (newStatus == 'rejected') {
       if (reason != null) {
-        final wd = await db.query('withdrawals', where: 'id = ?', whereArgs: [id]);
+        final wd = await db.query(
+          'withdrawals',
+          where: 'id = ?',
+          whereArgs: [id],
+        );
         if (wd.isNotEmpty) {
           await db.update(
             'withdrawals',
-            {'account_details': '${wd.first['account_details']} (Ditolak: $reason)'},
+            {
+              'account_details':
+                  '${wd.first['account_details']} (Ditolak: $reason)',
+            },
             where: 'id = ?',
             whereArgs: [id],
           );
         }
       }
-      
+
       if (pointsToRefund != null && nasabahId != null) {
-        final user = await db.query('users', where: 'id = ?', whereArgs: [nasabahId]);
+        final user = await db.query(
+          'users',
+          where: 'id = ?',
+          whereArgs: [nasabahId],
+        );
         if (user.isNotEmpty) {
-          int currentPoints = (user.first['point_balance'] as num?)?.toInt() ?? 0;
+          int currentPoints =
+              (user.first['point_balance'] as num?)?.toInt() ?? 0;
           await db.update(
-            'users', 
+            'users',
             {'point_balance': currentPoints + pointsToRefund},
             where: 'id = ?',
             whereArgs: [nasabahId],
@@ -1984,21 +1921,27 @@ class DatabaseHelper {
         }
       }
     }
-    
+
     return true;
   }
 
-  // --- Daftar Titipan Petugas ---
   Future<List<Map<String, dynamic>>> getTitipanKurir() async {
     if (kIsWeb) {
-      var filtered = _webWithdrawals.where((w) => 
-        w['status'] == 'approved' && 
-        w['account_details']?.toString().contains('(Titip Kurir)') == true
-      ).toList();
-      
+      var filtered = _webWithdrawals
+          .where(
+            (w) =>
+                w['status'] == 'approved' &&
+                w['account_details']?.toString().contains('(Titip Kurir)') ==
+                    true,
+          )
+          .toList();
+
       List<Map<String, dynamic>> result = [];
       for (var w in filtered) {
-        var user = _webUsers.firstWhere((u) => u['id'] == w['nasabah_id'], orElse: () => {});
+        var user = _webUsers.firstWhere(
+          (u) => u['id'] == w['nasabah_id'],
+          orElse: () => {},
+        );
         result.add({
           ...w,
           'full_name': user['full_name'] ?? 'Unknown',
@@ -2011,7 +1954,7 @@ class DatabaseHelper {
 
     final db = await instance.database;
     if (db == null) return [];
-    
+
     String query = '''
       SELECT w.*, u.full_name, u.phone_number, u.address as nasabah_address
       FROM withdrawals w
@@ -2019,7 +1962,7 @@ class DatabaseHelper {
       WHERE w.status = 'approved' AND w.account_details LIKE '%(Titip Kurir)%'
       ORDER BY w.created_at DESC
     ''';
-    
+
     return await db.rawQuery(query);
   }
 }

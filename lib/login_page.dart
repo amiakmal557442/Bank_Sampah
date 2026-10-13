@@ -21,7 +21,6 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
-  // Definisi Warna Sesuai Permintaan
   final Color _limeGreen = const Color(0xFF32CD32);
   final Color _oldGrassGreen = const Color(0xFF268b07);
 
@@ -43,19 +42,15 @@ class _LoginPageState extends State<LoginPage> {
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      // Coba login via API (XAMPP) terlebih dahulu, lalu fallback ke lokal
       Map<String, dynamic>? user;
       try {
         user = await ApiService.instance.login(email, password);
       } catch (e) {
-        // ignore: avoid_print
         print('[API Login Error]: $e');
         user = null;
       }
 
-      // Fallback ke SQLite lokal jika API tidak tersedia
       if (user == null) {
-        // ignore: avoid_print
         print('[Login Info]: Menggunakan fallback DatabaseHelper lokal');
         user = await DatabaseHelper.instance.login(email, password);
       }
@@ -70,7 +65,7 @@ class _LoginPageState extends State<LoginPage> {
           'module': 'Authentication',
           'action': 'Login ke dalam sistem',
           'ip_address': '127.0.0.1',
-          'status': 'BERHASIL'
+          'status': 'BERHASIL',
         });
         await SessionService.saveSession(user);
 
@@ -106,7 +101,7 @@ class _LoginPageState extends State<LoginPage> {
           'module': 'Authentication',
           'action': 'Percobaan login gagal',
           'ip_address': '127.0.0.1',
-          'status': 'GAGAL'
+          'status': 'GAGAL',
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -134,30 +129,24 @@ class _LoginPageState extends State<LoginPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // --- MULAI PERUBAHAN DI SINI ---
-                  // Logo / Header Icon (Diubah menjadi Tempat Sampah)
                   Container(
                     alignment: Alignment.center,
                     child: Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: _limeGreen.withValues(
-                          alpha: 0.2,
-                        ), // Warna latar hijau muda
+                        color: _limeGreen.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        Icons
-                            .delete_outline_rounded, // Ikon diubah dari lock ke delete
+                        Icons.delete_outline_rounded,
                         size: 64,
-                        color: _oldGrassGreen, // Warna ikon hijau tua
+                        color: _oldGrassGreen,
                       ),
                     ),
                   ),
-                  // --- SELESAI PERUBAHAN DI SINI ---
+
                   const SizedBox(height: 24),
 
-                  // Judul Halaman
                   const Text(
                     'Selamat Datang',
                     textAlign: TextAlign.center,
@@ -175,7 +164,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Input Email / Username
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -218,7 +206,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Input Password
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
@@ -275,25 +262,8 @@ class _LoginPageState extends State<LoginPage> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 8),
-
-                  // Lupa Password
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {},
-                      child: Text(
-                        'Lupa Password?',
-                        style: TextStyle(
-                          color: _oldGrassGreen,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
                   const SizedBox(height: 24),
 
-                  // Tombol Login dengan Gradasi Warna (Lime Green & Old Grass Green)
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -332,7 +302,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // --- PERBAIKAN: Opsi Menjadi Daftar User & Daftar Petugas ---
                   Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -344,7 +313,6 @@ class _LoginPageState extends State<LoginPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Tombol Daftar User
                           GestureDetector(
                             onTap: () {
                               Navigator.push(
@@ -366,7 +334,7 @@ class _LoginPageState extends State<LoginPage> {
                             '  |  ',
                             style: TextStyle(color: Colors.black38),
                           ),
-                          // Tombol Daftar Petugas Lapangan
+
                           GestureDetector(
                             onTap: () {
                               Navigator.push(
@@ -389,7 +357,15 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ],
                   ),
-                  // --- SELESAI PERUBAHAN ---
+                  const SizedBox(height: 32),
+
+                  const Center(
+                    child: Text(
+                      '© Muhammad Akmal Ahsan',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),

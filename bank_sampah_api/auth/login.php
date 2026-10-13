@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../jwt_helper.php';
 
 $input = json_decode(file_get_contents('php://input'), true);
 
@@ -11,23 +12,38 @@ if (empty($email) || empty($password)) {
     exit();
 }
 
-$hashed_pass = hash('sha256', $password);
-
-$stmt = $conn->prepare("SELECT * FROM users WHERE email = ? AND (password = ? OR password = ?)");
-$stmt->bind_param("sss", $email, $password, $hashed_pass);
+$stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
+$stmt->bind_param("s", $email);
 $stmt->execute();
 $result = $stmt->get_result();
 
 if ($row = $result->fetch_assoc()) {
-    unset($row['password']);
-    $row['point_balance'] = (int) $row['point_balance'];
-    $row['is_active'] = (int) ($row['is_active'] ?? 1);
+    if (password_verify($password, $row['password'])) {
 
-    echo json_encode([
-        'success' => true,
-        'message' => 'Login berhasil',
-        'data' => $row
-    ]);
+        $payload = [
+            'id' => $row['id'],
+            'role' => $row['role'],
+            'email' => $row['email'],
+            'exp' => time() + (86400 * 30)
+        ];
+        $token = JwtHelper::generateToken($payload);
+
+        unset($row['password']);
+        $row['point_balance'] = (int) $row['point_balance'];
+        $row['is_active'] = (int) ($row['is_active'] ?? 1);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Login berhasil',
+            'token' => $token,
+            'data' => $row
+        ]);
+    } else {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Email atau password salah'
+        ]);
+    }
 } else {
     echo json_encode([
         'success' => false,

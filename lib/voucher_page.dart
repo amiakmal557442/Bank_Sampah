@@ -3,7 +3,6 @@ import 'session_service.dart';
 import 'db_helper.dart';
 import 'api_service.dart';
 
-
 class VoucherItem {
   final String id;
   final String title;
@@ -121,10 +120,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
               ),
               title: const Text(
                 'Konfirmasi Penukaran',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18.0,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0),
               ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -181,12 +177,18 @@ class _VoucherScreenState extends State<VoucherScreen> {
                   ),
                   const SizedBox(height: 8.0),
                   RadioListTile<String>(
-                    title: const Text('Ambil di Kantor / Drop Point', style: TextStyle(fontSize: 13)),
+                    title: const Text(
+                      'Ambil di Kantor / Drop Point',
+                      style: TextStyle(fontSize: 13),
+                    ),
                     value: 'Ambil di Kantor',
                     groupValue: selectedMethod,
                     activeColor: const Color(0xFF268B07),
                     contentPadding: EdgeInsets.zero,
-                    visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                    visualDensity: const VisualDensity(
+                      horizontal: -4,
+                      vertical: -4,
+                    ),
                     onChanged: (value) {
                       setStateDialog(() {
                         selectedMethod = value!;
@@ -194,12 +196,18 @@ class _VoucherScreenState extends State<VoucherScreen> {
                     },
                   ),
                   RadioListTile<String>(
-                    title: const Text('Titip Kurir (Sekalian Jemput)', style: TextStyle(fontSize: 13)),
+                    title: const Text(
+                      'Titip Kurir (Sekalian Jemput)',
+                      style: TextStyle(fontSize: 13),
+                    ),
                     value: 'Titip Kurir',
                     groupValue: selectedMethod,
                     activeColor: const Color(0xFF268B07),
                     contentPadding: EdgeInsets.zero,
-                    visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                    visualDensity: const VisualDensity(
+                      horizontal: -4,
+                      vertical: -4,
+                    ),
                     onChanged: (value) {
                       setStateDialog(() {
                         selectedMethod = value!;
@@ -211,7 +219,10 @@ class _VoucherScreenState extends State<VoucherScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+                  child: const Text(
+                    'Batal',
+                    style: TextStyle(color: Colors.grey),
+                  ),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -225,19 +236,13 @@ class _VoucherScreenState extends State<VoucherScreen> {
                   onPressed: () async {
                     Navigator.of(context).pop();
 
-                    // 1. Jangan potong poin sekarang (sesuai request)
-                    // Poin hanya akan dipotong saat admin menyetujui penarikan
-                    // int newPoints = currentPoints - voucher.points;
-                    
-                    // 2. Buat Request di Database (tunggu konfirmasi admin)
-                    // Coba ke API dulu, jika gagal fallback ke local DB
                     String? error = await ApiService.instance.requestWithdrawal(
                       SessionService.userId,
                       voucher.points,
                       'tukar_barang',
                       '${voucher.title} ($selectedMethod)',
                     );
-                    
+
                     if (error != null) {
                       await DatabaseHelper.instance.insertWithdrawal(
                         SessionService.userId,
@@ -250,10 +255,11 @@ class _VoucherScreenState extends State<VoucherScreen> {
                     await SessionService.refresh();
 
                     if (mounted) {
-                      // Tidak perlu update currentPoints karena poin belum berubah
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Permintaan berhasil! Sedang diproses admin. Poin Anda belum terpotong.'),
+                          content: Text(
+                            'Permintaan berhasil! Sedang diproses admin. Poin Anda belum terpotong.',
+                          ),
                           backgroundColor: Color(0xFF268B07),
                           behavior: SnackBarBehavior.floating,
                         ),
@@ -304,7 +310,6 @@ class _VoucherScreenState extends State<VoucherScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Current Points Header
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20.0),
@@ -400,7 +405,6 @@ class _VoucherScreenState extends State<VoucherScreen> {
 
             const SizedBox(height: 20.0),
 
-            // Category Filter Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: SingleChildScrollView(
@@ -417,7 +421,6 @@ class _VoucherScreenState extends State<VoucherScreen> {
 
             const SizedBox(height: 16.0),
 
-            // Section Header
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
@@ -441,7 +444,6 @@ class _VoucherScreenState extends State<VoucherScreen> {
 
             const SizedBox(height: 12.0),
 
-            // Voucher List
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -507,7 +509,6 @@ class _VoucherScreenState extends State<VoucherScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Voucher Icon Box
             Container(
               width: 52,
               height: 52,
@@ -523,7 +524,6 @@ class _VoucherScreenState extends State<VoucherScreen> {
             ),
             const SizedBox(width: 14.0),
 
-            // Voucher Title & Point Cost
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -557,7 +557,6 @@ class _VoucherScreenState extends State<VoucherScreen> {
             ),
             const SizedBox(width: 8.0),
 
-            // Redeem Button
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: canAfford

@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../db.php';
 
-// Pastikan tabel audit_logs ada
 $conn->query("
     CREATE TABLE IF NOT EXISTS audit_logs (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -15,9 +14,29 @@ $conn->query("
     )
 ");
 
+require_once __DIR__ . '/../jwt_helper.php';
 $method = $_SERVER['REQUEST_METHOD'] ?? (isset($_SERVER['HTTP_METHOD']) ? $_SERVER['HTTP_METHOD'] : 'GET');
 
+if ($method !== 'OPTIONS') {
+    $token = JwtHelper::getBearerToken();
+    if (!$token) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit();
+    }
+    $decoded_token = JwtHelper::validateToken($token);
+    if (!$decoded_token) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit();
+    }
+}
+
 if ($method === 'GET') {
+    if ($decoded_token['role'] !== 'admin') {
+        echo json_encode(['success' => false, 'message' => 'Hanya admin yang bisa melihat audit log']);
+        exit();
+    }
     $modul = $_GET['modul'] ?? 'Semua Modul';
     $query = $_GET['query'] ?? '';
 
@@ -56,7 +75,7 @@ if ($method === 'GET') {
 
 } elseif ($method === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     $time = $input['time'] ?? '';
     $user_name = $input['user_name'] ?? '';
     $role = $input['role'] ?? '';
@@ -72,7 +91,7 @@ if ($method === 'GET') {
 
     $stmt = $conn->prepare("INSERT INTO audit_logs (time, user_name, role, module, action, ip_address, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
     $stmt->bind_param("sssssss", $time, $user_name, $role, $module, $action, $ip_address, $status);
-    
+
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'message' => 'Audit log berhasil disimpan', 'id' => $stmt->insert_id]);
     } else {

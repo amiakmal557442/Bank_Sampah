@@ -45,23 +45,20 @@ class _ChatAdminPageState extends State<ChatAdminPage> {
     final currentUserId = SessionService.userId;
     if (currentUserId.isEmpty) return;
 
-    final data = await ApiService.instance.getChatMessages(currentUserId, widget.adminId);
-    
-    // Convert API format to UI format
+    final data = await ApiService.instance.getChatMessages(
+      currentUserId,
+      widget.adminId,
+    );
+
     final List<Map<String, dynamic>> formatted = data.map((e) {
       bool isMe = e['sender_id'] == currentUserId;
-      // Extract time from created_at
+
       String rawDate = e['created_at'] ?? '';
       String timeStr = '';
       if (rawDate.length >= 16) {
-        // e.g. "2023-10-15 14:30:00" -> "14:30"
         timeStr = rawDate.substring(11, 16);
       }
-      return {
-        'isMe': isMe,
-        'text': e['message'] ?? '',
-        'time': timeStr,
-      };
+      return {'isMe': isMe, 'text': e['message'] ?? '', 'time': timeStr};
     }).toList();
 
     if (mounted) {
@@ -94,24 +91,25 @@ class _ChatAdminPageState extends State<ChatAdminPage> {
     final currentUserId = SessionService.userId;
     if (currentUserId.isEmpty) return;
 
-    // Optimistic UI update
     setState(() {
       _messages.add({
         'isMe': true,
         'text': text,
-        'time': '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+        'time':
+            '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}',
       });
     });
     _messageController.clear();
     _scrollToBottom();
 
-    // Call API
-    await ApiService.instance.sendChatMessage(currentUserId, widget.adminId, text);
-    // Refresh to get actual data
+    await ApiService.instance.sendChatMessage(
+      currentUserId,
+      widget.adminId,
+      text,
+    );
+
     _fetchMessages();
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -140,75 +138,77 @@ class _ChatAdminPageState extends State<ChatAdminPage> {
       body: Column(
         children: [
           Expanded(
-            child: _isLoading 
-                ? const Center(child: CircularProgressIndicator(color: primaryGreen))
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: primaryGreen),
+                  )
                 : ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
-                final msg = _messages[index];
-                final isMe = msg['isMe'] as bool;
-                return Align(
-                  alignment: isMe
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.75,
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isMe ? primaryGreen : Colors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(16),
-                        topRight: const Radius.circular(16),
-                        bottomLeft: Radius.circular(isMe ? 16 : 4),
-                        bottomRight: Radius.circular(isMe ? 4 : 16),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: isMe
-                          ? CrossAxisAlignment.end
-                          : CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          msg['text'],
-                          style: TextStyle(
-                            color: isMe
-                                ? Colors.white
-                                : const Color(0xFF334155),
-                            fontSize: 14,
-                            height: 1.4,
+                      final msg = _messages[index];
+                      final isMe = msg['isMe'] as bool;
+                      return Align(
+                        alignment: isMe
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width * 0.75,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isMe ? primaryGreen : Colors.white,
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(16),
+                              topRight: const Radius.circular(16),
+                              bottomLeft: Radius.circular(isMe ? 16 : 4),
+                              bottomRight: Radius.circular(isMe ? 4 : 16),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: isMe
+                                ? CrossAxisAlignment.end
+                                : CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                msg['text'],
+                                style: TextStyle(
+                                  color: isMe
+                                      ? Colors.white
+                                      : const Color(0xFF334155),
+                                  fontSize: 14,
+                                  height: 1.4,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                msg['time'],
+                                style: TextStyle(
+                                  color: isMe
+                                      ? Colors.white70
+                                      : const Color(0xFF94A3B8),
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          msg['time'],
-                          style: TextStyle(
-                            color: isMe
-                                ? Colors.white70
-                                : const Color(0xFF94A3B8),
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
           Container(
             padding: const EdgeInsets.all(16),

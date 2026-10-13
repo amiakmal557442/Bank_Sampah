@@ -56,31 +56,24 @@ class DropInMandiriScreen extends StatefulWidget {
 }
 
 class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
-  // Navigation State (0: DropPoint, 1: DetailSampah, 2: FotoSampah, 3: Konfirmasi, 4: Sukses)
   int _currentStep = 0;
 
-  // Primary Theme Colors
   final Color _primaryGreen = const Color(0xFF268B07);
   final Color _lightGreenBg = const Color(0xFFE8F5E9);
 
-  // Map Controller
   final MapController _mapController = MapController();
   LatLng? _currentPosition;
   final LatLng _defaultCenter = const LatLng(-4.0150, 119.6290);
 
-  // Search controller for Drop Points
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  // Step 1 Data: Drop Points (loaded from DB)
   int _selectedDropPointIndex = 0;
   List<DropPoint> _dropPoints = [];
 
-  // Step 2 Data: Waste Items (loaded from DB)
   List<WasteCategory> _wasteCategories = [];
   bool _isLoadingData = true;
 
-  // Step 3 Data: Photos
   final List<XFile> _uploadedPhotos = [];
   final ImagePicker _picker = ImagePicker();
 
@@ -231,7 +224,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) return;
     }
-    
+
     if (permission == LocationPermission.deniedForever) return;
 
     final position = await Geolocator.getCurrentPosition();
@@ -256,8 +249,10 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
               hours: 'Buka ${m['operating_hours'] ?? '08:00-17:00'}',
               distance: '~-',
               categories: ['Semua Jenis'],
-              latitude: double.tryParse(m['latitude']?.toString() ?? '') ?? -4.0150,
-              longitude: double.tryParse(m['longitude']?.toString() ?? '') ?? 119.6290,
+              latitude:
+                  double.tryParse(m['latitude']?.toString() ?? '') ?? -4.0150,
+              longitude:
+                  double.tryParse(m['longitude']?.toString() ?? '') ?? 119.6290,
             ),
           )
           .toList();
@@ -290,10 +285,8 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header Top Bar (Hide back button on Success screen)
             if (_currentStep < 3) _buildHeader(),
 
-            // Screen Content Body
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
@@ -304,7 +297,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
               ),
             ),
 
-            // Bottom Fixed Action Bar
             if (_currentStep < 3) _buildBottomActionBar(),
           ],
         ),
@@ -353,7 +345,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          // Step Progress Bar (3 Segments)
+
           Row(
             children: List.generate(3, (index) {
               final bool isActive = index <= _currentStep;
@@ -403,7 +395,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Search Input Bar
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
@@ -423,13 +414,15 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         ),
         const SizedBox(height: 16),
 
-        // Interactive Flutter Map
         Container(
           width: double.infinity,
           height: 180,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _primaryGreen.withOpacity(0.4), width: 1.5),
+            border: Border.all(
+              color: _primaryGreen.withOpacity(0.4),
+              width: 1.5,
+            ),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(14),
@@ -453,11 +446,15 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
                         height: 40,
                         child: GestureDetector(
                           onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(dp.name)),
-                            );
+                            ScaffoldMessenger.of(
+                              context,
+                            ).showSnackBar(SnackBar(content: Text(dp.name)));
                           },
-                          child: const Icon(Icons.location_on, color: Colors.green, size: 40),
+                          child: const Icon(
+                            Icons.location_on,
+                            color: Colors.green,
+                            size: 40,
+                          ),
                         ),
                       );
                     }),
@@ -466,7 +463,11 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
                         point: _currentPosition!,
                         width: 40,
                         height: 40,
-                        child: const Icon(Icons.my_location, color: Colors.blue, size: 30),
+                        child: const Icon(
+                          Icons.my_location,
+                          color: Colors.blue,
+                          size: 30,
+                        ),
                       ),
                   ],
                 ),
@@ -476,7 +477,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         ),
         const SizedBox(height: 20),
 
-        // List Header
         const Text(
           'DROP POINT TERDEKAT',
           style: TextStyle(
@@ -488,7 +488,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         ),
         const SizedBox(height: 10),
 
-        // Drop Points List
         ...List.generate(filteredDropPoints.length, (index) {
           final dp = filteredDropPoints[index];
           final originalIndex = _dropPoints.indexOf(dp);
@@ -614,7 +613,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         ),
         const SizedBox(height: 20),
 
-        // Upload Drop Box Area
         GestureDetector(
           onTap: _showImageSourceDialog,
           child: Container(
@@ -653,7 +651,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         ),
         const SizedBox(height: 16),
 
-        // Thumbnail Preview List
         Row(
           children: [
             ...List.generate(_uploadedPhotos.length, (index) {
@@ -668,7 +665,10 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
                       color: _lightGreenBg,
                       borderRadius: BorderRadius.circular(12),
                       image: DecorationImage(
-                        image: kIsWeb ? NetworkImage(_uploadedPhotos[index].path) : FileImage(File(_uploadedPhotos[index].path)) as ImageProvider,
+                        image: kIsWeb
+                            ? NetworkImage(_uploadedPhotos[index].path)
+                            : FileImage(File(_uploadedPhotos[index].path))
+                                  as ImageProvider,
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -700,7 +700,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
               );
             }),
 
-            // Add (+) Button
             GestureDetector(
               onTap: _showImageSourceDialog,
               child: Container(
@@ -721,7 +720,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         ),
         const SizedBox(height: 24),
 
-        // Tips Section Card
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -773,7 +771,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
 
     return Column(
       children: [
-        // Drop Point Card
         _buildConfirmationCard(
           title: 'DROP POINT',
           onEdit: () => setState(() => _currentStep = 0),
@@ -798,7 +795,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         ),
         const SizedBox(height: 14),
 
-        // Foto Sampah Card
         _buildConfirmationCard(
           title: 'FOTO SAMPAH',
           onEdit: () => setState(() => _currentStep = 1),
@@ -822,7 +818,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         ),
         const SizedBox(height: 20),
 
-        // Info Banner
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -904,7 +899,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
     return Column(
       children: [
         const SizedBox(height: 20),
-        // Success Green Check Icon
+
         Container(
           width: 64,
           height: 64,
@@ -932,7 +927,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         ),
         const SizedBox(height: 24),
 
-        // Simulated Barcode / QR Code Container
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),
@@ -943,7 +937,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
           ),
           child: Column(
             children: [
-              // Stylized Barcode Graphic
               Container(
                 height: 100,
                 width: double.infinity,
@@ -958,7 +951,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         ),
         const SizedBox(height: 12),
 
-        // Code Box Badge
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           decoration: BoxDecoration(
@@ -977,7 +969,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         ),
         const SizedBox(height: 24),
 
-        // Next Steps Info Box
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -1044,7 +1035,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         ),
         const SizedBox(height: 16),
 
-        // Map Lokasi Drop Point
         Container(
           width: double.infinity,
           height: 140,
@@ -1057,18 +1047,25 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
             child: IgnorePointer(
               child: FlutterMap(
                 options: MapOptions(
-                  initialCenter: LatLng(selectedDp.latitude, selectedDp.longitude),
+                  initialCenter: LatLng(
+                    selectedDp.latitude,
+                    selectedDp.longitude,
+                  ),
                   initialZoom: 15.0,
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.example.bank_sampah',
                   ),
                   MarkerLayer(
                     markers: [
                       Marker(
-                        point: LatLng(selectedDp.latitude, selectedDp.longitude),
+                        point: LatLng(
+                          selectedDp.latitude,
+                          selectedDp.longitude,
+                        ),
                         width: 40,
                         height: 40,
                         child: const Icon(
@@ -1086,7 +1083,6 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
         ),
         const SizedBox(height: 30),
 
-        // Action Buttons
         OutlinedButton(
           onPressed: () {
             _showToast('Membuka status transaksi...');

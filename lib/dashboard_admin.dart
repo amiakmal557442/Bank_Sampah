@@ -21,7 +21,6 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  // Palet Warna Utama
   final Color oldGrassGreen = const Color(0xFF268B07);
   final Color limeGreen = const Color(0xFF32CD32);
   final Color baseBlack = const Color(0xFF000000);
@@ -51,11 +50,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               );
             }
 
-            if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+            if (snapshot.hasError ||
+                !snapshot.hasData ||
+                snapshot.data!.isEmpty) {
               return const SizedBox(
                 height: 200,
                 child: Center(
-                  child: Text('Tidak ada pengguna yang tersedia untuk di chat saat ini.'),
+                  child: Text(
+                    'Tidak ada pengguna yang tersedia untuk di chat saat ini.',
+                  ),
                 ),
               );
             }
@@ -88,7 +91,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             backgroundColor: Color(0xFF16A34A),
                             child: Icon(Icons.person, color: Colors.white),
                           ),
-                          title: Text(userName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          title: Text(
+                            userName,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           subtitle: Text('Role: $role'),
                           trailing: unreadCount > 0
                               ? Container(
@@ -108,12 +114,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 )
                               : null,
                           onTap: () {
-                            Navigator.pop(context); // close sheet
+                            Navigator.pop(context);
                             Navigator.push(
                               this.context,
                               MaterialPageRoute(
                                 builder: (_) => ChatAdminPage(
-                                  adminId: userId, // from Admin perspective, the other person is adminId variable in ChatAdminPage
+                                  adminId: userId,
                                   adminName: userName,
                                 ),
                               ),
@@ -153,7 +159,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             child: Container(
               constraints: BoxConstraints(
                 maxWidth: 1200,
-                maxHeight: constraints.maxHeight - 48, // account for margin
+                maxHeight: constraints.maxHeight - 48,
               ),
               margin: const EdgeInsets.all(24),
               decoration: BoxDecoration(
@@ -173,7 +179,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // ==================== SIDEBAR KIRI ====================
                     SizedBox(
                       width: 260,
                       child: DecoratedBox(
@@ -184,7 +189,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         ),
                         child: Column(
                           children: [
-                            // 1. Logo (tetap di atas)
                             Padding(
                               padding: const EdgeInsets.all(24.0),
                               child: Row(
@@ -215,7 +219,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ),
                             const SizedBox(height: 8),
 
-                            // 2. Menu (scrollable area)
                             Expanded(
                               child: ListView(
                                 padding: EdgeInsets.zero,
@@ -271,7 +274,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               ),
                             ),
 
-                            // 3. Profil Bawah (tetap di bawah)
                             Container(
                               decoration: BoxDecoration(
                                 border: Border(
@@ -283,14 +285,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 children: [
                                   Builder(
                                     builder: (context) {
-                                      final picUrl = ApiService.getProfileImageUrl(SessionService.profilePicture);
+                                      final picUrl =
+                                          ApiService.getProfileImageUrl(
+                                            SessionService.profilePicture,
+                                          );
                                       Widget initialAvatar = CircleAvatar(
                                         backgroundColor: oldGrassGreen,
                                         radius: 20,
                                         child: Text(
                                           adminName
                                               .split(' ')
-                                              .map((e) => e.isNotEmpty ? e[0] : '')
+                                              .map(
+                                                (e) => e.isNotEmpty ? e[0] : '',
+                                              )
                                               .take(2)
                                               .join(),
                                           style: TextStyle(
@@ -304,11 +311,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                         return CircleAvatar(
                                           radius: 20,
                                           backgroundColor: Colors.transparent,
-                                          backgroundImage: NetworkImage(picUrl, headers: const {'ngrok-skip-browser-warning': 'true'}),
+                                          backgroundImage: NetworkImage(
+                                            picUrl,
+                                            headers: const {
+                                              'ngrok-skip-browser-warning':
+                                                  'true',
+                                            },
+                                          ),
                                         );
                                       }
                                       return initialAvatar;
-                                    }
+                                    },
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -359,7 +372,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                           Navigator.pushAndRemoveUntil(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (ctx) => const LoginPage(),
+                                              builder: (ctx) =>
+                                                  const LoginPage(),
                                             ),
                                             (route) => false,
                                           );
@@ -383,7 +397,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ),
                     ),
 
-                    // ==================== KONTEN UTAMA KANAN ====================
                     Expanded(
                       child: _selectedMenuIndex == 1
                           ? const MasterDataScreen()
@@ -404,7 +417,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Header Section
                                   Row(
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
@@ -465,7 +477,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                                   const SizedBox(height: 40),
 
-                                  // Grid Cards (2x2)
                                   Row(
                                     children: [
                                       Expanded(
@@ -515,7 +526,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // Widget untuk Item Menu Sidebar
   Widget _buildMenuItem(IconData icon, String title, {required int index}) {
     final bool isActive = _selectedMenuIndex == index;
     return InkWell(
@@ -530,7 +540,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             : Colors.transparent,
         child: Row(
           children: [
-            // Indikator aktif (Garis hijau di kiri)
             Container(
               width: 4,
               height: 48,
@@ -553,18 +562,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // Widget untuk Kartu Hak Akses Administrator
   Widget _buildPrivilegeCard(IconData icon, String title) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: limeGreen.withValues(
-          alpha: 0.05,
-        ), // Latar belakang hijau sangat tipis
+        color: limeGreen.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: limeGreen.withValues(alpha: 0.2), // Border hijau tipis
-        ),
+        border: Border.all(color: limeGreen.withValues(alpha: 0.2)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

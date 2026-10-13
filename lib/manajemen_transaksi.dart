@@ -4,18 +4,6 @@ import 'api_service.dart';
 import 'transaction_service.dart';
 import 'widgets/image_viewer_dialog.dart';
 
-// ============================================================================
-// Halaman Manajemen Transaksi — Admin Dashboard (Desktop/Web)
-// Berdasarkan SRS 3.3.2 Manajemen Transaksi:
-//   FR-AD-04 — Approval/verifikasi transaksi setor sampah dari pengguna
-//   FR-AD-05 — Kelola penarikan saldo/konversi poin: approval, riwayat,
-//              dan deteksi anomali
-//
-// RBAC: halaman ini bisa diakses Admin DAN Staf Kantor (berbeda dengan
-// Master Data yang admin-only) — sesuai peran Staf Kantor di SRS 2.2:
-// "Verifikasi transaksi, kelola penjualan sampah ke pengepul/industri".
-// ============================================================================
-
 const Color primaryGreen = Color(0xFF268B07);
 const Color limeGreen = Color(0xFF32CD32);
 const Color pageBackground = Color(0xFFF5F6F8);
@@ -27,15 +15,11 @@ const Color secondaryDarkText = Color(0xFF334155);
 const Color warningAmber = Color(0xFFB38600);
 const Color warningBg = Color(0xFFFFF8E1);
 
-// --------------------------------------------------------------------------
-// MODELS
-// --------------------------------------------------------------------------
-
 enum SetorStatus { menunggu, terverifikasi, ditolak }
 
 class SetorTransaksiModel {
   final String userName;
-  final String jenis; // Drop-in / Jemput
+  final String jenis;
   final String kategori;
   final double berat;
   final int estimasiPoin;
@@ -81,7 +65,6 @@ class PenarikanModel {
   });
 }
 
-// Sample data
 final List<SetorTransaksiModel> sampleSetor = [
   SetorTransaksiModel(
     userName: 'Budi Santoso',
@@ -147,11 +130,6 @@ final List<PenarikanModel> samplePenarikan = [
   ),
 ];
 
-
-// --------------------------------------------------------------------------
-// MAIN SCREEN
-// --------------------------------------------------------------------------
-
 class ManajemenTransaksiScreen extends StatefulWidget {
   const ManajemenTransaksiScreen({super.key});
 
@@ -202,75 +180,79 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
       wdData = await ApiService.instance.fetchWithdrawals();
       for (var w in wdData) {
         PenarikanStatus st = PenarikanStatus.menunggu;
-        if (w['status'] == 'approved') st = PenarikanStatus.selesai;
+        if (w['status'] == 'approved' || w['status'] == 'selesai')
+          st = PenarikanStatus.selesai;
         if (w['status'] == 'rejected') st = PenarikanStatus.ditolak;
-        
-        wds.add(PenarikanModel(
-          id: w['id'].toString(),
-          userName: w['full_name'] ?? w['nasabah_name'] ?? 'Unknown',
-          nasabahId: w['nasabah_id']?.toString() ?? '',
-          tujuan: w['account_details'] ?? w['method'] ?? 'Transfer',
-          poin: (w['points_deducted'] ?? 0).toInt(),
-          nominal: (w['points_deducted'] ?? 0) * 10, // Assuming 1 point = 10 Rp
-          waktu: w['created_at']?.toString().substring(0, 16) ?? '',
-          status: st,
-        ));
+
+        wds.add(
+          PenarikanModel(
+            id: w['id'].toString(),
+            userName: w['full_name'] ?? w['nasabah_name'] ?? 'Unknown',
+            nasabahId: w['nasabah_id']?.toString() ?? '',
+            tujuan: w['account_details'] ?? w['method'] ?? 'Transfer',
+            poin: (w['points_deducted'] ?? 0).toInt(),
+            nominal: (w['points_deducted'] ?? 0) * 10,
+            waktu: w['created_at']?.toString().substring(0, 16) ?? '',
+            status: st,
+          ),
+        );
       }
     } catch (_) {
       txs = [];
     }
-    // Jika API gagal/kosong, fallback ke database lokal
+
     if (txs.isEmpty) {
       txs = await DatabaseHelper.instance.getAllTransactions();
     }
-    
-    // Fallback Penarikan (Withdrawals) dari local DB
+
     if (wds.isEmpty) {
       final localWds = await DatabaseHelper.instance.getWithdrawals();
       for (var w in localWds) {
         PenarikanStatus st = PenarikanStatus.menunggu;
-        if (w['status'] == 'approved') st = PenarikanStatus.selesai;
+        if (w['status'] == 'approved' || w['status'] == 'selesai')
+          st = PenarikanStatus.selesai;
         if (w['status'] == 'rejected') st = PenarikanStatus.ditolak;
-        
-        wds.add(PenarikanModel(
-          id: w['id'].toString(),
-          userName: w['full_name'] ?? w['nasabah_name'] ?? 'Unknown',
-          nasabahId: w['nasabah_id']?.toString() ?? '',
-          tujuan: w['account_details'] ?? w['method'] ?? 'Transfer',
-          poin: (w['points_deducted'] ?? 0).toInt(),
-          nominal: (w['points_deducted'] ?? 0) * 10,
-          waktu: w['created_at']?.toString().substring(0, 16) ?? '',
-          status: st,
-        ));
+
+        wds.add(
+          PenarikanModel(
+            id: w['id'].toString(),
+            userName: w['full_name'] ?? w['nasabah_name'] ?? 'Unknown',
+            nasabahId: w['nasabah_id']?.toString() ?? '',
+            tujuan: w['account_details'] ?? w['method'] ?? 'Transfer',
+            poin: (w['points_deducted'] ?? 0).toInt(),
+            nominal: (w['points_deducted'] ?? 0) * 10,
+            waktu: w['created_at']?.toString().substring(0, 16) ?? '',
+            status: st,
+          ),
+        );
       }
     }
 
     if (!mounted) return;
-    
-    // Load titipan directly from loaded withdrawals (API + Local)
+
     List<Map<String, dynamic>> titipan = [];
-    
-    // Process API withdrawals
+
     if (wdData != null) {
       for (var w in wdData) {
-        if (w['status'] == 'approved' && w['account_details'] != null && w['account_details'].toString().contains('(Titip Kurir)')) {
-           titipan.add({
-             'id': w['id'],
-             'full_name': w['nasabah_name'] ?? w['full_name'] ?? 'Nasabah',
-             'phone_number': w['phone_number'] ?? '-',
-             'nasabah_address': w['nasabah_address'] ?? w['address'] ?? '-',
-             'account_details': w['account_details'],
-           });
+        if (w['status'] == 'approved' &&
+            w['account_details'] != null &&
+            w['account_details'].toString().contains('(Titip Kurir)')) {
+          titipan.add({
+            'id': w['id'],
+            'full_name': w['nasabah_name'] ?? w['full_name'] ?? 'Nasabah',
+            'phone_number': w['phone_number'] ?? '-',
+            'nasabah_address': w['nasabah_address'] ?? w['address'] ?? '-',
+            'account_details': w['account_details'],
+          });
         }
       }
     }
-    
-    // Process Local withdrawals
+
     if (titipan.isEmpty) {
-       final localTitipan = await DatabaseHelper.instance.getTitipanKurir();
-       titipan.addAll(localTitipan);
+      final localTitipan = await DatabaseHelper.instance.getTitipanKurir();
+      titipan.addAll(localTitipan);
     }
-    
+
     setState(() {
       _dbTransactions = txs;
       _dbWithdrawals = wds;
@@ -291,8 +273,9 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
   ) async {
     final String nasabahName =
         tx['nasabah_name'] ?? tx['full_name'] ?? 'Nasabah';
-    final String tipeStr =
-        tx['type'] == 'drop_in' ? 'Drop-in Mandiri' : 'Penjemputan';
+    final String tipeStr = tx['type'] == 'drop_in'
+        ? 'Drop-in Mandiri'
+        : 'Penjemputan';
     String rawDate = tx['pickup_date'] ?? '';
     if (rawDate.isEmpty || rawDate.startsWith('0000')) {
       rawDate = tx['created_at'] ?? '';
@@ -377,11 +360,15 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                     height: 1.4,
                   ),
                 ),
-                if (tx['photo_evidence'] != null && tx['photo_evidence'].toString().isNotEmpty) ...[
+                if (tx['photo_evidence'] != null &&
+                    tx['photo_evidence'].toString().isNotEmpty) ...[
                   const SizedBox(height: 16),
                   OutlinedButton.icon(
                     onPressed: () {
-                      ImageViewerDialog.show(context, tx['photo_evidence'].toString());
+                      ImageViewerDialog.show(
+                        context,
+                        tx['photo_evidence'].toString(),
+                      );
                     },
                     icon: const Icon(Icons.photo_library, size: 18),
                     label: const Text('Lihat Foto Bukti'),
@@ -393,17 +380,14 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                       ),
                     ),
                   ),
-                ]
+                ],
               ],
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text(
-                'Batal',
-                style: TextStyle(color: subtleText),
-              ),
+              child: const Text('Batal', style: TextStyle(color: subtleText)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -447,10 +431,6 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
       },
     );
   }
-
-  // ------------------------------------------------------------------------
-  // HEADER
-  // ------------------------------------------------------------------------
 
   Widget _buildHeader() {
     return Padding(
@@ -544,10 +524,6 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
     );
   }
 
-  // ------------------------------------------------------------------------
-  // SHARED HELPERS
-  // ------------------------------------------------------------------------
-
   Widget _tableContainer({required List<Widget> children}) {
     return Container(
       margin: const EdgeInsets.fromLTRB(28, 16, 28, 24),
@@ -639,10 +615,6 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
     );
   }
 
-  // ------------------------------------------------------------------------
-  // TAB 1: APPROVAL SETOR (FR-AD-04)
-  // ------------------------------------------------------------------------
-
   String _setorStatusLabel(SetorStatus s) {
     switch (s) {
       case SetorStatus.menunggu:
@@ -704,8 +676,7 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                   .toString()
                   .trim()
                   .toLowerCase();
-              // Status ENUM valid di MySQL: menunggu, dikonfirmasi,
-              // menuju_lokasi, tiba, selesai, dibatalkan
+
               final statusEnum = statusStr == 'menunggu'
                   ? SetorStatus.menunggu
                   : (statusStr == 'dikonfirmasi' ||
@@ -874,7 +845,6 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                                   'Tolak',
                                   primary: false,
                                   onTap: () async {
-                                    // 'dibatalkan' adalah nilai ENUM valid di MySQL
                                     const newStatus = 'dibatalkan';
                                     await DatabaseHelper.instance
                                         .updateTransactionStatus(
@@ -910,10 +880,6 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
       ),
     );
   }
-
-  // ------------------------------------------------------------------------
-  // TAB 2: PENARIKAN SALDO (FR-AD-05) — dgn deteksi anomali
-  // ------------------------------------------------------------------------
 
   String _penarikanStatusLabel(PenarikanStatus s) {
     switch (s) {
@@ -952,246 +918,333 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
                 ['User', 'Tujuan', 'Nominal', 'Waktu', 'Status', 'Aksi'],
                 [2, 2, 2, 2, 2, 2],
               ),
-            if (_dbWithdrawals.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(20),
-                child: Center(child: Text('Belum ada penarikan saldo')),
-              )
-            else
-              ..._dbWithdrawals.map(
-                (p) => Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: p.isAnomali
-                        ? warningBg.withValues(alpha: 0.35)
-                        : null,
-                    border: const Border(
-                      bottom: BorderSide(color: borderColor, width: 0.5),
+              if (_dbWithdrawals.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Center(child: Text('Belum ada penarikan saldo')),
+                )
+              else
+                ..._dbWithdrawals.map(
+                  (p) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
                     ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: Row(
-                              children: [
-                                if (p.isAnomali)
-                                  const Padding(
-                                    padding: EdgeInsets.only(right: 6),
-                                    child: Icon(
-                                      Icons.warning_amber_rounded,
-                                      size: 15,
-                                      color: warningAmber,
+                    decoration: BoxDecoration(
+                      color: p.isAnomali
+                          ? warningBg.withValues(alpha: 0.35)
+                          : null,
+                      border: const Border(
+                        bottom: BorderSide(color: borderColor, width: 0.5),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: Row(
+                                children: [
+                                  if (p.isAnomali)
+                                    const Padding(
+                                      padding: EdgeInsets.only(right: 6),
+                                      child: Icon(
+                                        Icons.warning_amber_rounded,
+                                        size: 15,
+                                        color: warningAmber,
+                                      ),
+                                    ),
+                                  Text(
+                                    p.userName,
+                                    style: const TextStyle(
+                                      fontFamily: 'PlusJakartaSans',
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: darkText,
                                     ),
                                   ),
-                                Text(
-                                  p.userName,
-                                  style: const TextStyle(
-                                    fontFamily: 'PlusJakartaSans',
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: darkText,
-                                  ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                p.tujuan,
+                                style: const TextStyle(
+                                  fontFamily: 'PlusJakartaSans',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: subtleText,
                                 ),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              p.tujuan,
-                              style: const TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: subtleText,
                               ),
                             ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              'Rp ${p.nominal.toStringAsFixed(0)}',
-                              style: TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: p.isAnomali ? warningAmber : darkText,
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'Rp ${p.nominal.toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  fontFamily: 'PlusJakartaSans',
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: p.isAnomali ? warningAmber : darkText,
+                                ),
                               ),
                             ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              p.waktu,
-                              style: const TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 11,
-                                fontWeight: FontWeight.w400,
-                                color: mutedText,
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                p.waktu,
+                                style: const TextStyle(
+                                  fontFamily: 'PlusJakartaSans',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w400,
+                                  color: mutedText,
+                                ),
                               ),
                             ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: _pill(
-                              _penarikanStatusLabel(p.status),
-                              _penarikanStatusColor(p.status),
+                            Expanded(
+                              flex: 2,
+                              child: _pill(
+                                _penarikanStatusLabel(p.status),
+                                _penarikanStatusColor(p.status),
+                              ),
                             ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: p.status == PenarikanStatus.menunggu
-                                ? Row(
-                                    children: [
-                                      _actionButton(
-                                        p.isAnomali ? 'Tinjau' : 'Setujui',
-                                        onTap: () async {
-                                          if (p.isAnomali) {
-                                            _showTinjauanAnomaliDialog(p);
-                                          } else {
+                            Expanded(
+                              flex: 2,
+                              child: p.status == PenarikanStatus.menunggu
+                                  ? Row(
+                                      children: [
+                                        _actionButton(
+                                          p.isAnomali ? 'Tinjau' : 'Setujui',
+                                          onTap: () async {
+                                            if (p.isAnomali) {
+                                              _showTinjauanAnomaliDialog(p);
+                                            } else {
+                                              String? error;
+                                              try {
+                                                error = await ApiService
+                                                    .instance
+                                                    .updateWithdrawalStatus(
+                                                      p.id,
+                                                      'approved',
+                                                    );
+                                              } catch (e) {
+                                                error =
+                                                    'Terjadi kesalahan koneksi';
+                                              }
+                                              if (error == null) {
+                                                await DatabaseHelper.instance
+                                                    .updateWithdrawalStatus(
+                                                      p.id,
+                                                      'approved',
+                                                    );
+                                                setState(() {
+                                                  p.status =
+                                                      PenarikanStatus.selesai;
+                                                });
+                                                await _loadTransactions();
+                                                if (mounted) {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                        'Penarikan saldo disetujui',
+                                                      ),
+                                                      backgroundColor:
+                                                          primaryGreen,
+                                                    ),
+                                                  );
+                                                }
+                                              } else {
+                                                bool localSuccess =
+                                                    await DatabaseHelper
+                                                        .instance
+                                                        .updateWithdrawalStatus(
+                                                          p.id,
+                                                          'approved',
+                                                        );
+                                                if (localSuccess &&
+                                                    (error ==
+                                                            'Terjadi kesalahan koneksi' ||
+                                                        error == 'API error')) {
+                                                  setState(() {
+                                                    p.status =
+                                                        PenarikanStatus.selesai;
+                                                  });
+                                                  if (mounted) {
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text(
+                                                          'Penarikan saldo disetujui (mode offline)',
+                                                        ),
+                                                        backgroundColor:
+                                                            primaryGreen,
+                                                      ),
+                                                    );
+                                                  }
+                                                } else {
+                                                  if (mounted) {
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(error),
+                                                        backgroundColor:
+                                                            Colors.red,
+                                                      ),
+                                                    );
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          },
+                                        ),
+                                        const SizedBox(width: 6),
+                                        _actionButton(
+                                          'Tolak',
+                                          primary: false,
+                                          onTap: () async {
                                             String? error;
                                             try {
-                                              error = await ApiService.instance.updateWithdrawalStatus(p.id, 'approved');
+                                              error = await ApiService.instance
+                                                  .updateWithdrawalStatus(
+                                                    p.id,
+                                                    'rejected',
+                                                    reason: 'Barang habis',
+                                                  );
                                             } catch (e) {
-                                              error = 'API error';
-                                            }
-                                            if (error != null) {
-                                              bool localSuccess = await DatabaseHelper.instance.updateWithdrawalStatus(p.id, 'approved');
-                                              if (localSuccess) error = null;
-                                            } else {
-                                              // Always sync local DB if API succeeds
-                                              await DatabaseHelper.instance.updateWithdrawalStatus(p.id, 'approved');
+                                              error =
+                                                  'Terjadi kesalahan koneksi';
                                             }
                                             if (error == null) {
+                                              await DatabaseHelper.instance
+                                                  .updateWithdrawalStatus(
+                                                    p.id,
+                                                    'rejected',
+                                                    pointsToRefund: p.poin,
+                                                    nasabahId: p.nasabahId,
+                                                    reason: 'Barang habis',
+                                                  );
                                               setState(() {
                                                 p.status =
-                                                    PenarikanStatus.selesai;
+                                                    PenarikanStatus.ditolak;
                                               });
-                                              // Refresh to update Daftar Titipan tab
-                                              _loadTransactions();
+                                              await _loadTransactions();
                                               if (mounted) {
                                                 ScaffoldMessenger.of(
                                                   context,
                                                 ).showSnackBar(
                                                   const SnackBar(
                                                     content: Text(
-                                                      'Penarikan saldo disetujui',
+                                                      'Penarikan ditolak',
                                                     ),
-                                                    backgroundColor: primaryGreen,
+                                                    backgroundColor: Colors.red,
                                                   ),
                                                 );
                                               }
                                             } else {
-                                              if (mounted) {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(content: Text(error), backgroundColor: Colors.red),
-                                                );
+                                              bool localSuccess =
+                                                  await DatabaseHelper.instance
+                                                      .updateWithdrawalStatus(
+                                                        p.id,
+                                                        'rejected',
+                                                        pointsToRefund: p.poin,
+                                                        nasabahId: p.nasabahId,
+                                                        reason: 'Barang habis',
+                                                      );
+                                              if (localSuccess &&
+                                                  (error ==
+                                                          'Terjadi kesalahan koneksi' ||
+                                                      error == 'API error')) {
+                                                setState(() {
+                                                  p.status =
+                                                      PenarikanStatus.ditolak;
+                                                });
+                                                if (mounted) {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                        'Penarikan ditolak (mode offline)',
+                                                      ),
+                                                      backgroundColor:
+                                                          Colors.red,
+                                                    ),
+                                                  );
+                                                }
+                                              } else {
+                                                if (mounted) {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(error),
+                                                      backgroundColor:
+                                                          Colors.red,
+                                                    ),
+                                                  );
+                                                }
                                               }
                                             }
-                                          }
-                                        },
+                                          },
+                                        ),
+                                      ],
+                                    )
+                                  : const Text(
+                                      '—',
+                                      style: TextStyle(
+                                        fontFamily: 'PlusJakartaSans',
+                                        fontSize: 12,
+                                        color: mutedText,
                                       ),
-                                      const SizedBox(width: 6),
-                                      _actionButton(
-                                        'Tolak',
-                                        primary: false,
-                                        onTap: () async {
-                                          String? error;
-                                          try {
-                                            error = await ApiService.instance.updateWithdrawalStatus(p.id, 'rejected', reason: 'Barang habis');
-                                          } catch (e) {
-                                            error = 'API error';
-                                          }
-                                          if (error != null) {
-                                            bool localSuccess = await DatabaseHelper.instance.updateWithdrawalStatus(
-                                              p.id, 'rejected', 
-                                              pointsToRefund: p.poin, 
-                                              nasabahId: p.nasabahId,
-                                              reason: 'Barang habis'
-                                            );
-                                            if (localSuccess) error = null;
-                                          }
-                                          if (error == null) {
-                                            setState(() {
-                                              p.status = PenarikanStatus.ditolak;
-                                            });
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text('Penarikan ditolak'),
-                                                  backgroundColor: Colors.red,
-                                                ),
-                                              );
-                                            }
-                                          } else {
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(content: Text(error), backgroundColor: Colors.red),
-                                              );
-                                            }
-                                          }
-                                        },
-                                      ),
-                                    ],
-                                  )
-                                : const Text(
-                                    '—',
-                                    style: TextStyle(
+                                    ),
+                            ),
+                          ],
+                        ),
+                        if (p.isAnomali && p.anomaliReason != null) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: warningBg,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.info_outline_rounded,
+                                  size: 13,
+                                  color: warningAmber,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    p.anomaliReason!,
+                                    style: const TextStyle(
                                       fontFamily: 'PlusJakartaSans',
-                                      fontSize: 12,
-                                      color: mutedText,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: warningAmber,
                                     ),
                                   ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
-                      ),
-                      if (p.isAnomali && p.anomaliReason != null) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: warningBg,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.info_outline_rounded,
-                                size: 13,
-                                color: warningAmber,
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  p.anomaliReason!,
-                                  style: const TextStyle(
-                                    fontFamily: 'PlusJakartaSans',
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                    color: warningAmber,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ],
@@ -1199,7 +1252,6 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
     );
   }
 
-  // ------------------------------------------------------------------------
   void _showTinjauanAnomaliDialog(PenarikanModel p) {
     showDialog(
       context: context,
@@ -1257,17 +1309,17 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
     );
   }
 
-  // ------------------------------------------------------------------------
-  // DAFTAR TITIPAN TAB
-  // ------------------------------------------------------------------------
   Widget _buildDaftarTitipanTab() {
-    // Menghindari error null akibat hot reload pada variabel state baru
     if ((_dbTitipan as dynamic) == null || _dbTitipan.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.shopping_bag_outlined, size: 64, color: Colors.grey.shade300),
+            Icon(
+              Icons.shopping_bag_outlined,
+              size: 64,
+              color: Colors.grey.shade300,
+            ),
             const SizedBox(height: 16),
             const Text(
               'Tidak ada titipan aktif',
@@ -1302,9 +1354,15 @@ class _ManajemenTransaksiScreenState extends State<ManajemenTransaksiScreen>
               [2, 3, 2],
             ),
             ..._dbTitipan.map((t) {
-              final String name = t['full_name'] ?? t['nasabah_name'] ?? 'Nasabah';
-              final String item = t['account_details']?.toString().replaceAll('(Titip Kurir)', '').trim() ?? '-';
-              
+              final String name =
+                  t['full_name'] ?? t['nasabah_name'] ?? 'Nasabah';
+              final String item =
+                  t['account_details']
+                      ?.toString()
+                      .replaceAll('(Titip Kurir)', '')
+                      .trim() ??
+                  '-';
+
               return Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,

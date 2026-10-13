@@ -1,11 +1,37 @@
 <?php
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../jwt_helper.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
+if ($method !== 'OPTIONS') {
+    $token = JwtHelper::getBearerToken();
+    if (!$token) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized: Token tidak ditemukan']);
+        exit();
+    }
+    $decoded_token = JwtHelper::validateToken($token);
+    if (!$decoded_token) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized: Token tidak valid']);
+        exit();
+    }
+}
+
 if ($method === 'GET') {
-    $sql = "SELECT w.*, u.full_name as nasabah_name, u.address as nasabah_address, u.phone_number FROM withdrawals w JOIN users u ON w.nasabah_id = u.id ORDER BY w.created_at DESC";
-    $result = $conn->query($sql);
+    $role = $decoded_token['role'];
+    if ($role === 'nasabah') {
+        $sql = "SELECT w.*, u.full_name as nasabah_name, u.address as nasabah_address, u.phone_number FROM withdrawals w LEFT JOIN users u ON w.nasabah_id = u.id WHERE w.nasabah_id = ? ORDER BY w.created_at DESC";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("s", $decoded_token['id']);
+        $stmt->execute();
+        $result = $stmt->get_result();
+    } else {
+        $sql = "SELECT w.*, u.full_name as nasabah_name, u.address as nasabah_address, u.phone_number FROM withdrawals w LEFT JOIN users u ON w.nasabah_id = u.id ORDER BY w.created_at DESC";
+        $result = $conn->query($sql);
+    }
+
     $data = [];
     while ($row = $result->fetch_assoc()) {
         $row['points_deducted'] = (int)$row['points_deducted'];
@@ -18,20 +44,22 @@ if ($method === 'GET') {
 if ($method === 'POST') {
     $data = json_decode(file_get_contents('php://input'), true);
     $id = 'WD-' . time() . '-' . rand(100, 999);
-    $nasabahId = $data['nasabah_id'] ?? '';
+
+    $nasabahId = $decoded_token['role'] === 'nasabah' ? $decoded_token['id'] : ($data['nasabah_id'] ?? '');
+
     $points = (int)($data['points_deducted'] ?? 0);
     $methodName = $data['method'] ?? 'Transfer Bank';
     $details = $data['account_details'] ?? '';
 
     $conn->begin_transaction();
     try {
-        // Cek saldo poin dulu
+
         $stmt_check = $conn->prepare("SELECT point_balance FROM users WHERE id = ?");
         $stmt_check->bind_param("s", $nasabahId);
         $stmt_check->execute();
         $res_check = $stmt_check->get_result();
         $user_data = $res_check->fetch_assoc();
-        
+
         if (!$user_data || $user_data['point_balance'] < $points) {
             throw new Exception("Poin tidak cukup");
         }
@@ -39,7 +67,7 @@ if ($method === 'POST') {
         $stmt = $conn->prepare("INSERT INTO withdrawals (id, nasabah_id, points_deducted, method, account_details, status) VALUES (?, ?, ?, ?, ?, 'pending')");
         $stmt->bind_param("ssiss", $id, $nasabahId, $points, $methodName, $details);
         $stmt->execute();
-        
+
         $conn->commit();
         echo json_encode(['success' => true, 'message' => 'Penarikan berhasil diajukan']);
     } catch (Exception $e) {
@@ -52,44 +80,58 @@ if ($method === 'POST') {
 if ($method === 'PUT') {
     $data = json_decode(file_get_contents('php://input'), true);
     $id = $data['id'] ?? '';
-    $status = $data['status'] ?? ''; // 'approved' or 'rejected'
-    
+    $status = $data['status'] ?? '';
+
     if (!$id || !$status) {
         echo json_encode(['success' => false, 'message' => 'Data tidak lengkap']);
         exit();
     }
 
+    $role = $decoded_token['role'] ?? '';
+    if ($status === 'selesai') {
+        if (!in_array($role, ['admin', 'petugas'])) {
+            echo json_encode(['success' => false, 'message' => 'Hanya petugas atau admin yang dapat menyelesaikan pengantaran']);
+            exit();
+        }
+    } else {
+        if ($role !== 'admin') {
+            echo json_encode(['success' => false, 'message' => 'Hanya admin yang dapat menyetujui atau menolak penarikan']);
+            exit();
+        }
+    }
+
     $conn->begin_transaction();
     try {
-        // get withdrawal info
+
         $stmt = $conn->prepare("SELECT nasabah_id, points_deducted, status FROM withdrawals WHERE id = ?");
         $stmt->bind_param("s", $id);
         $stmt->execute();
         $result = $stmt->get_result();
         $wd = $result->fetch_assoc();
-        
-        if ($wd && $wd['status'] === 'pending') {
-            
+
+        $currentStatus = $wd ? ($wd['status'] ?? '') : '';
+        $isPending = in_array($currentStatus, ['pending', '', 'menunggu']);
+
+        if ($wd && $isPending) {
+
             if ($status === 'rejected') {
                 $reason = $data['reason'] ?? 'Barang habis';
-                
-                // Tambahkan alasan penolakan ke account_details
+
                 $stmt_reason = $conn->prepare("UPDATE withdrawals SET account_details = CONCAT(account_details, ' (Ditolak: ', ?, ')') WHERE id = ?");
                 $stmt_reason->bind_param("ss", $reason, $id);
                 $stmt_reason->execute();
             } else if ($status === 'approved') {
-                // Cek saldo dulu saat admin menyetujui
+
                 $stmt_check = $conn->prepare("SELECT point_balance FROM users WHERE id = ?");
                 $stmt_check->bind_param("s", $wd['nasabah_id']);
                 $stmt_check->execute();
                 $res_check = $stmt_check->get_result();
                 $user_data = $res_check->fetch_assoc();
-                
+
                 if (!$user_data || $user_data['point_balance'] < $wd['points_deducted']) {
                     throw new Exception("Saldo poin nasabah tidak mencukupi untuk disetujui sekarang");
                 }
-                
-                // Kurangi poin sekarang
+
                 $stmt_deduct = $conn->prepare("UPDATE users SET point_balance = point_balance - ? WHERE id = ?");
                 $stmt_deduct->bind_param("is", $wd['points_deducted'], $wd['nasabah_id']);
                 $stmt_deduct->execute();
@@ -98,14 +140,14 @@ if ($method === 'PUT') {
             $stmt2 = $conn->prepare("UPDATE withdrawals SET status = ? WHERE id = ?");
             $stmt2->bind_param("ss", $status, $id);
             $stmt2->execute();
-            
+
             $conn->commit();
             echo json_encode(['success' => true, 'message' => 'Status berhasil diubah']);
-        } else if ($wd && $wd['status'] === 'approved' && $status === 'selesai') {
+        } else if ($wd && ($currentStatus === 'approved' || $isPending) && $status === 'selesai') {
             $stmt2 = $conn->prepare("UPDATE withdrawals SET status = ? WHERE id = ?");
             $stmt2->bind_param("ss", $status, $id);
             $stmt2->execute();
-            
+
             $conn->commit();
             echo json_encode(['success' => true, 'message' => 'Pengantaran berhasil diselesaikan']);
         } else {

@@ -6,21 +6,6 @@ import 'api_service.dart';
 import 'pengaturan_notifikasi_page.dart';
 import 'bantuan_faq_page.dart';
 
-// ============================================================================
-// Halaman Profil — Aplikasi Mobile Petugas/Pekerja Lapangan
-// Berdasarkan SRS:
-//   FR-PL-12 — Mencatat absensi & lokasi kerja petugas untuk pemantauan admin
-//   FR-PL-13 — Fitur chat dengan pengguna maupun dengan admin/kantor
-//   FR-PL-14 — Melaporkan kendala di lapangan
-//
-// CATATAN: bagian "Info Akun", "Statistik Kinerja", dan "Pengaturan" TIDAK
-// disebutkan eksplisit di SRS — ini elemen standar profil aplikasi yang
-// wajar ada, ditandai jelas di komentar supaya beda dengan requirement asli.
-//
-// Asumsi platform: mobile (Android/iOS), sesuai SRS 2.1 — aplikasi mobile
-// Petugas Lapangan terpisah mode kerjanya dari end user.
-// ============================================================================
-
 const Color primaryGreen = Color(0xFF268B07);
 const Color limeGreen = Color(0xFF32CD32);
 const Color pageBackground = Color(0xFFF5F6F8);
@@ -69,6 +54,7 @@ final List<AbsensiHistoryItem> sampleAbsensi = [
     isComplete: true,
   ),
 ];
+
 class PetugasProfilScreen extends StatefulWidget {
   const PetugasProfilScreen({super.key});
 
@@ -78,10 +64,6 @@ class PetugasProfilScreen extends StatefulWidget {
 
 class _PetugasProfilScreenState extends State<PetugasProfilScreen> {
   bool sudahAbsenHariIni = true;
-
-  // ------------------------------------------------------------------------
-  // HEADER
-  // ------------------------------------------------------------------------
 
   Widget _buildHeader() {
     final String petugasName = SessionService.fullName.isNotEmpty
@@ -174,10 +156,6 @@ class _PetugasProfilScreenState extends State<PetugasProfilScreen> {
     );
   }
 
-  // ------------------------------------------------------------------------
-  // ABSENSI CARD (FR-PL-12)
-  // ------------------------------------------------------------------------
-
   Widget _buildAbsensiCard() {
     return _card(
       child: Column(
@@ -265,9 +243,7 @@ class _PetugasProfilScreenState extends State<PetugasProfilScreen> {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () {
-                  // TODO: proses absen keluar
-                },
+                onPressed: () {},
                 icon: const Icon(Icons.logout_rounded, size: 15),
                 label: const Text('Absen Keluar'),
                 style: OutlinedButton.styleFrom(
@@ -285,10 +261,6 @@ class _PetugasProfilScreenState extends State<PetugasProfilScreen> {
       ),
     );
   }
-
-  // ------------------------------------------------------------------------
-  // STATISTIK KINERJA (elemen tambahan, bukan requirement eksplisit)
-  // ------------------------------------------------------------------------
 
   Widget _buildStatistikRow() {
     return Padding(
@@ -345,10 +317,6 @@ class _PetugasProfilScreenState extends State<PetugasProfilScreen> {
       ),
     );
   }
-
-  // ------------------------------------------------------------------------
-  // RIWAYAT ABSENSI (FR-PL-12)
-  // ------------------------------------------------------------------------
 
   Widget _buildRiwayatAbsensi() {
     return _card(
@@ -429,10 +397,6 @@ class _PetugasProfilScreenState extends State<PetugasProfilScreen> {
     );
   }
 
-  // ------------------------------------------------------------------------
-  // MENU: CHAT ADMIN (FR-PL-13), LAPOR KENDALA (FR-PL-14), PENGATURAN
-  // ------------------------------------------------------------------------
-
   void _showAdminSelectionSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -452,7 +416,9 @@ class _PetugasProfilScreenState extends State<PetugasProfilScreen> {
               );
             }
 
-            if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+            if (snapshot.hasError ||
+                !snapshot.hasData ||
+                snapshot.data!.isEmpty) {
               return const SizedBox(
                 height: 200,
                 child: Center(
@@ -488,10 +454,13 @@ class _PetugasProfilScreenState extends State<PetugasProfilScreen> {
                             backgroundColor: Color(0xFF16A34A),
                             child: Icon(Icons.person, color: Colors.white),
                           ),
-                          title: Text(adminName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          title: Text(
+                            adminName,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           subtitle: Text('Role: $role'),
                           onTap: () {
-                            Navigator.pop(context); // close sheet
+                            Navigator.pop(context);
                             Navigator.push(
                               this.context,
                               MaterialPageRoute(
@@ -547,9 +516,7 @@ class _PetugasProfilScreenState extends State<PetugasProfilScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const BantuanFaqPage(),
-                ),
+                MaterialPageRoute(builder: (_) => const BantuanFaqPage()),
               );
             },
           ),
@@ -623,10 +590,6 @@ class _PetugasProfilScreenState extends State<PetugasProfilScreen> {
     endIndent: 14,
   );
 
-  // ------------------------------------------------------------------------
-  // LOGOUT
-  // ------------------------------------------------------------------------
-
   Widget _buildLogoutButton() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -656,10 +619,6 @@ class _PetugasProfilScreenState extends State<PetugasProfilScreen> {
       ),
     );
   }
-
-  // ------------------------------------------------------------------------
-  // SHARED CARD WRAPPER
-  // ------------------------------------------------------------------------
 
   Widget _card({required Widget child, EdgeInsets? padding}) {
     return Container(

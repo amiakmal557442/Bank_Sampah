@@ -4,14 +4,11 @@ import '../api_service.dart';
 class ImageViewerDialog extends StatelessWidget {
   final String photoEvidence;
 
-  const ImageViewerDialog({
-    Key? key,
-    required this.photoEvidence,
-  }) : super(key: key);
+  const ImageViewerDialog({Key? key, required this.photoEvidence})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // Bersihkan data dari spasi dan pecah jika ada multi file
     final files = photoEvidence
         .split(',')
         .map((e) => e.trim())
@@ -49,7 +46,8 @@ class ImageViewerDialog extends StatelessWidget {
               child: PageView.builder(
                 itemCount: files.length,
                 itemBuilder: (context, index) {
-                  final url = '${ApiService.baseUrl}/uploads/transactions/${files[index]}';
+                  final url =
+                      '${ApiService.baseUrl}/uploads/transactions/${files[index]}';
                   return InteractiveViewer(
                     minScale: 0.5,
                     maxScale: 4.0,
@@ -63,7 +61,7 @@ class ImageViewerDialog extends StatelessWidget {
                           child: CircularProgressIndicator(
                             value: loadingProgress.expectedTotalBytes != null
                                 ? loadingProgress.cumulativeBytesLoaded /
-                                    (loadingProgress.expectedTotalBytes ?? 1)
+                                      (loadingProgress.expectedTotalBytes ?? 1)
                                 : null,
                             color: Colors.white,
                           ),
@@ -74,7 +72,11 @@ class ImageViewerDialog extends StatelessWidget {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.broken_image, color: Colors.grey, size: 60),
+                              const Icon(
+                                Icons.broken_image,
+                                color: Colors.grey,
+                                size: 60,
+                              ),
                               const SizedBox(height: 16),
                               const Text(
                                 'Gambar gagal dimuat.',
@@ -84,7 +86,10 @@ class ImageViewerDialog extends StatelessWidget {
                               Text(
                                 'URL:\n$url',
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.white38, fontSize: 10),
+                                style: const TextStyle(
+                                  color: Colors.white38,
+                                  fontSize: 10,
+                                ),
                               ),
                             ],
                           ),
@@ -114,7 +119,10 @@ class ImageViewerDialog extends StatelessWidget {
             Positioned(
               bottom: 20,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black54,
                   borderRadius: BorderRadius.circular(20),
@@ -130,12 +138,11 @@ class ImageViewerDialog extends StatelessWidget {
     );
   }
 
-  /// Helper untuk menampilkan dialog dengan mudah
   static void show(BuildContext context, String? photoEvidence) {
     if (photoEvidence == null || photoEvidence.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tidak ada foto bukti.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Tidak ada foto bukti.')));
       return;
     }
     showDialog(

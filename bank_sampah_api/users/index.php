@@ -1,12 +1,27 @@
 <?php
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../jwt_helper.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-// Auto-migration: Tambah kolom profile_picture jika belum ada
 $checkCol = $conn->query("SHOW COLUMNS FROM users LIKE 'profile_picture'");
 if ($checkCol && $checkCol->num_rows === 0) {
     $conn->query("ALTER TABLE users ADD COLUMN profile_picture VARCHAR(255) DEFAULT NULL AFTER email");
+}
+
+if ($method !== 'POST' && $method !== 'OPTIONS') {
+    $token = JwtHelper::getBearerToken();
+    if (!$token) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized: Token tidak ditemukan']);
+        exit();
+    }
+    $decoded_token = JwtHelper::validateToken($token);
+    if (!$decoded_token) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized: Token tidak valid atau kadaluarsa']);
+        exit();
+    }
 }
 
 if ($method === 'GET') {
@@ -26,7 +41,7 @@ if ($method === 'GET') {
     } else {
         $result = $conn->query("SELECT id, phone_number, email, full_name, role, address, default_setor_method, point_balance, is_active, profile_picture, created_at FROM users");
     }
-    
+
     $users = [];
     while ($row = $result->fetch_assoc()) {
         $row['point_balance'] = (int) $row['point_balance'];
@@ -42,7 +57,7 @@ if ($method === 'POST') {
     $id = $data['id'] ?? ('USR-' . time());
     $phone = $data['phone_number'] ?? null;
     $email = $data['email'] ?? null;
-    $password = hash('sha256', $data['password'] ?? '123456');
+    $password = password_hash($data['password'] ?? '123456', PASSWORD_BCRYPT);
     $name = $data['full_name'] ?? '';
     $role = $data['role'] ?? 'nasabah';
     $address = $data['address'] ?? null;

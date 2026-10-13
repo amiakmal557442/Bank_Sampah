@@ -6,19 +6,6 @@ import 'api_service.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
-// ============================================================================
-// Halaman Tukar Poin ke Saldo
-// Berdasarkan SRS: FR-EU-10 (info saldo), FR-EU-11 (konversi ke e-wallet/
-// bank/saldo internal), FR-EU-12 (riwayat konversi & minimum penarikan)
-//
-// CATATAN OPEN ISSUE DARI SRS (perlu konfirmasi tim sebelum production):
-// - Ambang batas nominal wajib verifikasi KTP belum ditentukan di SRS.
-//   Nilai 50.000 poin di bawah ini adalah ASUMSI SEMENTARA, tandai TODO.
-// - Payment gateway (DANA/GoPay/OVO/Bank) masih tahap seleksi vendor,
-//   jadi integrasi API belum bisa final di kode ini (masih placeholder).
-// ============================================================================
-
-// Color Palette (konsisten dengan voucher_page.dart)
 const Color primaryGreen = Color(0xFF268B07);
 const Color pageBackground = Color(0xFFF5F6F8);
 const Color darkText = Color(0xFF0F172A);
@@ -28,12 +15,8 @@ const Color borderColor = Color(0xFFE2E8F0);
 const Color secondaryDarkText = Color(0xFF334155);
 const Color limeGreen = Color(0xFF32CD32);
 
-// TODO: konfirmasi threshold ini ke tim — belum ada di SRS
-const int ktpVerificationThresholdPoints = 50000; // ~Rp 500.000, ASUMSI
+const int ktpVerificationThresholdPoints = 50000;
 
-// Rate konversi poin -> rupiah (asumsi 1 poin = Rp 10, konsisten dgn contoh
-// SRS: 4.820 poin ≈ Rp 48.200). TODO: pastikan rate final dari business rule.
-// (Sekarang rate ini diambil dari konfigurasi sistem)
 enum DestinationType { ewallet, cash }
 
 class WithdrawalDestination {
@@ -81,7 +64,7 @@ class ConversionHistoryItem {
   final int points;
   final double amount;
   final String date;
-  final String status; // 'Selesai', 'Diproses', 'Gagal'
+  final String status;
 
   ConversionHistoryItem({
     required this.destination,
@@ -115,7 +98,10 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _pickImage(ImageSource source) async {
-    final XFile? image = await _picker.pickImage(source: source, imageQuality: 70);
+    final XFile? image = await _picker.pickImage(
+      source: source,
+      imageQuality: 70,
+    );
     if (image != null) {
       setState(() {
         _ktpPhotoPath = image.path;
@@ -142,7 +128,10 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library, color: Color(0xFF268B07)),
+                leading: const Icon(
+                  Icons.photo_library,
+                  color: Color(0xFF268B07),
+                ),
                 title: const Text('Galeri'),
                 onTap: () {
                   Navigator.pop(context);
@@ -170,12 +159,12 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
       final config = await DatabaseHelper.instance.getSystemConfig();
       if (mounted) {
         setState(() {
-          // Asumsi konfigurasi tersimpan dalam double/int, fallback jika null
-          minWithdrawalPoints = (config['min_withdraw'] as num?)?.toInt() ?? 10000;
+          minWithdrawalPoints =
+              (config['min_withdraw'] as num?)?.toInt() ?? 10000;
           pointToRupiahRate = (config['point_rate'] as num?)?.toDouble() ?? 1.0;
           _isLoadingConfig = false;
         });
-        // trigger re-validation in case amount was already entered
+
         _onAmountChanged();
       }
     } catch (_) {
@@ -188,26 +177,32 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
   Future<void> _loadHistory() async {
     try {
       final withdrawals = await ApiService.instance.fetchWithdrawals();
-      final userWds = withdrawals.where((w) => w['nasabah_id']?.toString() == SessionService.userId).toList();
-      
+      final userWds = withdrawals
+          .where((w) => w['nasabah_id']?.toString() == SessionService.userId)
+          .toList();
+
       List<ConversionHistoryItem> history = [];
       for (var w in userWds) {
-         String st = 'Diproses';
-         if (w['status'] == 'approved' || w['status'] == 'selesai') st = 'Selesai';
-         if (w['status'] == 'rejected') st = 'Gagal';
-         String details = w['account_details'] ?? '';
-         if (w['status'] == 'pending') details += '\n(Poin belum terpotong)';
-         String method = w['method'] ?? 'Unknown';
-         
-         history.add(ConversionHistoryItem(
-           destination: '$method\n$details'.trim(),
-           points: (w['points_deducted'] ?? 0).toInt(),
-           amount: ((w['points_deducted'] ?? 0) * pointToRupiahRate).toDouble(),
-           date: w['created_at']?.toString().substring(0, 16) ?? '',
-           status: st,
-         ));
+        String st = 'Diproses';
+        if (w['status'] == 'approved' || w['status'] == 'selesai')
+          st = 'Selesai';
+        if (w['status'] == 'rejected') st = 'Gagal';
+        String details = w['account_details'] ?? '';
+        if (w['status'] == 'pending') details += '\n(Poin belum terpotong)';
+        String method = w['method'] ?? 'Unknown';
+
+        history.add(
+          ConversionHistoryItem(
+            destination: '$method\n$details'.trim(),
+            points: (w['points_deducted'] ?? 0).toInt(),
+            amount: ((w['points_deducted'] ?? 0) * pointToRupiahRate)
+                .toDouble(),
+            date: w['created_at']?.toString().substring(0, 16) ?? '',
+            status: st,
+          ),
+        );
       }
-      
+
       if (mounted) {
         setState(() {
           _historyList = history;
@@ -215,33 +210,38 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
         });
       }
     } catch (_) {
-       // fallback to local DB
-       final localWds = await DatabaseHelper.instance.getWithdrawals();
-       final userWds = localWds.where((w) => w['nasabah_id']?.toString() == SessionService.userId).toList();
-       List<ConversionHistoryItem> history = [];
-       for (var w in userWds) {
-         String st = 'Diproses';
-         if (w['status'] == 'approved' || w['status'] == 'selesai') st = 'Selesai';
-         if (w['status'] == 'rejected') st = 'Gagal';
-         
-         String details = w['account_details'] ?? '';
-         if (w['status'] == 'pending') details += '\n(Poin belum terpotong)';
-         String method = w['method'] ?? 'Unknown';
-         
-         history.add(ConversionHistoryItem(
-           destination: '$method\n$details'.trim(),
-           points: (w['points_deducted'] ?? 0).toInt(),
-           amount: ((w['points_deducted'] ?? 0) * pointToRupiahRate).toDouble(),
-           date: w['created_at']?.toString().substring(0, 16) ?? '',
-           status: st,
-         ));
-       }
-       if (mounted) {
-         setState(() {
-           _historyList = history;
-           _isLoadingHistory = false;
-         });
-       }
+      final localWds = await DatabaseHelper.instance.getWithdrawals();
+      final userWds = localWds
+          .where((w) => w['nasabah_id']?.toString() == SessionService.userId)
+          .toList();
+      List<ConversionHistoryItem> history = [];
+      for (var w in userWds) {
+        String st = 'Diproses';
+        if (w['status'] == 'approved' || w['status'] == 'selesai')
+          st = 'Selesai';
+        if (w['status'] == 'rejected') st = 'Gagal';
+
+        String details = w['account_details'] ?? '';
+        if (w['status'] == 'pending') details += '\n(Poin belum terpotong)';
+        String method = w['method'] ?? 'Unknown';
+
+        history.add(
+          ConversionHistoryItem(
+            destination: '$method\n$details'.trim(),
+            points: (w['points_deducted'] ?? 0).toInt(),
+            amount: ((w['points_deducted'] ?? 0) * pointToRupiahRate)
+                .toDouble(),
+            date: w['created_at']?.toString().substring(0, 16) ?? '',
+            status: st,
+          ),
+        );
+      }
+      if (mounted) {
+        setState(() {
+          _historyList = history;
+          _isLoadingHistory = false;
+        });
+      }
     }
   }
 
@@ -293,10 +293,6 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
     );
   }
 
-  // --------------------------------------------------------------------
-  // UI BUILDERS
-  // --------------------------------------------------------------------
-
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -334,7 +330,10 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
             const SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: primaryGreen),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: primaryGreen,
+              ),
             ),
         ],
       ),
@@ -676,7 +675,9 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
               onTap: _showImageSourceDialog,
               child: Container(
                 width: double.infinity,
-                padding: EdgeInsets.symmetric(vertical: _ktpPhotoPath == null ? 18 : 0),
+                padding: EdgeInsets.symmetric(
+                  vertical: _ktpPhotoPath == null ? 18 : 0,
+                ),
                 decoration: BoxDecoration(
                   color: pageBackground,
                   borderRadius: BorderRadius.circular(12),
@@ -713,7 +714,7 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
                         ],
                       )
                     : Container(
-                        height: 120, // adjust height for photo preview
+                        height: 120,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           color: Colors.black.withOpacity(0.3),
@@ -767,106 +768,120 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: _isLoadingHistory ? const Center(child: CircularProgressIndicator()) : Column(
-            children: _historyList.isEmpty 
-              ? [const Padding(padding: EdgeInsets.all(20), child: Text('Belum ada riwayat konversi', style: TextStyle(color: Colors.grey)))]
-              : _historyList.map((item) {
-              final isSuccess = item.status == 'Selesai';
-              final statusColor = isSuccess
-                  ? primaryGreen
-                  : const Color(0xFF5F5E5A);
-              final statusBg = isSuccess
-                  ? const Color(0xFFE8F8E8)
-                  : const Color(0xFFF1EFE8);
+          child: _isLoadingHistory
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                  children: _historyList.isEmpty
+                      ? [
+                          const Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Text(
+                              'Belum ada riwayat konversi',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        ]
+                      : _historyList.map((item) {
+                          final isSuccess = item.status == 'Selesai';
+                          final statusColor = isSuccess
+                              ? primaryGreen
+                              : const Color(0xFF5F5E5A);
+                          final statusBg = isSuccess
+                              ? const Color(0xFFE8F8E8)
+                              : const Color(0xFFF1EFE8);
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: borderColor, width: 0.5),
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: borderColor,
+                                width: 0.5,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: BoxDecoration(
+                                    color: pageBackground,
+                                    borderRadius: BorderRadius.circular(9),
+                                  ),
+                                  child: const Icon(
+                                    Icons.arrow_upward_rounded,
+                                    size: 16,
+                                    color: primaryGreen,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.destination,
+                                        style: const TextStyle(
+                                          fontFamily: 'PlusJakartaSans',
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: darkText,
+                                        ),
+                                      ),
+                                      Text(
+                                        item.date,
+                                        style: const TextStyle(
+                                          fontFamily: 'PlusJakartaSans',
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w400,
+                                          color: mutedText,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '-${item.points} poin',
+                                      style: const TextStyle(
+                                        fontFamily: 'PlusJakartaSans',
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: darkText,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: statusBg,
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        item.status,
+                                        style: TextStyle(
+                                          fontFamily: 'PlusJakartaSans',
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: statusColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: pageBackground,
-                        borderRadius: BorderRadius.circular(9),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_upward_rounded,
-                        size: 16,
-                        color: primaryGreen,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.destination,
-                            style: const TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: darkText,
-                            ),
-                          ),
-                          Text(
-                            item.date,
-                            style: const TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w400,
-                              color: mutedText,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '-${item.points} poin',
-                          style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: darkText,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusBg,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            item.status,
-                            style: TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w600,
-                              color: statusColor,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
         ),
       ],
     );
@@ -1038,12 +1053,11 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
               Expanded(
                 child: GestureDetector(
                   onTap: () async {
-                    // Insert withdrawal request to API
                     final error = await ApiService.instance.requestWithdrawal(
                       SessionService.userId,
                       inputPoints,
                       selectedDestination?.name ?? 'Unknown',
-                      'Detail menyusul', // TODO: Add input for account details
+                      'Detail menyusul',
                     );
 
                     if (error == null) {

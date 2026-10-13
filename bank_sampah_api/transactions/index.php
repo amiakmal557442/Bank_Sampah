@@ -1,13 +1,33 @@
 <?php
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../jwt_helper.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
+
+if ($method !== 'OPTIONS') {
+    $token = JwtHelper::getBearerToken();
+    if (!$token) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized: Token tidak ditemukan']);
+        exit();
+    }
+    $decoded_token = JwtHelper::validateToken($token);
+    if (!$decoded_token) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized: Token tidak valid']);
+        exit();
+    }
+}
 
 if ($method === 'GET') {
     $id = $_GET['id'] ?? null;
     $status = $_GET['status'] ?? null;
-    $nasabahId = $_GET['nasabah_id'] ?? null;
     $petugasId = $_GET['petugas_id'] ?? null;
+    $nasabahId = $_GET['nasabah_id'] ?? null;
+
+    if ($decoded_token['role'] === 'nasabah') {
+        $nasabahId = $decoded_token['id'];
+    }
 
     if ($id) {
         $stmt = $conn->prepare("SELECT t.*, u.full_name as nasabah_name FROM transactions t JOIN users u ON t.nasabah_id = u.id WHERE t.id = ?");
@@ -51,9 +71,9 @@ if ($method === 'GET') {
         $params[] = $petugasId;
     }
 
-    $sql = "SELECT t.*, u.full_name as nasabah_name, p.full_name as petugas_name 
-            FROM transactions t 
-            LEFT JOIN users u ON t.nasabah_id = u.id 
+    $sql = "SELECT t.*, u.full_name as nasabah_name, p.full_name as petugas_name
+            FROM transactions t
+            LEFT JOIN users u ON t.nasabah_id = u.id
             LEFT JOIN users p ON t.petugas_id = p.id";
 
     if (!empty($where)) {
@@ -102,7 +122,9 @@ if ($method === 'GET') {
 if ($method === 'POST') {
     $data = json_decode(file_get_contents('php://input'), true);
     $id = $data['id'] ?? ('TRX-' . rand(1000, 9999));
-    $nasabahId = $data['nasabah_id'] ?? '';
+
+    $nasabahId = $decoded_token['role'] === 'nasabah' ? $decoded_token['id'] : ($data['nasabah_id'] ?? '');
+
     $petugasId = $data['petugas_id'] ?? null;
     $dropPointId = $data['drop_point_id'] ?? null;
     $type = $data['type'] ?? 'pickup';
@@ -112,7 +134,7 @@ if ($method === 'POST') {
 
     $stmt = $conn->prepare("INSERT INTO transactions (id, nasabah_id, petugas_id, drop_point_id, type, status, pickup_date, total_est_points) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     $stmt->bind_param("sssssssi", $id, $nasabahId, $petugasId, $dropPointId, $type, $status, $pickupDate, $estPoints);
-    
+
     if ($stmt->execute()) {
         if (!empty($data['items']) && is_array($data['items'])) {
             foreach ($data['items'] as $item) {
@@ -175,7 +197,6 @@ if ($method === 'PUT') {
         $stmt->execute();
     }
 
-    // Process items & weight updates
     if (!empty($data['items']) && is_array($data['items'])) {
         $calculatedPoints = 0;
         foreach ($data['items'] as $item) {
@@ -212,7 +233,6 @@ if ($method === 'PUT') {
         }
     }
 
-    // Update user point_balance if status becomes dikonfirmasi/terverifikasi/selesai
     if (isset($data['status']) && in_array($data['status'], ['dikonfirmasi', 'selesai', 'terverifikasi'])) {
         $txRes = $conn->query("SELECT nasabah_id, total_est_points, total_actual_points FROM transactions WHERE id = '$id'");
         if ($txRow = $txRes->fetch_assoc()) {

@@ -164,7 +164,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Handle bar
               Center(
                 child: Container(
                   width: 40,
@@ -187,7 +186,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               ),
               const SizedBox(height: 20),
 
-              // Option 1: Drop-in mandiri
               _buildSetorOption(
                 icon: Icons.add_location_alt_outlined,
                 title: 'Drop-in mandiri',
@@ -206,7 +204,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               ),
               const SizedBox(height: 12),
 
-              // Option 2: Jemput sampah
               _buildSetorOption(
                 icon: Icons.local_shipping_outlined,
                 title: 'Jemput sampah',
@@ -225,7 +222,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               ),
               const SizedBox(height: 20),
 
-              // Tombol Batal
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
@@ -356,13 +352,11 @@ class _BerandaPageState extends State<BerandaPage> {
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             children: [
-              // --- HEADER ATAS & KARTU POIN ---
               SizedBox(
                 height: 290,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    // Background Hijau dengan Lengkungan Atas
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.only(
@@ -404,7 +398,7 @@ class _BerandaPageState extends State<BerandaPage> {
                               ),
                             ],
                           ),
-                          // Tombol Notifikasi
+
                           Container(
                             width: 42,
                             height: 42,
@@ -439,7 +433,6 @@ class _BerandaPageState extends State<BerandaPage> {
                       ),
                     ),
 
-                    // Kartu Poin Saya
                     Positioned(
                       left: 20,
                       right: 20,
@@ -552,8 +545,7 @@ class _BerandaPageState extends State<BerandaPage> {
                                       await Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) =>
-                                              VoucherScreen(),
+                                          builder: (context) => VoucherScreen(),
                                         ),
                                       );
                                       setState(() {});
@@ -599,7 +591,6 @@ class _BerandaPageState extends State<BerandaPage> {
 
               const SizedBox(height: 140),
 
-              // --- SEKSI 1: SETOR SAMPAH ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -617,7 +608,6 @@ class _BerandaPageState extends State<BerandaPage> {
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        // Card 1: Drop-in Mandiri
                         Expanded(
                           child: _buildActionCard(
                             icon: Icons.add_location_alt_outlined,
@@ -636,7 +626,7 @@ class _BerandaPageState extends State<BerandaPage> {
                           ),
                         ),
                         const SizedBox(width: 14),
-                        // Card 2: Jemput Sampah
+
                         Expanded(
                           child: _buildActionCard(
                             icon: Icons.local_shipping_outlined,
@@ -662,7 +652,6 @@ class _BerandaPageState extends State<BerandaPage> {
 
               const SizedBox(height: 28),
 
-              // --- SEKSI 2: TRANSAKSI TERAKHIR ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -716,7 +705,6 @@ class _BerandaPageState extends State<BerandaPage> {
 
               const SizedBox(height: 28),
 
-              // --- SEKSI 3: DAMPAK LINGKUNGAN SAYA ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -795,7 +783,6 @@ class _BerandaPageState extends State<BerandaPage> {
     );
   }
 
-  // Widget Pembantu Card Setor Sampah
   Widget _buildActionCard({
     required IconData icon,
     required String title,
@@ -858,28 +845,36 @@ class _BerandaPageState extends State<BerandaPage> {
     );
   }
 
-  // Widget Pembantu Item Transaksi
   Widget _buildTransactionItem({
     required BuildContext context,
     required TransactionModel tx,
   }) {
     return GestureDetector(
       onTap: () {
-        // Show dialog with transaction details
         showDialog(
           context: context,
           builder: (ctx) {
-            final isWithdrawal = tx.icon == Icons.card_giftcard_outlined || tx.icon == Icons.account_balance_wallet_outlined;
-            
+            final isWithdrawal =
+                tx.icon == Icons.card_giftcard_outlined ||
+                tx.icon == Icons.account_balance_wallet_outlined;
+
             if (isWithdrawal) {
               String jenis = tx.title.split('(').first.trim();
               String detail = '';
               if (tx.title.contains('(')) {
-                detail = tx.title.substring(tx.title.indexOf('(')).replaceAll(RegExp(r'[()]'), '').trim();
+                detail = tx.title
+                    .substring(tx.title.indexOf('('))
+                    .replaceAll(RegExp(r'[()]'), '')
+                    .trim();
               }
               return AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                title: const Text('Detail Transaksi', style: TextStyle(fontWeight: FontWeight.bold)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                title: const Text(
+                  'Detail Transaksi',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -896,7 +891,13 @@ class _BerandaPageState extends State<BerandaPage> {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Tutup', style: TextStyle(color: Color(0xFF268B07), fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Tutup',
+                      style: TextStyle(
+                        color: Color(0xFF268B07),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               );
@@ -926,7 +927,6 @@ class _BerandaPageState extends State<BerandaPage> {
                   })
                   .join(', ');
             } else if (tx.title.contains('-')) {
-              // Extract from title if rawItems is somehow empty but title has it
               final parts = tx.title.split('-');
               if (parts.length > 1) {
                 jenisSampah = parts.last.trim();
@@ -1088,7 +1088,6 @@ class _BerandaPageState extends State<BerandaPage> {
     );
   }
 
-  // Widget Pembantu Metrik Dampak Lingkungan
   Widget _buildImpactMetric({
     required String value,
     required String unit,
@@ -1134,9 +1133,6 @@ class _BerandaPageState extends State<BerandaPage> {
   }
 }
 
-// ============================================================================
-// HALAMAN: SEMUA TRANSAKSI
-// ============================================================================
 class SemuaTransaksiPage extends StatefulWidget {
   const SemuaTransaksiPage({super.key});
 
@@ -1147,11 +1143,10 @@ class SemuaTransaksiPage extends StatefulWidget {
 class _SemuaTransaksiPageState extends State<SemuaTransaksiPage> {
   static const Color primaryGreen = Color(0xFF268B07);
 
-  // Gabungkan semua sumber transaksi menjadi satu list
   List<TransactionModel> get _semuaTransaksi {
     final all = <TransactionModel>[];
     all.addAll(TransactionService.riwayatHariIni);
-    // Tambahkan transaksi dari beranda yang belum ada di riwayatHariIni
+
     for (final tx in TransactionService.transactions) {
       final alreadyAdded = all.any(
         (t) =>
@@ -1238,17 +1233,27 @@ class _SemuaTransaksiPageState extends State<SemuaTransaksiPage> {
         showDialog(
           context: context,
           builder: (ctx) {
-            final isWithdrawal = tx.icon == Icons.card_giftcard_outlined || tx.icon == Icons.account_balance_wallet_outlined;
-            
+            final isWithdrawal =
+                tx.icon == Icons.card_giftcard_outlined ||
+                tx.icon == Icons.account_balance_wallet_outlined;
+
             if (isWithdrawal) {
               String jenis = tx.title.split('(').first.trim();
               String detail = '';
               if (tx.title.contains('(')) {
-                detail = tx.title.substring(tx.title.indexOf('(')).replaceAll(RegExp(r'[()]'), '').trim();
+                detail = tx.title
+                    .substring(tx.title.indexOf('('))
+                    .replaceAll(RegExp(r'[()]'), '')
+                    .trim();
               }
               return AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                title: const Text('Detail Transaksi', style: TextStyle(fontWeight: FontWeight.bold)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                title: const Text(
+                  'Detail Transaksi',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1265,7 +1270,13 @@ class _SemuaTransaksiPageState extends State<SemuaTransaksiPage> {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Tutup', style: TextStyle(color: Color(0xFF268B07), fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Tutup',
+                      style: TextStyle(
+                        color: Color(0xFF268B07),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               );
@@ -1470,7 +1481,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
 
   final Color primaryGreen = const Color(0xFF268B07);
 
-  // Helper untuk memfilter transaksi berdasarkan Jenis Transaksi dan Status
   bool _matchesFilter({
     required String title,
     required String statusText,
@@ -1605,7 +1615,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- HEADER RIWAYAT ---
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.only(
@@ -1633,7 +1642,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
 
               const SizedBox(height: 16),
 
-              // --- FILTER 1: JENIS TRANSAKSI ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -1690,7 +1698,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
 
               const SizedBox(height: 16),
 
-              // --- FILTER 2: STATUS ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -1778,7 +1785,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
                   ),
                 ),
 
-              // --- SEKSI: HARI INI ---
               if (filteredHariIni.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1811,7 +1817,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
                   (filteredKemarin.isNotEmpty || filtered22Juli.isNotEmpty))
                 const SizedBox(height: 20),
 
-              // --- SEKSI: KEMARIN ---
               if (filteredKemarin.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1843,7 +1848,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
               if (filteredKemarin.isNotEmpty && filtered22Juli.isNotEmpty)
                 const SizedBox(height: 20),
 
-              // --- SEKSI: 22 JULI 2026 ---
               if (filtered22Juli.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1880,7 +1884,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
     );
   }
 
-  // Widget Pembantu Filter Chip Interaktif
   Widget _buildFilterChip({
     required String label,
     required bool isSelected,
@@ -1910,7 +1913,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
     );
   }
 
-  // Widget Pembantu Item Riwayat Transaksi
   Widget _buildRiwayatItem({
     required BuildContext context,
     required TransactionModel tx,
@@ -1921,17 +1923,27 @@ class _RiwayatPageState extends State<RiwayatPage> {
         showDialog(
           context: context,
           builder: (ctx) {
-            final isWithdrawal = tx.icon == Icons.card_giftcard_outlined || tx.icon == Icons.account_balance_wallet_outlined;
-            
+            final isWithdrawal =
+                tx.icon == Icons.card_giftcard_outlined ||
+                tx.icon == Icons.account_balance_wallet_outlined;
+
             if (isWithdrawal) {
               String jenis = tx.title.split('(').first.trim();
               String detail = '';
               if (tx.title.contains('(')) {
-                detail = tx.title.substring(tx.title.indexOf('(')).replaceAll(RegExp(r'[()]'), '').trim();
+                detail = tx.title
+                    .substring(tx.title.indexOf('('))
+                    .replaceAll(RegExp(r'[()]'), '')
+                    .trim();
               }
               return AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                title: const Text('Detail Transaksi', style: TextStyle(fontWeight: FontWeight.bold)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                title: const Text(
+                  'Detail Transaksi',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1948,7 +1960,13 @@ class _RiwayatPageState extends State<RiwayatPage> {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Tutup', style: TextStyle(color: Color(0xFF268B07), fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Tutup',
+                      style: TextStyle(
+                        color: Color(0xFF268B07),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               );
@@ -2169,11 +2187,9 @@ class _ProfilPageState extends State<ProfilPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // --- HEADER PROFIL & AVATAR ---
             Stack(
               clipBehavior: Clip.none,
               children: [
-                // Background Hijau Atas
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.only(
@@ -2204,7 +2220,6 @@ class _ProfilPageState extends State<ProfilPage> {
                   ),
                 ),
 
-                // Kartu Informasi Pengguna
                 Positioned(
                   left: 20,
                   right: 20,
@@ -2226,7 +2241,6 @@ class _ProfilPageState extends State<ProfilPage> {
                       children: [
                         Row(
                           children: [
-                            // Foto Profil dengan Badge Edit
                             GestureDetector(
                               onTap: () async {
                                 final updated = await Navigator.push(
@@ -2241,37 +2255,57 @@ class _ProfilPageState extends State<ProfilPage> {
                               },
                               child: Stack(
                                 children: [
-                                  if (SessionService.profilePicture.isNotEmpty &&
-                                      ApiService.getProfileImageUrl(SessionService.profilePicture) != null)
+                                  if (SessionService
+                                          .profilePicture
+                                          .isNotEmpty &&
+                                      ApiService.getProfileImageUrl(
+                                            SessionService.profilePicture,
+                                          ) !=
+                                          null)
                                     CircleAvatar(
                                       radius: 34,
                                       backgroundColor: const Color(0xFFDCFCE7),
                                       child: ClipOval(
                                         child: Image.network(
-                                          ApiService.getProfileImageUrl(SessionService.profilePicture)!,
+                                          ApiService.getProfileImageUrl(
+                                            SessionService.profilePicture,
+                                          )!,
                                           width: 68,
                                           height: 68,
                                           fit: BoxFit.cover,
-                                          headers: const {'ngrok-skip-browser-warning': 'true'},
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return Text(
-                                              (() {
-                                                final names = SessionService.fullName.split(' ');
-                                                if (names.length >= 2) {
-                                                  return (names[0].isNotEmpty ? names[0][0] : '') +
-                                                      (names[1].isNotEmpty ? names[1][0] : '');
-                                                } else if (names.isNotEmpty && names[0].isNotEmpty) {
-                                                  return names[0][0];
-                                                }
-                                                return 'US';
-                                              })().toUpperCase(),
-                                              style: TextStyle(
-                                                fontSize: 22,
-                                                fontWeight: FontWeight.bold,
-                                                color: primaryGreen,
-                                              ),
-                                            );
+                                          headers: const {
+                                            'ngrok-skip-browser-warning':
+                                                'true',
                                           },
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                                return Text(
+                                                  (() {
+                                                    final names = SessionService
+                                                        .fullName
+                                                        .split(' ');
+                                                    if (names.length >= 2) {
+                                                      return (names[0]
+                                                                  .isNotEmpty
+                                                              ? names[0][0]
+                                                              : '') +
+                                                          (names[1].isNotEmpty
+                                                              ? names[1][0]
+                                                              : '');
+                                                    } else if (names
+                                                            .isNotEmpty &&
+                                                        names[0].isNotEmpty) {
+                                                      return names[0][0];
+                                                    }
+                                                    return 'US';
+                                                  })().toUpperCase(),
+                                                  style: TextStyle(
+                                                    fontSize: 22,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: primaryGreen,
+                                                  ),
+                                                );
+                                              },
                                         ),
                                       ),
                                     )
@@ -2358,7 +2392,7 @@ class _ProfilPageState extends State<ProfilPage> {
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  // Badge Tingkat Keanggotaan
+
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 10,
@@ -2402,7 +2436,6 @@ class _ProfilPageState extends State<ProfilPage> {
 
             const SizedBox(height: 110),
 
-            // --- SEKSI 1: AKUN & ALAMAT ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
@@ -2482,7 +2515,6 @@ class _ProfilPageState extends State<ProfilPage> {
 
             const SizedBox(height: 24),
 
-            // --- SEKSI 3: BANTUAN & KEAMANAN ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
@@ -2555,7 +2587,6 @@ class _ProfilPageState extends State<ProfilPage> {
 
             const SizedBox(height: 24),
 
-            // Tombol Logout
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: SizedBox(
@@ -2596,7 +2627,7 @@ class _ProfilPageState extends State<ProfilPage> {
 
             const SizedBox(height: 20),
             const Text(
-              'Bank Sampah Mobile v1.2.0',
+              '© Muhammad Akmal Ahsan',
               style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
             ),
             const SizedBox(height: 30),
@@ -2606,7 +2637,6 @@ class _ProfilPageState extends State<ProfilPage> {
     );
   }
 
-  // ─── CHAT DENGAN ADMIN ───────────────────────────────────────────────────
   void _showAdminSelectionSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -2670,7 +2700,10 @@ class _ProfilPageState extends State<ProfilPage> {
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text('Role: $role'),
-                          trailing: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF16A34A)),
+                          trailing: const Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            color: Color(0xFF16A34A),
+                          ),
                           onTap: () {
                             Navigator.pop(context);
                             Navigator.push(
@@ -2696,9 +2729,7 @@ class _ProfilPageState extends State<ProfilPage> {
     );
   }
 
-  // Widget Pembantu Baris Menu Profil
   Widget _buildProfileMenuItem({
-
     required IconData icon,
     required String title,
     required String subtitle,

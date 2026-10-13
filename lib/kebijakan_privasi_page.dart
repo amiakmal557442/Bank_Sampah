@@ -48,10 +48,7 @@ class KebijakanPrivasiPage extends StatelessWidget {
               const SizedBox(height: 8),
               const Text(
                 'Terakhir diperbarui: 08 Agustus 2026',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF94A3B8),
-                ),
+                style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
               ),
               const SizedBox(height: 24),
               _buildSectionTitle('1. Pengumpulan Data Informasi'),

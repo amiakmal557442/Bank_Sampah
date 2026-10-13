@@ -11,26 +11,21 @@ class PetugasRegistrationPage extends StatefulWidget {
 }
 
 class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
-  // Form Key untuk Validasi
   final _formKey = GlobalKey<FormState>();
 
-  // Controller Input Teks
   final _namaController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _platNomorController = TextEditingController();
 
-  // State Pilihan Dropdown & Visibility
   bool _isPasswordObscured = true;
   String? _selectedZona;
   String? _selectedKendaraan;
 
-  // Skema Warna
   final Color _limeGreen = const Color(0xFF32CD32);
   final Color _oldGrassGreen = const Color(0xFF268B07);
 
-  // Daftar Pilihan Zona Operasional
   final List<String> _zonaList = [
     'Drop Point 01 - Pusat Parepare',
     'Drop Point 02 - Soreang',
@@ -39,7 +34,6 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
     'Drop Point 05 - Ujung',
   ];
 
-  // Daftar Pilihan Jenis Kendaraan
   final List<String> _kendaraanList = [
     'Motor Roda 2',
     'Motor Roda 3',
@@ -71,7 +65,6 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      // Cek email & phone di API (XAMPP) dulu
       bool emailExists = false;
       bool phoneExists = false;
       try {
@@ -126,7 +119,6 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
         'point_balance': 0,
       };
 
-      // Simpan ke XAMPP dulu, fallback ke lokal
       bool success = false;
       try {
         success = await ApiService.instance.createUser(newPetugas);
@@ -189,7 +181,6 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Badge Penanda Peran Petugas Lapangan
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Container(
@@ -227,7 +218,6 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Judul Halaman
                     const Text(
                       'Bergabung Sebagai Petugas',
                       style: TextStyle(
@@ -243,11 +233,9 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
                     ),
                     const SizedBox(height: 28),
 
-                    // --- BAGIAN 1: DATA AKUN ---
                     _buildSectionHeader('1. Data Utama & Akun'),
                     const SizedBox(height: 14),
 
-                    // Input Nama Lengkap
                     TextFormField(
                       controller: _namaController,
                       style: const TextStyle(color: Colors.black),
@@ -264,7 +252,6 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Input Nomor WhatsApp / HP
                     TextFormField(
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
@@ -282,7 +269,6 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Input Email
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -303,7 +289,6 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Input Kata Sandi
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _isPasswordObscured,
@@ -337,11 +322,9 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
                     ),
                     const SizedBox(height: 28),
 
-                    // --- BAGIAN 2: DATA OPERASIONAL ---
                     _buildSectionHeader('2. Data Operasional & Kendaraan'),
                     const SizedBox(height: 14),
 
-                    // Dropdown Zona / Drop Point
                     DropdownButtonFormField<String>(
                       value: _selectedZona,
                       dropdownColor: Colors.white,
@@ -370,7 +353,6 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Dropdown Jenis Kendaraan Operasional
                     DropdownButtonFormField<String>(
                       value: _selectedKendaraan,
                       dropdownColor: Colors.white,
@@ -399,7 +381,6 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Input Plat Nomor (Bila Menggunakan Kendaraan)
                     if (_selectedKendaraan != null &&
                         !_selectedKendaraan!.contains('Tanpa Kendaraan')) ...[
                       TextFormField(
@@ -423,7 +404,6 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
 
                     const SizedBox(height: 20),
 
-                    // Tombol Submit Pendaftaran Petugas
                     Container(
                       height: 52,
                       decoration: BoxDecoration(
@@ -471,7 +451,6 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
     );
   }
 
-  // Widget Header Sub-Bagian Form
   Widget _buildSectionHeader(String title) {
     return Text(
       title,
@@ -483,7 +462,6 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
     );
   }
 
-  // Dekorasi Input Form Konsisten
   InputDecoration _buildInputDecoration({
     required String label,
     required IconData prefixIcon,

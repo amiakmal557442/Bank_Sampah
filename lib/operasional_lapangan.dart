@@ -35,11 +35,15 @@ class _OperasionalLapanganScreenState extends State<OperasionalLapanganScreen> {
 
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
-    
+
     final data = await ApiService.instance.getOperasionalData();
     final summary = Map<String, dynamic>.from(data['summary'] ?? {});
-    final dropPoints = List<Map<String, dynamic>>.from(data['dropPoints'] ?? []);
-    final workerStatus = List<Map<String, dynamic>>.from(data['workerStatus'] ?? []);
+    final dropPoints = List<Map<String, dynamic>>.from(
+      data['dropPoints'] ?? [],
+    );
+    final workerStatus = List<Map<String, dynamic>>.from(
+      data['workerStatus'] ?? [],
+    );
 
     if (mounted) {
       setState(() {
@@ -62,7 +66,6 @@ class _OperasionalLapanganScreenState extends State<OperasionalLapanganScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Section
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -110,7 +113,6 @@ class _OperasionalLapanganScreenState extends State<OperasionalLapanganScreen> {
 
           const SizedBox(height: 24),
 
-          // Ringkasan Operasional (Top Cards)
           Row(
             children: [
               _buildSummaryCard(
@@ -141,11 +143,9 @@ class _OperasionalLapanganScreenState extends State<OperasionalLapanganScreen> {
 
           const SizedBox(height: 24),
 
-          // Section Utama: Peta Live (Kiri) & Kapasitas Drop Point (Kanan)
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Live Map View (Google Maps API Placeholder)
               Expanded(
                 flex: 3,
                 child: Container(
@@ -161,12 +161,13 @@ class _OperasionalLapanganScreenState extends State<OperasionalLapanganScreen> {
                         borderRadius: BorderRadius.circular(12),
                         child: FlutterMap(
                           options: MapOptions(
-                            initialCenter: const LatLng(-4.0150, 119.6290), // Pusat Parepare
+                            initialCenter: const LatLng(-4.0150, 119.6290),
                             initialZoom: 13.0,
                           ),
                           children: [
                             TileLayer(
-                              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                              urlTemplate:
+                                  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                               userAgentPackageName: 'com.example.bank_sampah',
                             ),
                           ],
@@ -219,7 +220,6 @@ class _OperasionalLapanganScreenState extends State<OperasionalLapanganScreen> {
 
               const SizedBox(width: 20),
 
-              // 2. Pemantauan Kapasitas Drop Point (FR-AD-08)
               Expanded(
                 flex: 2,
                 child: Container(
@@ -274,7 +274,6 @@ class _OperasionalLapanganScreenState extends State<OperasionalLapanganScreen> {
 
           const SizedBox(height: 24),
 
-          // Section Tabel: Daftar Penugasan & Status Petugas (FR-AD-07)
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(

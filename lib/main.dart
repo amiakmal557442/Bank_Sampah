@@ -12,7 +12,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
@@ -43,7 +43,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/// Widget ini menentukan halaman pertama berdasarrkan sesi yang tersimpan.
 class SplashRouter extends StatefulWidget {
   const SplashRouter({super.key});
 
@@ -87,7 +86,6 @@ class _SplashRouterState extends State<SplashRouter> {
 
   @override
   Widget build(BuildContext context) {
-    // Tampilan loading sementara saat cek sesi
     return const Scaffold(
       backgroundColor: Color(0xFF268B07),
       body: Center(

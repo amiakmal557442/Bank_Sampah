@@ -1,4 +1,3 @@
-
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_saver/file_saver.dart';
@@ -16,7 +15,6 @@ class LaporanAnalitikScreen extends StatefulWidget {
 }
 
 class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
-  // ── Palet Warna
   static const Color _green = Color(0xFF268B07);
   static const Color _lime = Color(0xFF32CD32);
   static const Color _black = Color(0xFF000000);
@@ -24,11 +22,9 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
   static const Color _grey = Color(0xFF5F6368);
   static const Color _border = Color(0xFFE0E0E0);
 
-  // ── State
   bool _isLoading = true;
   Map<String, dynamic> _data = {};
 
-  // Filter bulan yang tersedia
   final List<Map<String, dynamic>> _filterOptions = [
     {'label': 'Semua Waktu', 'bulan': 0, 'tahun': 0},
     {'label': 'Agustus 2026', 'bulan': 8, 'tahun': 2026},
@@ -36,7 +32,7 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
     {'label': 'Juni 2026', 'bulan': 6, 'tahun': 2026},
     {'label': 'Mei 2026', 'bulan': 5, 'tahun': 2026},
   ];
-  int _selectedFilterIndex = 1; // default: Agustus 2026
+  int _selectedFilterIndex = 1;
 
   @override
   void initState() {
@@ -59,7 +55,6 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
     }
   }
 
-  // ── Format angka
   String _formatKg(double kg) {
     if (kg >= 1000) return '${(kg / 1000).toStringAsFixed(1)} ton';
     return '${kg.toStringAsFixed(0)} kg';
@@ -78,7 +73,6 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
     return '$pts Pts';
   }
 
-  // ── Pilih filter dialog
   void _showFilterDialog() {
     showDialog(
       context: context,
@@ -131,7 +125,6 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
     );
   }
 
-  // ── Dialog Export
   void _showExportDialog() {
     showDialog(
       context: context,
@@ -263,16 +256,17 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
 
     try {
       final filterLabel = _filterOptions[_selectedFilterIndex]['label'];
-      
-      // Data Mappings
+
       final int totalTx = _data['totalTx'] ?? 0;
       final int totalPts = _data['totalPoints'] ?? 0;
       final double totalKg = _data['totalKg']?.toDouble() ?? 0.0;
       final int totalNasabah = _data['totalNasabah'] ?? 0;
       final int allNasabah = _data['allNasabah'] ?? 1;
-      final double aktifPct = allNasabah > 0 ? (totalNasabah / allNasabah) * 100 : 0.0;
+      final double aktifPct = allNasabah > 0
+          ? (totalNasabah / allNasabah) * 100
+          : 0.0;
       final double recyclePct = _data['recyclePct']?.toDouble() ?? 0.0;
-      
+
       final List? kategoriList = _data['kategoriData'] as List?;
       final List? trenList = _data['trendData'] as List?;
       final List? rekapList = _data['rekapData'] as List?;
@@ -283,41 +277,44 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
       String? name;
 
       if (format.contains('CSV')) {
-        // Build CSV
         final StringBuffer csv = StringBuffer();
         csv.writeln('LAPORAN ANALITIK BANK SAMPAH');
         csv.writeln('Periode: $filterLabel\n');
-        
+
         csv.writeln('RINGKASAN');
-        csv.writeln('Total Transaksi,Total Poin Dikeluarkan,Total Volume (Kg),Nasabah Aktif (%),Tingkat Daur Ulang (%)');
-        csv.writeln('$totalTx,$totalPts,$totalKg,${aktifPct.toStringAsFixed(1)},${recyclePct.toStringAsFixed(1)}\n');
-        
+        csv.writeln(
+          'Total Transaksi,Total Poin Dikeluarkan,Total Volume (Kg),Nasabah Aktif (%),Tingkat Daur Ulang (%)',
+        );
+        csv.writeln(
+          '$totalTx,$totalPts,$totalKg,${aktifPct.toStringAsFixed(1)},${recyclePct.toStringAsFixed(1)}\n',
+        );
+
         csv.writeln('VOLUME PER KATEGORI');
         csv.writeln('Kategori,Volume (Kg)');
         if (kategoriList != null) {
           for (var k in kategoriList) csv.writeln('${k['name']},${k['kg']}');
         }
         csv.writeln('');
-        
+
         csv.writeln('TREN SETORAN MINGGUAN');
         csv.writeln('Hari/Tanggal,Transaksi,Poin Keluar');
         if (trenList != null) {
-          for (var t in trenList) csv.writeln('${t['label']},${t['cnt']},${t['pts']}');
+          for (var t in trenList)
+            csv.writeln('${t['label']},${t['cnt']},${t['pts']}');
         }
         csv.writeln('');
-        
+
         csv.writeln('REKAP BULANAN');
         csv.writeln('Bulan,Total Transaksi,Total Poin');
         if (rekapList != null) {
-          for (var r in rekapList) csv.writeln('${r['periode']},${r['totalTx']},${r['totalPts']}');
+          for (var r in rekapList)
+            csv.writeln('${r['periode']},${r['totalTx']},${r['totalPts']}');
         }
-        
+
         bytes = Uint8List.fromList(csv.toString().codeUnits);
         mime = MimeType.csv;
         name = 'Laporan_Analitik_$filterLabel';
-        
       } else if (format.contains('Excel')) {
-        // Build Excel
         var excel = Excel.createExcel();
         Sheet sheetObject = excel['Laporan'];
         excel.setDefaultSheet('Laporan');
@@ -325,79 +322,138 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
         sheetObject.appendRow([TextCellValue('LAPORAN ANALITIK BANK SAMPAH')]);
         sheetObject.appendRow([TextCellValue('Periode: $filterLabel')]);
         sheetObject.appendRow([TextCellValue('')]);
-        
+
         sheetObject.appendRow([TextCellValue('RINGKASAN')]);
-        sheetObject.appendRow([TextCellValue('Total Transaksi'), TextCellValue('Total Poin'), TextCellValue('Total Volume (Kg)'), TextCellValue('Nasabah Aktif (%)'), TextCellValue('Tingkat Daur Ulang (%)')]);
-        sheetObject.appendRow([IntCellValue(totalTx), IntCellValue(totalPts), DoubleCellValue(totalKg), DoubleCellValue(aktifPct), DoubleCellValue(recyclePct)]);
+        sheetObject.appendRow([
+          TextCellValue('Total Transaksi'),
+          TextCellValue('Total Poin'),
+          TextCellValue('Total Volume (Kg)'),
+          TextCellValue('Nasabah Aktif (%)'),
+          TextCellValue('Tingkat Daur Ulang (%)'),
+        ]);
+        sheetObject.appendRow([
+          IntCellValue(totalTx),
+          IntCellValue(totalPts),
+          DoubleCellValue(totalKg),
+          DoubleCellValue(aktifPct),
+          DoubleCellValue(recyclePct),
+        ]);
         sheetObject.appendRow([TextCellValue('')]);
-        
+
         sheetObject.appendRow([TextCellValue('VOLUME PER KATEGORI')]);
-        sheetObject.appendRow([TextCellValue('Kategori'), TextCellValue('Volume (Kg)')]);
+        sheetObject.appendRow([
+          TextCellValue('Kategori'),
+          TextCellValue('Volume (Kg)'),
+        ]);
         if (kategoriList != null) {
           for (var k in kategoriList) {
-            sheetObject.appendRow([TextCellValue(k['name'].toString()), DoubleCellValue((k['kg'] ?? 0).toDouble())]);
+            sheetObject.appendRow([
+              TextCellValue(k['name'].toString()),
+              DoubleCellValue((k['kg'] ?? 0).toDouble()),
+            ]);
           }
         }
         sheetObject.appendRow([TextCellValue('')]);
-        
+
         sheetObject.appendRow([TextCellValue('TREN SETORAN MINGGUAN')]);
-        sheetObject.appendRow([TextCellValue('Hari/Tanggal'), TextCellValue('Transaksi'), TextCellValue('Poin Keluar')]);
+        sheetObject.appendRow([
+          TextCellValue('Hari/Tanggal'),
+          TextCellValue('Transaksi'),
+          TextCellValue('Poin Keluar'),
+        ]);
         if (trenList != null) {
           for (var t in trenList) {
-            sheetObject.appendRow([TextCellValue(t['label'].toString()), IntCellValue(t['cnt'] as int), IntCellValue(t['pts'] as int)]);
+            sheetObject.appendRow([
+              TextCellValue(t['label'].toString()),
+              IntCellValue(t['cnt'] as int),
+              IntCellValue(t['pts'] as int),
+            ]);
           }
         }
-        
+
         final List<int>? fileBytes = excel.encode();
         bytes = Uint8List.fromList(fileBytes!);
         mime = MimeType.microsoftExcel;
         name = 'Laporan_Analitik_$filterLabel';
-        
       } else if (format.contains('PDF')) {
-        // Build PDF
         final pdfDoc = pw.Document();
-        
+
         pdfDoc.addPage(
           pw.Page(
             build: (pw.Context context) => pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text('LAPORAN ANALITIK BANK SAMPAH', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                pw.Text(
+                  'LAPORAN ANALITIK BANK SAMPAH',
+                  style: pw.TextStyle(
+                    fontSize: 18,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
                 pw.Text('Periode: $filterLabel\n\n'),
-                
-                pw.Text('RINGKASAN', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+
+                pw.Text(
+                  'RINGKASAN',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                ),
                 pw.TableHelper.fromTextArray(
                   context: context,
                   data: <List<String>>[
-                    <String>['Total Transaksi', 'Total Poin', 'Total Volume (Kg)', 'Nasabah Aktif (%)', 'Tingkat Daur Ulang (%)'],
-                    <String>['$totalTx', '$totalPts', '$totalKg', '${aktifPct.toStringAsFixed(1)}%', '${recyclePct.toStringAsFixed(1)}%'],
+                    <String>[
+                      'Total Transaksi',
+                      'Total Poin',
+                      'Total Volume (Kg)',
+                      'Nasabah Aktif (%)',
+                      'Tingkat Daur Ulang (%)',
+                    ],
+                    <String>[
+                      '$totalTx',
+                      '$totalPts',
+                      '$totalKg',
+                      '${aktifPct.toStringAsFixed(1)}%',
+                      '${recyclePct.toStringAsFixed(1)}%',
+                    ],
                   ],
                 ),
                 pw.SizedBox(height: 20),
-                
-                pw.Text('VOLUME PER KATEGORI', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+
+                pw.Text(
+                  'VOLUME PER KATEGORI',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                ),
                 pw.TableHelper.fromTextArray(
                   context: context,
                   data: <List<String>>[
                     <String>['Kategori', 'Volume (Kg)'],
-                    ...?kategoriList?.map((k) => [k['name'].toString(), k['kg'].toString()]),
+                    ...?kategoriList?.map(
+                      (k) => [k['name'].toString(), k['kg'].toString()],
+                    ),
                   ],
                 ),
                 pw.SizedBox(height: 20),
-                
-                pw.Text('TREN SETORAN MINGGUAN', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+
+                pw.Text(
+                  'TREN SETORAN MINGGUAN',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                ),
                 pw.TableHelper.fromTextArray(
                   context: context,
                   data: <List<String>>[
                     <String>['Hari/Tanggal', 'Transaksi', 'Poin Keluar'],
-                    ...?trenList?.map((t) => [t['label'].toString(), t['cnt'].toString(), t['pts'].toString()]),
+                    ...?trenList?.map(
+                      (t) => [
+                        t['label'].toString(),
+                        t['cnt'].toString(),
+                        t['pts'].toString(),
+                      ],
+                    ),
                   ],
                 ),
               ],
             ),
           ),
         );
-        
+
         bytes = await pdfDoc.save();
         mime = MimeType.pdf;
         name = 'Laporan_Analitik_$filterLabel';
@@ -460,13 +516,11 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
     final rekapData =
         (_data['rekapData'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
-    // Hitung total KG dari kategori
     final totalKatKg = kategoriData.fold<double>(
       0,
       (sum, e) => sum + ((e['kg'] as num?)?.toDouble() ?? 0),
     );
 
-    // Tren - cari nilai max
     final maxPts = trendData.isEmpty
         ? 1
         : trendData
@@ -480,12 +534,10 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Kiri: judul dan deskripsi – bisa menyusut
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -507,13 +559,12 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
                 ),
               ),
               const SizedBox(width: 16),
-              // Kanan: filter + tombol ekspor – bungkus Wrap agar tidak overflow
+
               Wrap(
                 spacing: 12,
                 runSpacing: 8,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  // Filter waktu
                   InkWell(
                     onTap: _showFilterDialog,
                     borderRadius: BorderRadius.circular(8),
@@ -545,7 +596,7 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
                       ),
                     ),
                   ),
-                  // Tombol Ekspor
+
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _green,
@@ -575,7 +626,6 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
 
           const SizedBox(height: 24),
 
-          // ── Metric Cards
           Row(
             children: [
               _buildMetricCard(
@@ -614,11 +664,9 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
 
           const SizedBox(height: 24),
 
-          // ── Grafik & Komposisi
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Grafik Batang Tren Mingguan
               Expanded(
                 flex: 3,
                 child: Container(
@@ -681,7 +729,6 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
 
               const SizedBox(width: 20),
 
-              // Komposisi Kategori
               Expanded(
                 flex: 2,
                 child: Container(
@@ -744,7 +791,6 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
 
           const SizedBox(height: 24),
 
-          // ── Tabel Rekapitulasi
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -789,7 +835,6 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
                     4: FlexColumnWidth(1),
                   },
                   children: [
-                    // Header
                     TableRow(
                       decoration: BoxDecoration(
                         color: _lime.withValues(alpha: 0.08),
@@ -847,7 +892,7 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
                         ),
                       ],
                     ),
-                    // Data Rows
+
                     ...rekapData.map((row) {
                       final tx = row['totalTx'] ?? row['totalTx'] ?? 0;
                       final pts = (row['totalPts'] as num?)?.toInt() ?? 0;
@@ -880,7 +925,6 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
     );
   }
 
-  // ── Metric Card
   Widget _buildMetricCard(
     String title,
     String value,
@@ -931,11 +975,9 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
     );
   }
 
-  // ── Bar Chart Custom (tanpa library)
   Widget _buildBarChart(List<Map<String, dynamic>> data, int maxPts) {
     return Column(
       children: [
-        // Chart area
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -953,7 +995,6 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          // Tooltip-ish label on top
                           Text(
                             pts >= 1000
                                 ? '${(pts / 1000).toStringAsFixed(1)}K'
@@ -965,12 +1006,12 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          // Bar
+
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 600),
                             curve: Curves.easeOut,
                             width: double.infinity,
-                            // Maximum bar height = available height minus the space taken by Text and SizedBox (~18px)
+
                             height: (constraints.maxHeight - 20) * pct,
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
@@ -993,7 +1034,7 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        // X Labels
+
         Row(
           children: data.map((item) {
             return Expanded(
@@ -1009,7 +1050,6 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
     );
   }
 
-  // ── Category Progress Bar
   Widget _buildCategoryBar(
     String name,
     String pct,
@@ -1058,7 +1098,6 @@ class _LaporanAnalitikScreenState extends State<LaporanAnalitikScreen> {
     );
   }
 
-  // ── Rekap Table Row
   TableRow _buildRekapRow(
     String periode,
     String totalTx,

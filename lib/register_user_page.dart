@@ -36,7 +36,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      // Cek email di API (XAMPP) dulu, lalu lokal
       bool isRegistered = false;
       try {
         final users = await ApiService.instance.getUsers();
@@ -73,7 +72,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'point_balance': 0,
       };
 
-      // Simpan ke XAMPP dulu, fallback ke lokal
       bool success = false;
       try {
         success = await ApiService.instance.createUser(newUser);
@@ -127,7 +125,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Judul & Subtitle
                   const Text(
                     'Pendaftaran Akun Pengguna',
                     style: TextStyle(
@@ -147,7 +144,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Card Formulir Pendaftaran
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -167,7 +163,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Field Nama
                           const Text(
                             'Nama Lengkap',
                             style: TextStyle(
@@ -192,7 +187,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           const SizedBox(height: 18),
 
-                          // Field Email
                           const Text(
                             'Alamat Email',
                             style: TextStyle(
@@ -223,7 +217,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           const SizedBox(height: 18),
 
-                          // Field Password
                           const Text(
                             'Kata Sandi',
                             style: TextStyle(
@@ -265,7 +258,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Tombol Daftar
                           SizedBox(
                             width: double.infinity,
                             height: 48,

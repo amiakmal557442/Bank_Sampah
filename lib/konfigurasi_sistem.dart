@@ -10,7 +10,6 @@ class KonfigurasiSistemScreen extends StatefulWidget {
 }
 
 class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
-  // Palet Warna Utama
   final Color oldGrassGreen = const Color(0xFF268B07);
   final Color limeGreen = const Color(0xFF32CD32);
   final Color baseBlack = const Color(0xFF000000);
@@ -18,7 +17,6 @@ class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
   final Color textGrey = const Color(0xFF5F6368);
   final Color borderGrey = const Color(0xFFE0E0E0);
 
-  // State Form Konfigurasi (FR-AD-14)
   final TextEditingController _minWeightController = TextEditingController();
   final TextEditingController _maxRadiusController = TextEditingController();
   final TextEditingController _minWithdrawController = TextEditingController();
@@ -69,7 +67,6 @@ class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
   Future<void> _saveConfig() async {
     setState(() => _isSaving = true);
 
-    // Parse numeric values, fallback to defaults if invalid
     double minWeight = double.tryParse(_minWeightController.text) ?? 1.0;
     double maxRadius = double.tryParse(_maxRadiusController.text) ?? 5.0;
     double minWithdraw =
@@ -139,14 +136,12 @@ class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
     }
 
     return Scaffold(
-      backgroundColor:
-          Colors.transparent, // Mengikuti background shell dashboard
+      backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(32.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Section
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -176,7 +171,7 @@ class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
                 Row(
                   children: [
                     OutlinedButton(
-                      onPressed: _loadConfig, // Refresh data ke kondisi awal
+                      onPressed: _loadConfig,
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
@@ -234,11 +229,9 @@ class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
 
             const SizedBox(height: 32),
 
-            // Form Grid (Dua Kolom)
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // KOLOM KIRI: Parameter Transaksi & Poin
                 Expanded(
                   child: Column(
                     children: [
@@ -291,7 +284,6 @@ class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
 
                 const SizedBox(width: 24),
 
-                // KOLOM KANAN: Otomatisasi, Jam Operasional & Notifikasi
                 Expanded(
                   child: Column(
                     children: [
@@ -362,7 +354,6 @@ class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
     );
   }
 
-  // Widget Container Kelompok Pengaturan (Card Section)
   Widget _buildCardSection({
     required String title,
     required IconData icon,
@@ -400,7 +391,6 @@ class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
     );
   }
 
-  // Widget Input Form Standar
   Widget _buildInputField({
     required String label,
     required TextEditingController controller,
@@ -460,7 +450,6 @@ class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
     );
   }
 
-  // Widget Toggle Switch
   Widget _buildSwitchTile({
     required String title,
     required String subtitle,

@@ -6,8 +6,7 @@ class SessionService {
   static Map<String, dynamic>? currentUser;
 
   static const String _keyUserId = 'logged_in_user_id';
-
-  // ── Getters ──────────────────────────────────────────────────────────────
+  static const String _keyToken = 'jwt_token';
 
   static bool get isLoggedIn => currentUser != null;
   static String get userId => currentUser?['id'] ?? '';
@@ -19,25 +18,29 @@ class SessionService {
   static String get address => currentUser?['address'] ?? '';
   static String get profilePicture => currentUser?['profile_picture'] ?? '';
 
-  // ── Persistensi Sesi ─────────────────────────────────────────────────────
-
-  /// Simpan user ke memori dan simpan ID ke SharedPreferences agar sesi
-  /// tetap aktif walaupun app ditutup.
   static Future<void> saveSession(Map<String, dynamic> user) async {
     currentUser = user;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyUserId, user['id'].toString());
+
+    if (user.containsKey('token')) {
+      await prefs.setString(_keyToken, user['token']);
+      ApiService.setToken(user['token']);
+    }
   }
 
-  /// Coba memuat ulang sesi dari SharedPreferences saat app dibuka.
-  /// Mengembalikan true jika sesi ditemukan, false jika tidak.
   static Future<bool> loadSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedId = prefs.getString(_keyUserId);
+      final savedToken = prefs.getString(_keyToken);
+
       if (savedId == null || savedId.isEmpty) return false;
 
-      // Prioritas: ambil dari XAMPP API untuk data paling baru
+      if (savedToken != null && savedToken.isNotEmpty) {
+        ApiService.setToken(savedToken);
+      }
+
       try {
         final apiUser = await ApiService.instance.getUserById(savedId);
         if (apiUser != null) {
@@ -46,7 +49,6 @@ class SessionService {
         }
       } catch (_) {}
 
-      // Fallback ke local DB
       final user = await DatabaseHelper.instance.getUserById(savedId);
       if (user == null) {
         await prefs.remove(_keyUserId);
@@ -60,31 +62,27 @@ class SessionService {
     }
   }
 
-  /// Refresh data user terbaru — prioritas dari XAMPP API agar point_balance
-  /// selalu sinkron dengan yang ada di MySQL.
   static Future<void> refresh() async {
     if (userId.isEmpty) return;
     try {
-      // Coba ambil dari XAMPP API dulu (poin paling akurat)
       final apiUser = await ApiService.instance.getUserById(userId);
       if (apiUser != null) {
-        // Gabungkan dengan currentUser agar field lokal tidak hilang
         currentUser = {...?currentUser, ...apiUser};
         return;
       }
     } catch (_) {}
 
-    // Fallback ke local DB jika API tidak tersedia
     final user = await DatabaseHelper.instance.getUserById(userId);
     if (user != null) {
       currentUser = user;
     }
   }
 
-  /// Logout: hapus sesi dari memori dan SharedPreferences.
   static Future<void> logout() async {
     currentUser = null;
+    ApiService.setToken(null);
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyUserId);
+    await prefs.remove(_keyToken);
   }
 }

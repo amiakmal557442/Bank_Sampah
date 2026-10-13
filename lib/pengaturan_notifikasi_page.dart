@@ -4,7 +4,8 @@ class PengaturanNotifikasiPage extends StatefulWidget {
   const PengaturanNotifikasiPage({super.key});
 
   @override
-  State<PengaturanNotifikasiPage> createState() => _PengaturanNotifikasiPageState();
+  State<PengaturanNotifikasiPage> createState() =>
+      _PengaturanNotifikasiPageState();
 }
 
 class _PengaturanNotifikasiPageState extends State<PengaturanNotifikasiPage> {

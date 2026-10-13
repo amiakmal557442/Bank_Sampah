@@ -30,11 +30,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void initState() {
     super.initState();
-    _fullNameController =
-        TextEditingController(text: SessionService.fullName);
+    _fullNameController = TextEditingController(text: SessionService.fullName);
     _emailController = TextEditingController(text: SessionService.email);
-    _addressController =
-        TextEditingController(text: SessionService.address);
+    _addressController = TextEditingController(text: SessionService.address);
   }
 
   @override
@@ -60,9 +58,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memilih gambar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal memilih gambar: $e')));
       }
     }
   }
@@ -91,17 +89,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 const SizedBox(height: 16),
                 const Text(
                   'Ubah Foto Profil',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
                 ListTile(
                   leading: CircleAvatar(
                     backgroundColor: lightGreenBg,
-                    child: Icon(Icons.photo_library_rounded,
-                        color: primaryGreen),
+                    child: Icon(
+                      Icons.photo_library_rounded,
+                      color: primaryGreen,
+                    ),
                   ),
                   title: const Text('Pilih dari Galeri'),
                   onTap: () {
@@ -112,8 +109,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ListTile(
                   leading: CircleAvatar(
                     backgroundColor: lightGreenBg,
-                    child:
-                        Icon(Icons.camera_alt_rounded, color: primaryGreen),
+                    child: Icon(Icons.camera_alt_rounded, color: primaryGreen),
                   ),
                   title: const Text('Ambil Foto Kamera'),
                   onTap: () {
@@ -126,8 +122,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ListTile(
                     leading: const CircleAvatar(
                       backgroundColor: Color(0xFFFEE2E2),
-                      child:
-                          Icon(Icons.delete_outline_rounded, color: Colors.red),
+                      child: Icon(
+                        Icons.delete_outline_rounded,
+                        color: Colors.red,
+                      ),
                     ),
                     title: const Text(
                       'Hapus Foto Profil',
@@ -175,7 +173,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
         );
       }
 
-      // 2. Prepare payload update profil
       final Map<String, dynamic> updateData = {
         'full_name': _fullNameController.text.trim(),
         'email': _emailController.text.trim(),
@@ -186,7 +183,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
         updateData['profile_picture'] = updatedPhotoName;
       }
 
-      // 3. Simpan perubahan ke API MySQL
       final success = await ApiService.instance.updateUserProfile(
         SessionService.userId,
         updateData,
@@ -266,7 +262,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final names = SessionService.fullName.split(' ');
     String initial = 'US';
     if (names.length >= 2) {
-      initial = (names[0].isNotEmpty ? names[0][0] : '') +
+      initial =
+          (names[0].isNotEmpty ? names[0][0] : '') +
           (names[1].isNotEmpty ? names[1][0] : '');
     } else if (names.isNotEmpty && names[0].isNotEmpty) {
       initial = names[0][0];
@@ -303,8 +300,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: Color(0xFF0F172A), size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF0F172A),
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -316,7 +316,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
             children: [
               const SizedBox(height: 10),
 
-              // --- AVATAR FOTO PROFIL & PENCIL OVERLAY ---
               Center(
                 child: Stack(
                   children: [
@@ -341,10 +340,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           decoration: BoxDecoration(
                             color: primaryGreen,
                             shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white,
-                              width: 3,
-                            ),
+                            border: Border.all(color: Colors.white, width: 3),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.15),
@@ -380,7 +376,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
               const SizedBox(height: 28),
 
-              // --- FORM ISIAN DATA PROFIL ---
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -436,7 +431,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
               const SizedBox(height: 32),
 
-              // --- BUTTON SIMPAN PERUBAHAN ---
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -503,8 +497,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
         prefixIcon: Icon(icon, color: primaryGreen, size: 20),
         filled: true,
         fillColor: const Color(0xFFF8FAFC),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,

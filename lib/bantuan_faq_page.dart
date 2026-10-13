@@ -30,7 +30,11 @@ class BantuanFaqPage extends StatelessWidget {
             ),
             child: Column(
               children: [
-                const Icon(Icons.support_agent_rounded, size: 48, color: Colors.white),
+                const Icon(
+                  Icons.support_agent_rounded,
+                  size: 48,
+                  color: Colors.white,
+                ),
                 const SizedBox(height: 12),
                 const Text(
                   'Halo, ada yang bisa kami bantu?',
@@ -84,10 +88,11 @@ class BantuanFaqPage extends StatelessWidget {
             width: double.infinity,
             height: 54,
             child: OutlinedButton.icon(
-              onPressed: () {
-                // Future action: Open WhatsApp or Email
-              },
-              icon: Icon(Icons.chat_bubble_outline_rounded, color: primaryGreen),
+              onPressed: () {},
+              icon: Icon(
+                Icons.chat_bubble_outline_rounded,
+                color: primaryGreen,
+              ),
               label: Text(
                 'Hubungi Customer Service',
                 style: TextStyle(

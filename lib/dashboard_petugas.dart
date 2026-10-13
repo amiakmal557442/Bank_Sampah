@@ -9,9 +9,6 @@ import 'widgets/image_viewer_dialog.dart';
 import 'chat_admin_page.dart';
 import 'chat_page.dart';
 
-// ============================================================
-// Model Data Dummy untuk Antrean Penjemputan
-// ============================================================
 class PickupTask {
   final String wasteId;
   final String customerName;
@@ -19,7 +16,7 @@ class PickupTask {
   final String time;
   final List<String> wasteTypes;
   final double estWeightKg;
-  String status; // 'menuju', 'tiba', 'selesai'
+  String status;
   final String type;
   final String? photoEvidence;
   final String? customerId;
@@ -38,14 +35,11 @@ class PickupTask {
   });
 }
 
-// ============================================================
-// Model Data Dummy untuk Drop Point
-// ============================================================
 class WorkerDropPoint {
   final String id;
   final String name;
   final String address;
-  String capacityStatus; // 'aman', 'penuh', 'kritis'
+  String capacityStatus;
 
   WorkerDropPoint({
     required this.id,
@@ -55,9 +49,6 @@ class WorkerDropPoint {
   });
 }
 
-// ============================================================
-// Model Kategori Sampah (untuk Timbang Manual)
-// ============================================================
 class ManualWasteItem {
   final int id;
   final String name;
@@ -78,9 +69,6 @@ class ManualWasteItem {
   int get totalPoints => (pointsPerKg * weightKg).round();
 }
 
-// ============================================================
-// WorkerDashboardScreen — Main Widget
-// ============================================================
 class WorkerDashboardScreen extends StatefulWidget {
   const WorkerDashboardScreen({super.key});
 
@@ -89,19 +77,16 @@ class WorkerDashboardScreen extends StatefulWidget {
 }
 
 class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
-  // Palet Warna
   static const Color limeGreen = Color(0xFF32CD32);
   static const Color oldGrassGreen = Color(0xFF268B07);
   static const Color baseBlack = Color(0xFF000000);
   static const Color baseWhite = Color(0xFFFFFFFF);
   static const Color bgGrey = Color(0xFFF5F6FA);
 
-  // State
   bool isLoading = true;
   bool isOnline = true;
   int _bottomNavIndex = 0;
 
-  // Ambil info petugas dari sesi
   String get _petugasName => SessionService.fullName;
 
   String get _armada {
@@ -110,14 +95,11 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     return match?.group(1)?.trim() ?? 'Petugas Lapangan';
   }
 
-  // Data Tugas & Antrean
   PickupTask? _currentTask;
   List<PickupTask> _queue = [];
-  
-  // Data Titipan Kurir
+
   List<Map<String, dynamic>> _titipanList = [];
 
-  // Data Drop Point
   List<WorkerDropPoint> _dropPoints = [];
 
   @override
@@ -131,12 +113,11 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     try {
       final petugasId = SessionService.currentUser?['id'] as String?;
 
-      // Load Drop Points
       List<Map<String, dynamic>> dps = [];
       try {
         dps = await ApiService.instance.getDropPoints();
       } catch (_) {}
-      
+
       if (dps.isEmpty) {
         dps = await DatabaseHelper.instance.getDropPoints();
       }
@@ -152,21 +133,18 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           )
           .toList();
 
-      // Load Tasks — coba API dulu, fallback ke local DB
       List<Map<String, dynamic>> allTasks = [];
       try {
-        // Ambil hanya tugas penjemputan (pickup) untuk Beranda
         allTasks = await ApiService.instance.getPendingTasks(
           petugasId: petugasId,
           statuses: ['dikonfirmasi', 'menuju_lokasi', 'tiba'],
         );
       } catch (_) {}
 
-      // Fallback ke lokal jika API gagal atau kosong
       if (allTasks.isEmpty) {
         final localTasks = await DatabaseHelper.instance
             .getPendingPickupTasks();
-        // Map field lokal ke format yang diharapkan
+
         allTasks = localTasks.map((t) {
           final weightStr = (t['estimasi_berat'] ?? '0 kg')
               .toString()
@@ -185,8 +163,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           };
         }).toList();
       }
-
-      // Hapus filter pickup agar tugas drop_in juga muncul
 
       _queue = allTasks.map((t) {
         String rawDate = t['pickup_date'] ?? '';
@@ -250,17 +226,18 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       } else {
         _currentTask = null;
       }
-      
-      // Load Titipan Kurir
+
       try {
-        final List<Map<String, dynamic>> res = await ApiService.instance.fetchWithdrawals();
+        final List<Map<String, dynamic>> res = await ApiService.instance
+            .fetchWithdrawals();
         _titipanList = res.where((w) {
-          return w['status'] == 'approved' && w['account_details']?.toString().contains('(Titip Kurir)') == true;
+          return w['status'] == 'approved' &&
+              w['account_details']?.toString().contains('(Titip Kurir)') ==
+                  true;
         }).toList();
       } catch (e) {
         _titipanList = await DatabaseHelper.instance.getTitipanKurir();
       }
-      
     } catch (e) {
       debugPrint('Error loading dashboard petugas data: $e');
     }
@@ -287,9 +264,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // AppBar
-  // ─────────────────────────────────────────────
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: oldGrassGreen,
@@ -300,21 +274,32 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
         onTap: () => setState(() => _bottomNavIndex = 3),
         child: Row(
           children: [
-            Builder(builder: (context) {
-              final picUrl = ApiService.getProfileImageUrl(SessionService.profilePicture);
-              if (picUrl != null && picUrl.isNotEmpty) {
-                return CircleAvatar(
+            Builder(
+              builder: (context) {
+                final picUrl = ApiService.getProfileImageUrl(
+                  SessionService.profilePicture,
+                );
+                if (picUrl != null && picUrl.isNotEmpty) {
+                  return CircleAvatar(
+                    backgroundColor: baseWhite,
+                    radius: 18,
+                    backgroundImage: NetworkImage(
+                      picUrl,
+                      headers: const {'ngrok-skip-browser-warning': 'true'},
+                    ),
+                  );
+                }
+                return const CircleAvatar(
                   backgroundColor: baseWhite,
                   radius: 18,
-                  backgroundImage: NetworkImage(picUrl, headers: const {'ngrok-skip-browser-warning': 'true'}),
+                  child: Icon(
+                    Icons.person_rounded,
+                    color: oldGrassGreen,
+                    size: 22,
+                  ),
                 );
-              }
-              return const CircleAvatar(
-                backgroundColor: baseWhite,
-                radius: 18,
-                child: Icon(Icons.person_rounded, color: oldGrassGreen, size: 22),
-              );
-            }),
+              },
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -375,9 +360,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // Bottom Navigation
-  // ─────────────────────────────────────────────
   Widget _buildBottomNav() {
     return BottomNavigationBar(
       currentIndex: _bottomNavIndex,
@@ -417,9 +399,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // Beranda Body
-  // ─────────────────────────────────────────────
   Widget _buildBerandaBody() {
     if (isLoading) {
       return const Center(
@@ -431,15 +410,12 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Banner Status Aktif / Istirahat
           _buildStatusBanner(),
 
-          // 1. Menu Aksi Cepat
           _buildQuickActionBar(),
 
           const SizedBox(height: 16),
 
-          // 2. Tugas Saat Ini
           _buildSectionHeader('TUGAS SAAT INI'),
           const SizedBox(height: 8),
           _currentTask != null
@@ -462,7 +438,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
 
           const SizedBox(height: 20),
 
-          // 3. Antrean Penjemputan
           _buildSectionHeader(
             'ANTREAN PENJEMPUTAN',
             trailing: GestureDetector(
@@ -479,38 +454,45 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           ),
           const SizedBox(height: 8),
           for (final task in _queue) _buildQueueTaskCard(task),
-          
+
           if (_titipanList.isNotEmpty) ...[
             const SizedBox(height: 24),
             _buildSectionHeader('DAFTAR TITIPAN (BAWAAN)'),
             const SizedBox(height: 8),
             for (final titipan in _titipanList) _buildTitipanCard(titipan),
           ],
-          
+
           const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  // ─────────────────────────────────────────────
-  // Titipan Card
-  // ─────────────────────────────────────────────
   Widget _buildTitipanCard(Map<String, dynamic> titipan) {
-    String itemName = titipan['account_details']?.toString().replaceAll('(Titip Kurir)', '').trim() ?? 'Barang';
-    String nasabahName = titipan['full_name'] ?? titipan['nasabah_name'] ?? 'Nasabah';
-    
+    String itemName =
+        titipan['account_details']
+            ?.toString()
+            .replaceAll('(Titip Kurir)', '')
+            .trim() ??
+        'Barang';
+    String nasabahName =
+        titipan['full_name'] ?? titipan['nasabah_name'] ?? 'Nasabah';
+
     String nasabahAddress = titipan['nasabah_address']?.toString().trim() ?? '';
-    if (nasabahAddress.isEmpty) nasabahAddress = titipan['address']?.toString().trim() ?? '';
+    if (nasabahAddress.isEmpty)
+      nasabahAddress = titipan['address']?.toString().trim() ?? '';
     if (nasabahAddress.isEmpty) nasabahAddress = 'Alamat belum diatur';
-    
+
     return Container(
       margin: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: baseWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: oldGrassGreen.withValues(alpha: 0.3), width: 1.5),
+        border: Border.all(
+          color: oldGrassGreen.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -528,7 +510,11 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
               color: oldGrassGreen.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.shopping_bag_outlined, color: oldGrassGreen, size: 24),
+            child: const Icon(
+              Icons.shopping_bag_outlined,
+              color: oldGrassGreen,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -556,12 +542,19 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.location_on_rounded, size: 14, color: Colors.grey),
+                    const Icon(
+                      Icons.location_on_rounded,
+                      size: 14,
+                      color: Colors.grey,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         nasabahAddress,
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
                       ),
                     ),
                   ],
@@ -574,9 +567,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // Coming Soon placeholder untuk tab lain
-  // ─────────────────────────────────────────────
   Widget _buildComingSoonBody(int index) {
     const labels = ['', 'Tugas', 'Riwayat', 'Profil'];
     return Center(
@@ -603,9 +593,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // Status Banner
-  // ─────────────────────────────────────────────
   Widget _buildStatusBanner() {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -655,9 +642,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // Quick Action Bar
-  // ─────────────────────────────────────────────
   Widget _buildQuickActionBar() {
     return Container(
       color: baseWhite,
@@ -723,9 +707,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // Section Header helper
-  // ─────────────────────────────────────────────
   Widget _buildSectionHeader(String title, {Widget? trailing}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -747,11 +728,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // Kartu Tugas Aktif
-  // ─────────────────────────────────────────────
-  // _showImageDialog removed in favor of ImageViewerDialog
-
   Widget _buildCurrentTaskCard() {
     final task = _currentTask!;
     return Container(
@@ -772,7 +748,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Badge status + ID
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -810,7 +785,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           ),
           const SizedBox(height: 14),
 
-          // Nama nasabah
           Text(
             task.customerName,
             style: const TextStyle(
@@ -821,7 +795,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           ),
           const SizedBox(height: 6),
 
-          // Alamat
           Row(
             children: [
               Icon(
@@ -841,7 +814,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           ),
           const SizedBox(height: 6),
 
-          // Estimasi berat
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -859,10 +831,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Tombol aksi
           Row(
             children: [
-              // Tombol Lihat Gambar
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
@@ -874,24 +844,26 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                     ),
                   ),
                   onPressed: () {
-                    if (task.photoEvidence != null && task.photoEvidence!.isNotEmpty) {
+                    if (task.photoEvidence != null &&
+                        task.photoEvidence!.isNotEmpty) {
                       ImageViewerDialog.show(context, task.photoEvidence!);
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tidak ada gambar foto sampah.')));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Tidak ada gambar foto sampah.'),
+                        ),
+                      );
                     }
                   },
                   icon: const Icon(Icons.image_outlined, size: 16),
                   label: const FittedBox(
                     fit: BoxFit.scaleDown,
-                    child: Text(
-                      'Lihat Gambar',
-                      style: TextStyle(fontSize: 12),
-                    ),
+                    child: Text('Lihat Gambar', style: TextStyle(fontSize: 12)),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              // Tombol Chat Nasabah
+
               if (task.status == 'menuju_lokasi' || task.status == 'tiba') ...[
                 Expanded(
                   child: OutlinedButton.icon(
@@ -916,7 +888,10 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                         ),
                       );
                     },
-                    icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
+                    icon: const Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      size: 16,
+                    ),
                     label: const FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(
@@ -928,7 +903,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 ),
                 const SizedBox(width: 8),
               ],
-              // Tombol Aksi Utama
+
               Expanded(
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -942,7 +917,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                   ),
                   onPressed: () {
                     _currentTask = task;
-                    if (task.status == 'menuju_lokasi' || task.status == 'tiba') {
+                    if (task.status == 'menuju_lokasi' ||
+                        task.status == 'tiba') {
                       _showTimbangManualSheet(wasteId: task.wasteId);
                     } else {
                       _updateStatusMenujuForCurrentTask();
@@ -951,7 +927,9 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                   child: Text(
                     (task.status == 'menuju_lokasi' || task.status == 'tiba')
                         ? 'Verifikasi & Timbang'
-                        : (task.type == 'drop_in' || task.type == 'drop-in' ? 'Terima Drop-in' : 'Menjemput'),
+                        : (task.type == 'drop_in' || task.type == 'drop-in'
+                              ? 'Terima Drop-in'
+                              : 'Menjemput'),
                     style: const TextStyle(fontSize: 13),
                     textAlign: TextAlign.center,
                   ),
@@ -964,9 +942,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // Kartu Antrean
-  // ─────────────────────────────────────────────
   Widget _buildQueueTaskCard(PickupTask task) {
     return GestureDetector(
       onTap: () => _showTimbangManualSheet(wasteId: task.wasteId),
@@ -1078,9 +1053,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  //  FR-PL-07: SCAN WASTE-ID
-  // ═══════════════════════════════════════════════════════════
   void _showScanWasteIdModal() {
     if (_currentTask == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1111,7 +1083,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Handle bar
                 Container(
                   width: 40,
                   height: 4,
@@ -1122,7 +1093,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                   ),
                 ),
 
-                // Icon & Judul
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
@@ -1148,7 +1118,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Simulasi Viewfinder QR
                 Container(
                   height: 140,
                   width: double.infinity,
@@ -1202,7 +1171,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Divider
                 Row(
                   children: [
                     Expanded(child: Divider(color: Colors.grey[300])),
@@ -1218,7 +1186,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Input Manual
                 TextField(
                   controller: controller,
                   textCapitalization: TextCapitalization.characters,
@@ -1243,7 +1210,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Tombol Konfirmasi
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -1351,9 +1317,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  //  FR-PL-05: TIMBANG MANUAL
-  // ═══════════════════════════════════════════════════════════
   Future<void> _showTimbangManualSheet({String? wasteId}) async {
     if (_currentTask == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1401,9 +1364,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  //  4. CHAT ADMIN (Menggantikan Lapor Kendala)
-  // ─────────────────────────────────────────────
   void _showAdminSelectionSheet() {
     showModalBottomSheet(
       context: context,
@@ -1423,7 +1383,9 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
               );
             }
 
-            if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+            if (snapshot.hasError ||
+                !snapshot.hasData ||
+                snapshot.data!.isEmpty) {
               return const SizedBox(
                 height: 200,
                 child: Center(
@@ -1459,10 +1421,13 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                             backgroundColor: Color(0xFF16A34A),
                             child: Icon(Icons.person, color: Colors.white),
                           ),
-                          title: Text(adminName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          title: Text(
+                            adminName,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           subtitle: Text('Role: $role'),
                           onTap: () {
-                            Navigator.pop(context); // close sheet
+                            Navigator.pop(context);
                             Navigator.push(
                               this.context,
                               MaterialPageRoute(
@@ -1486,9 +1451,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  //  FR-PL-09: UPDATE DROP POINT
-  // ═══════════════════════════════════════════════════════════
   void _showUpdateDropPointSheet() {
     showModalBottomSheet(
       context: context,
@@ -1500,11 +1462,10 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           oldGrassGreen: oldGrassGreen,
           limeGreen: limeGreen,
           onUpdate: (dp, newStatus) async {
-            // Update UI dulu agar responsif
             setState(() {
               dp.capacityStatus = newStatus;
             });
-            // Update API (di latar belakang)
+
             try {
               await ApiService.instance.updateDropPoint(dp.id, {
                 'capacity_status': newStatus,
@@ -1543,9 +1504,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════
-  //  FR-PL-14: LAPOR KENDALA
-  // ═══════════════════════════════════════════════════════════
   void _showLaporKendalaSheet() {
     showModalBottomSheet(
       context: context,
@@ -1571,24 +1529,24 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  //  Update Status: Menuju Lokasi
-  // ═══════════════════════════════════════════════════════════
   Future<void> _updateStatusMenujuForCurrentTask() async {
     if (_currentTask == null) return;
-    
+
     final petugasId = SessionService.currentUser?['id']?.toString() ?? '';
     bool success = false;
     String? errorMessage;
 
     try {
-      success = await ApiService.instance.claimTask(_currentTask!.wasteId, petugasId);
+      success = await ApiService.instance.claimTask(
+        _currentTask!.wasteId,
+        petugasId,
+      );
     } catch (e) {
       errorMessage = e.toString().replaceAll('Exception: ', '');
     }
 
     if (!success && errorMessage == null) {
-       success = await DatabaseHelper.instance.updateTransactionStatus(
+      success = await DatabaseHelper.instance.updateTransactionStatus(
         _currentTask!.wasteId,
         'menuju_lokasi',
       );
@@ -1616,9 +1574,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     _loadData();
   }
 
-  // ═══════════════════════════════════════════════════════════
-  //  FR-PL-03: Tiba di Lokasi
-  // ═══════════════════════════════════════════════════════════
   void _showTibaDialogForCurrentTask() {
     if (_currentTask == null) return;
 
@@ -1650,7 +1605,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             onPressed: () async {
               Navigator.pop(ctx);
 
-              // Update status ke 'tiba' (bukan 'dikonfirmasi')
               try {
                 await ApiService.instance.updateTaskStatus(
                   _currentTask!.wasteId,
@@ -1663,7 +1617,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 );
               }
 
-              // Langsung buka dialog timbang
               if (mounted) _showTimbangManualSheet();
             },
             child: const Text('Ya, Tiba & Timbang'),
@@ -1673,9 +1626,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  //  FR-PL-02: Navigasi Maps (simulasi)
-  // ─────────────────────────────────────────────
   void _launchMaps() {
     if (_currentTask == null) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1705,9 +1655,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   }
 }
 
-// ════════════════════════════════════════════════════════════
-// Custom Painter untuk sudut QR viewfinder
-// ════════════════════════════════════════════════════════════
 class _QrCornerPainter extends CustomPainter {
   final bool top;
   final bool left;
@@ -1735,9 +1682,6 @@ class _QrCornerPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// ════════════════════════════════════════════════════════════
-//  FR-PL-05: Timbang Manual — StatefulWidget Sheet
-// ════════════════════════════════════════════════════════════
 class _TimbangManualSheet extends StatefulWidget {
   final List<ManualWasteItem> items;
   final String wasteId;
@@ -1794,7 +1738,6 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle
             Container(
               width: 40,
               height: 4,
@@ -1805,7 +1748,6 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
               ),
             ),
 
-            // Header
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
@@ -1853,7 +1795,6 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
               ),
             ),
 
-            // Daftar sampah (scrollable)
             Flexible(
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1863,7 +1804,6 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
               ),
             ),
 
-            // Total & Kirim
             Container(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
               decoration: BoxDecoration(
@@ -1921,13 +1861,18 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: (_totalWeight > 0 && !_isSubmitting) ? _konfirmasiTimbang : null,
-                      icon: _isSubmitting 
+                      onPressed: (_totalWeight > 0 && !_isSubmitting)
+                          ? _konfirmasiTimbang
+                          : null,
+                      icon: _isSubmitting
                           ? const SizedBox(
-                              width: 20, 
-                              height: 20, 
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                            ) 
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
                           : const Icon(Icons.check_circle_rounded),
                       label: Text(
                         _isSubmitting ? 'Memproses...' : 'Konfirmasi Timbangan',
@@ -2087,7 +2032,7 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
       };
     }).toList();
     setState(() => _isSubmitting = true);
-    // 1. Update ke API (jika ada koneksi)
+
     try {
       await ApiService.instance.updateTransaction(wasteId, {
         'status': 'selesai',
@@ -2096,14 +2041,12 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
       });
     } catch (_) {}
 
-    // 2. Selalu update lokal (in-memory / SQLite) — ini yang mengubah saldo poin user
     await DatabaseHelper.instance.completeTransaction(
       wasteId,
       totalPoints,
       items: selectedItems,
     );
 
-    // 3. Refresh session agar saldo poin terbaru tersedia di UI
     await SessionService.refresh();
 
     if (!mounted) return;
@@ -2152,8 +2095,8 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
               ),
               onPressed: () {
                 Navigator.pop(ctx);
-                Navigator.pop(context); // Close bottom sheet
-                // Refresh main dashboard setelah selesai dengan memanggil onComplete callback
+                Navigator.pop(context);
+
                 widget.onComplete();
               },
               child: const Text('Selesai'),
@@ -2165,9 +2108,6 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
   }
 }
 
-// ════════════════════════════════════════════════════════════
-//  FR-PL-09: Update Drop Point — StatefulWidget Sheet
-// ════════════════════════════════════════════════════════════
 class _UpdateDropPointSheet extends StatefulWidget {
   final List<WorkerDropPoint> dropPoints;
   final Color oldGrassGreen;
@@ -2226,7 +2166,6 @@ class _UpdateDropPointSheetState extends State<_UpdateDropPointSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle
           Container(
             width: 40,
             height: 4,
@@ -2237,7 +2176,6 @@ class _UpdateDropPointSheetState extends State<_UpdateDropPointSheet> {
             ),
           ),
 
-          // Header
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
@@ -2275,7 +2213,6 @@ class _UpdateDropPointSheetState extends State<_UpdateDropPointSheet> {
           ),
           const SizedBox(height: 12),
 
-          // List Drop Point
           Flexible(
             child: ListView.builder(
               shrinkWrap: true,
@@ -2353,7 +2290,6 @@ class _UpdateDropPointSheetState extends State<_UpdateDropPointSheet> {
             ),
           ),
 
-          // Pilih Status baru
           if (_selected != null) ...[
             const Divider(height: 1),
             Padding(
@@ -2436,7 +2372,6 @@ class _UpdateDropPointSheetState extends State<_UpdateDropPointSheet> {
             ),
           ],
 
-          // Tombol Simpan
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
             child: SizedBox(
@@ -2504,9 +2439,6 @@ class _UpdateDropPointSheetState extends State<_UpdateDropPointSheet> {
   }
 }
 
-// ════════════════════════════════════════════════════════════
-//  FR-PL-14: Lapor Kendala — StatefulWidget Sheet
-// ════════════════════════════════════════════════════════════
 class _LaporKendalaSheet extends StatefulWidget {
   final Color oldGrassGreen;
   final void Function(String jenis, String deskripsi) onSubmit;
@@ -2559,7 +2491,6 @@ class _LaporKendalaSheetState extends State<_LaporKendalaSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle
             Container(
               width: 40,
               height: 4,
@@ -2570,7 +2501,6 @@ class _LaporKendalaSheetState extends State<_LaporKendalaSheet> {
               ),
             ),
 
-            // Header
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(

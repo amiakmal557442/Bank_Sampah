@@ -4,29 +4,25 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'db_helper.dart';
 
-/// Service untuk berkomunikasi dengan API Backend (PHP + MySQL XAMPP)
-/// Ganti BASE_URL jika menjalankan di perangkat Android fisik dengan IP lokal Anda.
 class ApiService {
-  // =====================================================================
-  // KONFIGURASI URL — sesuaikan dengan platform yang Anda gunakan:
-  // - Windows Desktop / Web  : http://localhost/bank_sampah_api
-  // - Android Emulator       : http://10.0.2.2/bank_sampah_api
-  // - Android Fisik (Wi-Fi)  : http://192.168.x.x/bank_sampah_api
-  // =====================================================================
-  static const String baseUrl = 'https://contempt-scrubber-cautious.ngrok-free.dev/bank_sampah_api';
+  static const String baseUrl =
+      'https://contempt-scrubber-cautious.ngrok-free.dev/bank_sampah_api';
 
   static final ApiService instance = ApiService._();
   ApiService._();
 
-  static const Map<String, String> _headers = {
+  static String? _token;
+
+  static void setToken(String? token) {
+    _token = token;
+  }
+
+  static Map<String, String> get _headers => {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     'ngrok-skip-browser-warning': 'true',
+    if (_token != null) 'Authorization': 'Bearer $_token',
   };
-
-  // ─────────────────────────────────────────────────
-  // Helpers
-  // ─────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> _get(
     String endpoint, {
@@ -89,11 +85,6 @@ class ApiService {
     throw Exception(body['message'] ?? 'Terjadi kesalahan');
   }
 
-  // ─────────────────────────────────────────────────
-  // AUTH
-  // ─────────────────────────────────────────────────
-
-  /// Login: kembalikan data user jika berhasil, null jika gagal
   Future<Map<String, dynamic>?> login(String email, String password) async {
     try {
       final res = await _post('auth/login.php', {
@@ -101,7 +92,11 @@ class ApiService {
         'password': password,
       });
       if (res['success'] == true && res['data'] != null) {
-        return res['data'] as Map<String, dynamic>;
+        final user = res['data'] as Map<String, dynamic>;
+        if (res['token'] != null) {
+          user['token'] = res['token'];
+        }
+        return user;
       }
       return null;
     } catch (e) {
@@ -110,17 +105,19 @@ class ApiService {
     }
   }
 
-  // ─────────────────────────────────────────────────
-  // AUDIT LOGS
-  // ─────────────────────────────────────────────────
-
-  Future<List<Map<String, dynamic>>> getAuditLogs({String? modul, String? query}) async {
+  Future<List<Map<String, dynamic>>> getAuditLogs({
+    String? modul,
+    String? query,
+  }) async {
     try {
       final params = <String, String>{};
       if (modul != null && modul != 'Semua Modul') params['modul'] = modul;
       if (query != null && query.isNotEmpty) params['query'] = query;
 
-      final res = await _get('audit_logs/index.php', params: params.isNotEmpty ? params : null);
+      final res = await _get(
+        'audit_logs/index.php',
+        params: params.isNotEmpty ? params : null,
+      );
       if (res['success'] == true) {
         return List<Map<String, dynamic>>.from(res['data'] ?? []);
       }
@@ -140,10 +137,6 @@ class ApiService {
       return false;
     }
   }
-
-  // ─────────────────────────────────────────────────
-  // USERS
-  // ─────────────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> getUsers({String? role}) async {
     final params = role != null ? {'role': role} : null;
@@ -169,7 +162,6 @@ class ApiService {
     return res['success'] == true;
   }
 
-  /// Update data profil user (nama, email, no HP, alamat, foto_profil)
   Future<bool> updateUserProfile(String id, Map<String, dynamic> data) async {
     try {
       final res = await _put('users/index.php', data, params: {'id': id});
@@ -179,25 +171,34 @@ class ApiService {
     }
   }
 
-  /// Upload foto profil ke XAMPP server via multipart request
   Future<String?> uploadProfilePicture({
-    required String userId, 
+    required String userId,
     String? filePath,
-    List<int>? imageBytes, 
+    List<int>? imageBytes,
     required String filename,
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/users/upload_avatar.php');
       final request = http.MultipartRequest('POST', uri);
-      request.headers.addAll({
-        'ngrok-skip-browser-warning': 'true',
-      });
+      request.headers.addAll({'ngrok-skip-browser-warning': 'true'});
       request.fields['user_id'] = userId;
-      
+
       if (!kIsWeb && filePath != null) {
-        request.files.add(await http.MultipartFile.fromPath('profile_picture', filePath, filename: filename));
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'profile_picture',
+            filePath,
+            filename: filename,
+          ),
+        );
       } else if (imageBytes != null) {
-        request.files.add(http.MultipartFile.fromBytes('profile_picture', imageBytes, filename: filename));
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'profile_picture',
+            imageBytes,
+            filename: filename,
+          ),
+        );
       } else {
         throw Exception('Data gambar tidak tersedia');
       }
@@ -214,7 +215,6 @@ class ApiService {
     }
   }
 
-  /// Helper untuk mendapatkan URL gambar profil lengkap
   static String? getProfileImageUrl(String? filename) {
     if (filename == null || filename.isEmpty) return null;
     if (filename.startsWith('http://') || filename.startsWith('https://')) {
@@ -223,7 +223,6 @@ class ApiService {
     return '$baseUrl/uploads/profiles/$filename';
   }
 
-  /// Ambil satu user berdasarkan ID dari XAMPP (termasuk point_balance terbaru)
   Future<Map<String, dynamic>?> getUserById(String id) async {
     try {
       final res = await _get('users/index.php', params: {'id': id});
@@ -241,10 +240,6 @@ class ApiService {
     }
   }
 
-  // ─────────────────────────────────────────────────
-  // TRANSACTIONS
-  // ─────────────────────────────────────────────────
-
   Future<String?> uploadTransactionPhoto({
     required String txId,
     String? filePath,
@@ -254,15 +249,21 @@ class ApiService {
     try {
       final uri = Uri.parse('$baseUrl/transactions/upload_photo.php');
       final request = http.MultipartRequest('POST', uri);
-      request.headers.addAll({
-        'ngrok-skip-browser-warning': 'true',
-      });
+      request.headers.addAll({'ngrok-skip-browser-warning': 'true'});
       request.fields['transaction_id'] = txId;
-      
+
       if (!kIsWeb && filePath != null) {
-        request.files.add(await http.MultipartFile.fromPath('photo', filePath, filename: filename));
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'photo',
+            filePath,
+            filename: filename,
+          ),
+        );
       } else if (imageBytes != null) {
-        request.files.add(http.MultipartFile.fromBytes('photo', imageBytes, filename: filename));
+        request.files.add(
+          http.MultipartFile.fromBytes('photo', imageBytes, filename: filename),
+        );
       } else {
         throw Exception('Data gambar tidak tersedia');
       }
@@ -322,10 +323,6 @@ class ApiService {
     return res['success'] == true;
   }
 
-  // ─────────────────────────────────────────────────
-  // DROP POINTS
-  // ─────────────────────────────────────────────────
-
   Future<List<Map<String, dynamic>>> getDropPoints() async {
     final res = await _get('drop_points/index.php');
     if (res['success'] == true) {
@@ -348,10 +345,6 @@ class ApiService {
     final res = await _delete('drop_points/index.php', params: {'id': id});
     return res['success'] == true;
   }
-
-  // ─────────────────────────────────────────────────
-  // WASTE CATEGORIES
-  // ─────────────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> getWasteCategories() async {
     final res = await _get('waste_categories/index.php');
@@ -383,10 +376,6 @@ class ApiService {
     return res['success'] == true;
   }
 
-  // ─────────────────────────────────────────────────
-  // DASHBOARD STATS
-  // ─────────────────────────────────────────────────
-
   Future<Map<String, dynamic>?> getDashboardStats() async {
     try {
       final res = await _get('dashboard/stats.php');
@@ -399,18 +388,12 @@ class ApiService {
     }
   }
 
-  // ─────────────────────────────────────────────────
-  // TASKS (Petugas Lapangan)
-  // ─────────────────────────────────────────────────
-
   Future<List<Map<String, dynamic>>> getPendingTasks({
     String? petugasId,
     List<String> statuses = const ['dikonfirmasi', 'menuju_lokasi', 'tiba'],
     String? type,
   }) async {
-    final params = <String, String>{
-      'status': statuses.join(','),
-    };
+    final params = <String, String>{'status': statuses.join(',')};
     if (petugasId != null) params['petugas_id'] = petugasId;
     if (type != null && type.isNotEmpty) params['type'] = type;
     final res = await _get('tasks/index.php', params: params);
@@ -442,10 +425,6 @@ class ApiService {
     }
   }
 
-  // ─────────────────────────────────────────────────
-  // HEALTH CHECK (tes koneksi ke API)
-  // ─────────────────────────────────────────────────
-
   Future<bool> checkConnection() async {
     try {
       final response = await http
@@ -457,11 +436,12 @@ class ApiService {
     }
   }
 
-  // ─────────────────────────────────────────────────
-  // WITHDRAWALS
-  // ─────────────────────────────────────────────────
-
-  Future<String?> requestWithdrawal(String userId, int points, String method, String details) async {
+  Future<String?> requestWithdrawal(
+    String userId,
+    int points,
+    String method,
+    String details,
+  ) async {
     try {
       final res = await _post('withdrawals/index.php', {
         'nasabah_id': userId,
@@ -488,7 +468,11 @@ class ApiService {
     }
   }
 
-  Future<String?> updateWithdrawalStatus(String id, String status, {String? reason}) async {
+  Future<String?> updateWithdrawalStatus(
+    String id,
+    String status, {
+    String? reason,
+  }) async {
     try {
       final res = await _put('withdrawals/index.php', {
         'id': id,
@@ -501,10 +485,6 @@ class ApiService {
       return 'Terjadi kesalahan koneksi';
     }
   }
-
-  // ─────────────────────────────────────────────────
-  // CHAT SYSTEM
-  // ─────────────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> getAdmins() async {
     try {
@@ -520,7 +500,10 @@ class ApiService {
 
   Future<List<Map<String, dynamic>>> getChatUsers(String adminId) async {
     try {
-      final res = await _get('chats/get_chat_users.php', params: {'admin_id': adminId});
+      final res = await _get(
+        'chats/get_chat_users.php',
+        params: {'admin_id': adminId},
+      );
       if (res['success'] == true && res['data'] != null) {
         return List<Map<String, dynamic>>.from(res['data']);
       }
@@ -530,12 +513,15 @@ class ApiService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getChatMessages(String user1, String user2) async {
+  Future<List<Map<String, dynamic>>> getChatMessages(
+    String user1,
+    String user2,
+  ) async {
     try {
-      final res = await _get('chats/get_messages.php', params: {
-        'user1': user1,
-        'user2': user2,
-      });
+      final res = await _get(
+        'chats/get_messages.php',
+        params: {'user1': user1, 'user2': user2},
+      );
       if (res['success'] == true && res['data'] != null) {
         return List<Map<String, dynamic>>.from(res['data']);
       }
@@ -545,7 +531,11 @@ class ApiService {
     }
   }
 
-  Future<bool> sendChatMessage(String senderId, String receiverId, String message) async {
+  Future<bool> sendChatMessage(
+    String senderId,
+    String receiverId,
+    String message,
+  ) async {
     try {
       final res = await _post('chats/send_message.php', {
         'sender_id': senderId,
@@ -553,14 +543,19 @@ class ApiService {
         'message': message,
       });
       if (res['success'] == true) return true;
-      return await DatabaseHelper.instance.insertChatMessage(senderId, receiverId, message);
+      return await DatabaseHelper.instance.insertChatMessage(
+        senderId,
+        receiverId,
+        message,
+      );
     } catch (_) {
-      return await DatabaseHelper.instance.insertChatMessage(senderId, receiverId, message);
+      return await DatabaseHelper.instance.insertChatMessage(
+        senderId,
+        receiverId,
+        message,
+      );
     }
   }
-  // ─────────────────────────────────────────────────
-  // LAPORAN & ANALITIK
-  // ─────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getLaporanAnalitikData({
     int bulan = 0,
@@ -569,10 +564,7 @@ class ApiService {
     try {
       final res = await _get(
         'reports/index.php',
-        params: {
-          'bulan': bulan.toString(),
-          'tahun': tahun.toString(),
-        },
+        params: {'bulan': bulan.toString(), 'tahun': tahun.toString()},
       );
       return res;
     } catch (e) {
@@ -591,10 +583,6 @@ class ApiService {
     }
   }
 
-  // ─────────────────────────────────────────────────
-  // OPERASIONAL LAPANGAN
-  // ─────────────────────────────────────────────────
-
   Future<Map<String, dynamic>> getOperasionalData() async {
     try {
       final res = await _get('reports/operasional.php');
@@ -611,7 +599,7 @@ class ApiService {
           'tugasAntrean': 0,
         },
         'dropPoints': [],
-        'workerStatus': []
+        'workerStatus': [],
       };
     }
   }

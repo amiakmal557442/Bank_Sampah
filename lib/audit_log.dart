@@ -1,4 +1,3 @@
-
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_saver/file_saver.dart';
@@ -13,7 +12,6 @@ class AuditLogScreen extends StatefulWidget {
 }
 
 class _AuditLogScreenState extends State<AuditLogScreen> {
-  // Palet Warna Utama
   final Color oldGrassGreen = const Color(0xFF268B07);
   final Color limeGreen = const Color(0xFF32CD32);
   final Color baseBlack = const Color(0xFF000000);
@@ -40,8 +38,7 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
       modul: _selectedModule,
       query: _searchQuery,
     );
-    
-    // Fallback jika API gagal atau kosong, ambil dari lokal
+
     if (logs.isEmpty) {
       logs = await DatabaseHelper.instance.getAuditLogs(
         modul: _selectedModule,
@@ -65,11 +62,10 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
     }
 
     try {
-      // 1. Generate CSV String
       final List<String> csvRows = [];
-      // Header
+
       csvRows.add('Waktu,Pengguna,Role,Modul,Aktivitas,IP Address,Status');
-      
+
       for (var log in _logs) {
         final time = (log['time']?.toString() ?? '').replaceAll(',', ' ');
         final user = (log['user_name']?.toString() ?? '').replaceAll(',', ' ');
@@ -78,15 +74,14 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
         final action = (log['action']?.toString() ?? '').replaceAll(',', ' ');
         final ip = (log['ip_address']?.toString() ?? '').replaceAll(',', ' ');
         final status = (log['status']?.toString() ?? '').replaceAll(',', ' ');
-        
+
         csvRows.add('$time,$user,$role,$module,$action,$ip,$status');
       }
-      
+
       final String csvString = csvRows.join('\n');
 
       final Uint8List bytes = Uint8List.fromList(csvString.codeUnits);
 
-      // 2. Tampilkan dialog "Save As" (file_saver)
       final String? path = await FileSaver.instance.saveFile(
         name: 'audit_log_${DateTime.now().millisecondsSinceEpoch}',
         bytes: bytes,
@@ -122,7 +117,6 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Hitung statistik
     int totalLogs = _logs.length;
     int perubahanData = _logs.where((log) {
       final a = (log['action'] ?? '').toString().toLowerCase();
@@ -134,7 +128,6 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
     }).length;
     int aksesGagal = _logs.where((log) => log['status'] == 'GAGAL').length;
 
-    // Hitung unique IP (sebagai estimasi active user)
     int uniqueUsers = _logs.map((e) => e['user_name']).toSet().length;
 
     return Scaffold(
@@ -146,7 +139,6 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header Section
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -203,7 +195,6 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
 
                   const SizedBox(height: 24),
 
-                  // Metric Summary Cards
                   Row(
                     children: [
                       _buildStatCard(
@@ -242,7 +233,6 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
 
                   const SizedBox(height: 24),
 
-                  // Filter & Search Bar
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -252,7 +242,6 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                     ),
                     child: Row(
                       children: [
-                        // Search Box
                         Expanded(
                           flex: 3,
                           child: TextField(
@@ -284,7 +273,7 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        // Filter Modul
+
                         Expanded(
                           flex: 2,
                           child: DropdownButtonFormField<String>(
@@ -330,7 +319,7 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        // Date Filter Button (Static for now)
+
                         OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(
@@ -358,7 +347,6 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
 
                   const SizedBox(height: 20),
 
-                  // Tabel Audit Log
                   Container(
                     decoration: BoxDecoration(
                       color: baseWhite,
@@ -378,7 +366,6 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                             5: FlexColumnWidth(1.2),
                           },
                           children: [
-                            // Header Table
                             TableRow(
                               decoration: BoxDecoration(
                                 color: limeGreen.withOpacity(0.08),
@@ -446,7 +433,7 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                                 ),
                               ],
                             ),
-                            // Rows
+
                             ..._logs.map((log) {
                               final status =
                                   log['status']?.toString() ?? 'UNKNOWN';
@@ -487,7 +474,6 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
     );
   }
 
-  // Widget Stat Card
   Widget _buildStatCard(
     String title,
     String value,
@@ -546,7 +532,6 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
     );
   }
 
-  // Baris Tabel Log Aktivitas
   TableRow _buildLogRow({
     required String time,
     required String userName,
@@ -671,7 +656,7 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
       'Sep',
       'Okt',
       'Nov',
-      'Des'
+      'Des',
     ];
     if (month >= 1 && month <= 12) return months[month];
     return '';

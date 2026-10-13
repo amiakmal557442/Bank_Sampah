@@ -11,9 +11,6 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'chat_page.dart';
 
-// ============================================================================
-// 1. HALAMAN JADWAL & LOKASI PENJEMPUTAN
-// ============================================================================
 class PickupScheduleScreen extends StatefulWidget {
   const PickupScheduleScreen({super.key});
 
@@ -22,12 +19,10 @@ class PickupScheduleScreen extends StatefulWidget {
 }
 
 class _PickupScheduleScreenState extends State<PickupScheduleScreen> {
-  // Index 1 = besok (default terpilih)
   int selectedDateIndex = 1;
   int selectedTimeIndex = 1;
   int selectedLocationIndex = 0;
 
-  // Nama hari dalam bahasa Indonesia
   static const List<String> _dayNames = [
     'MIN',
     'SEN',
@@ -38,7 +33,6 @@ class _PickupScheduleScreenState extends State<PickupScheduleScreen> {
     'SAB',
   ];
 
-  // Generate tanggal dinamis: hari ini + 3 hari ke depan (total 4 hari)
   List<Map<String, String>> get _dates {
     final today = DateTime.now();
     return List.generate(4, (i) {
@@ -84,13 +78,13 @@ class _PickupScheduleScreenState extends State<PickupScheduleScreen> {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) return;
     }
-    
+
     if (permission == LocationPermission.deniedForever) return;
 
     final position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
-    
+
     if (mounted) {
       setState(() {
         _currentPosition = LatLng(position.latitude, position.longitude);
@@ -267,12 +261,14 @@ class _PickupScheduleScreenState extends State<PickupScheduleScreen> {
               child: FlutterMap(
                 mapController: _mapController,
                 options: MapOptions(
-                  initialCenter: _currentPosition ?? const LatLng(-4.0150, 119.6290),
+                  initialCenter:
+                      _currentPosition ?? const LatLng(-4.0150, 119.6290),
                   initialZoom: 13.0,
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.example.bank_sampah',
                   ),
                   if (_currentPosition != null)
@@ -434,9 +430,6 @@ class _PickupScheduleScreenState extends State<PickupScheduleScreen> {
   }
 }
 
-// ============================================================================
-// 2. HALAMAN KONFIRMASI JEMPUT
-// ============================================================================
 class PickupConfirmationScreen extends StatefulWidget {
   final String selectedDay;
   final String selectedDate;
@@ -677,7 +670,10 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                           border: Border.all(color: Colors.grey.shade300),
                           image: _photoFile != null
                               ? DecorationImage(
-                                  image: kIsWeb ? NetworkImage(_photoFile!.path) : FileImage(File(_photoFile!.path)) as ImageProvider,
+                                  image: kIsWeb
+                                      ? NetworkImage(_photoFile!.path)
+                                      : FileImage(File(_photoFile!.path))
+                                            as ImageProvider,
                                   fit: BoxFit.cover,
                                 )
                               : null,
@@ -773,15 +769,17 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
 
                       setState(() => _isSubmitting = true);
 
-                      // Prepare Data for DB
                       final txId =
                           'TRX-${DateTime.now().millisecondsSinceEpoch}';
                       final txData = <String, dynamic>{
                         'id': txId,
                         'nasabah_id': SessionService.userId,
-                        'full_name':
-                            SessionService.fullName, // simpan nama langsung
-                        'address': SessionService.address + (widget.note.isNotEmpty ? ' (Patokan: ${widget.note})' : ''),
+                        'full_name': SessionService.fullName,
+                        'address':
+                            SessionService.address +
+                            (widget.note.isNotEmpty
+                                ? ' (Patokan: ${widget.note})'
+                                : ''),
                         'type': 'pickup',
                         'status': 'menunggu',
                         'pickup_date':
@@ -810,8 +808,6 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                         }
                       } catch (_) {}
 
-                      // Selalu simpan ke local DB (sumber data utama untuk web).
-                      // Ini memastikan transaksi tampil di Manajemen Admin.
                       await DatabaseHelper.instance.createTransaction(
                         txData,
                         [],
@@ -919,9 +915,6 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
   }
 }
 
-// ============================================================================
-// 4. HASIL: PERMINTAAN BERHASIL DIBUAT
-// ============================================================================
 class PickupSuccessScreen extends StatelessWidget {
   final String selectedDay;
   final String selectedDate;
@@ -1014,7 +1007,7 @@ class PickupSuccessScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 28),
-            // Status Steps
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1192,9 +1185,6 @@ class PickupSuccessScreen extends StatelessWidget {
   }
 }
 
-// ============================================================================
-// 5. TRACKING REAL-TIME PETUGAS
-// ============================================================================
 class PickupTrackingScreen extends StatefulWidget {
   final String? petugasName;
   final String? petugasId;
@@ -1227,20 +1217,22 @@ class _PickupTrackingScreenState extends State<PickupTrackingScreen> {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) return;
     }
-    
+
     if (permission == LocationPermission.deniedForever) return;
 
     final position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
-    
+
     if (mounted) {
       setState(() {
         _currentPosition = LatLng(position.latitude, position.longitude);
-        // Simulasi posisi petugas berada sedikit bergeser dari posisi nasabah
-        _petugasPosition = LatLng(position.latitude + 0.005, position.longitude - 0.005);
-        
-        // Pusatkan peta di antara keduanya atau di posisi user
+
+        _petugasPosition = LatLng(
+          position.latitude + 0.005,
+          position.longitude - 0.005,
+        );
+
         _mapController.move(_currentPosition!, 13.5);
       });
     }
@@ -1294,7 +1286,8 @@ class _PickupTrackingScreenState extends State<PickupTrackingScreen> {
             child: FlutterMap(
               mapController: _mapController,
               options: MapOptions(
-                initialCenter: _currentPosition ?? const LatLng(-4.0150, 119.6290),
+                initialCenter:
+                    _currentPosition ?? const LatLng(-4.0150, 119.6290),
                 initialZoom: 13.0,
               ),
               children: [
@@ -1305,7 +1298,6 @@ class _PickupTrackingScreenState extends State<PickupTrackingScreen> {
                 if (_currentPosition != null)
                   MarkerLayer(
                     markers: [
-                      // Marker Lokasi Nasabah (User)
                       Marker(
                         point: _currentPosition!,
                         width: 40,
@@ -1316,7 +1308,7 @@ class _PickupTrackingScreenState extends State<PickupTrackingScreen> {
                           size: 40,
                         ),
                       ),
-                      // Marker Lokasi Petugas (Simulasi)
+
                       if (_petugasPosition != null)
                         Marker(
                           point: _petugasPosition!,
@@ -1332,7 +1324,7 @@ class _PickupTrackingScreenState extends State<PickupTrackingScreen> {
                                   color: Colors.black26,
                                   blurRadius: 4,
                                   offset: Offset(0, 2),
-                                )
+                                ),
                               ],
                             ),
                             child: const Icon(
@@ -1415,7 +1407,9 @@ class _PickupTrackingScreenState extends State<PickupTrackingScreen> {
                           radius: 24,
                           backgroundColor: primaryGreen.withOpacity(0.1),
                           child: Icon(
-                            widget.petugasName != null ? Icons.person_rounded : Icons.hourglass_empty_rounded,
+                            widget.petugasName != null
+                                ? Icons.person_rounded
+                                : Icons.hourglass_empty_rounded,
                             color: primaryGreen,
                           ),
                         ),
@@ -1425,10 +1419,13 @@ class _PickupTrackingScreenState extends State<PickupTrackingScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                widget.petugasName ?? 'Belum ada petugas yang sedang menjemput',
+                                widget.petugasName ??
+                                    'Belum ada petugas yang sedang menjemput',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: widget.petugasName != null ? 15 : 13,
+                                  fontSize: widget.petugasName != null
+                                      ? 15
+                                      : 13,
                                 ),
                               ),
                               if (widget.petugasName != null) ...[
@@ -1450,7 +1447,6 @@ class _PickupTrackingScreenState extends State<PickupTrackingScreen> {
                             ],
                           ),
                         ),
-                        // Bagian telfon dan chat dihilangkan
                       ],
                     ),
                   ),

@@ -66,7 +66,7 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) return;
     }
-    
+
     if (permission == LocationPermission.deniedForever) return;
 
     final position = await Geolocator.getCurrentPosition();
@@ -95,12 +95,14 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
       bool foundPickup = false;
       bool foundDropIn = false;
 
-      // Find an active transaction with a petugas assigned
       for (var tx in txs) {
-        final type = (tx['tipe_tugas'] ?? tx['type'] ?? '').toString().toLowerCase();
+        final type = (tx['tipe_tugas'] ?? tx['type'] ?? '')
+            .toString()
+            .toLowerCase();
         final isDropIn = type == 'drop-in' || type == 'drop_in';
 
-        if (tx['petugas_id'] != null && tx['petugas_id'].toString().isNotEmpty) {
+        if (tx['petugas_id'] != null &&
+            tx['petugas_id'].toString().isNotEmpty) {
           if (!isDropIn && !foundPickup) {
             foundPickup = true;
             setState(() {
@@ -194,7 +196,6 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Banner Pelacakan Aktif
             if (_hasActivePickup)
               Container(
                 margin: const EdgeInsets.all(16),
@@ -274,11 +275,13 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                 ),
               ),
 
-            // Banner Drop-in Aktif
             if (_hasActiveDropIn)
               Container(
                 margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 16,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.orange[50],
                   borderRadius: BorderRadius.circular(12),
@@ -286,7 +289,11 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.check_circle_outline, color: Colors.orange[700], size: 24),
+                    Icon(
+                      Icons.check_circle_outline,
+                      color: Colors.orange[700],
+                      size: 24,
+                    ),
                     const SizedBox(width: 12),
                     const Expanded(
                       child: Text(
@@ -302,10 +309,9 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                 ),
               ),
 
-            // 2. Flutter Map (Mendukung Desktop & Mobile)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
-              height: 250, // Slightly taller for better view
+              height: 250,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.green, width: 2),
@@ -322,17 +328,29 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                         ),
                         children: [
                           TileLayer(
-                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            urlTemplate:
+                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                             userAgentPackageName: 'com.example.bank_sampah',
                           ),
                           MarkerLayer(
                             markers: [
                               ..._dropPoints.map((dp) {
                                 final dpId = dp['id']?.toString();
-                                final lat = double.tryParse(dp['latitude'].toString()) ?? -4.0131;
-                                final lng = double.tryParse(dp['longitude'].toString()) ?? 119.6250;
-                                
-                                final isActiveDropIn = _hasActiveDropIn && dpId != null && dpId == _activeDropInDpId;
+                                final lat =
+                                    double.tryParse(
+                                      dp['latitude'].toString(),
+                                    ) ??
+                                    -4.0131;
+                                final lng =
+                                    double.tryParse(
+                                      dp['longitude'].toString(),
+                                    ) ??
+                                    119.6250;
+
+                                final isActiveDropIn =
+                                    _hasActiveDropIn &&
+                                    dpId != null &&
+                                    dpId == _activeDropInDpId;
 
                                 return Marker(
                                   point: LatLng(lat, lng),
@@ -340,13 +358,21 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                                   height: isActiveDropIn ? 50 : 40,
                                   child: GestureDetector(
                                     onTap: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text(dp['name'].toString())),
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(dp['name'].toString()),
+                                        ),
                                       );
                                     },
                                     child: Icon(
-                                      isActiveDropIn ? Icons.person_pin_circle : Icons.location_on, 
-                                      color: isActiveDropIn ? Colors.orange : Colors.green, 
+                                      isActiveDropIn
+                                          ? Icons.person_pin_circle
+                                          : Icons.location_on,
+                                      color: isActiveDropIn
+                                          ? Colors.orange
+                                          : Colors.green,
                                       size: isActiveDropIn ? 50 : 40,
                                     ),
                                   ),
@@ -357,7 +383,11 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                                   point: _currentPosition!,
                                   width: 40,
                                   height: 40,
-                                  child: const Icon(Icons.my_location, color: Colors.blue, size: 30),
+                                  child: const Icon(
+                                    Icons.my_location,
+                                    color: Colors.blue,
+                                    size: 30,
+                                  ),
                                 ),
                             ],
                           ),
@@ -381,7 +411,6 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
               ),
             ),
 
-            // 3. Filter Kategori Sampah
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -420,7 +449,6 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
               ),
             ),
 
-            // 4. Daftar Drop Point Terdekat
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Row(
@@ -446,7 +474,6 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
               ),
             ),
 
-            // Item Drop Point
             if (_isLoading)
               const Padding(
                 padding: EdgeInsets.all(24),
@@ -483,7 +510,6 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
         ),
       ),
 
-      // 5. Bottom Navigation Bar (hanya ditampilkan jika showBottomNav true)
       bottomNavigationBar: widget.showBottomNav
           ? Container(
               decoration: BoxDecoration(

@@ -36,7 +36,7 @@ if ($method === 'GET') {
     while ($row = $result->fetch_assoc()) {
         $row['total_est_points'] = (int) ($row['total_est_points'] ?? 0);
         $row['total_actual_points'] = (int) ($row['total_actual_points'] ?? 0);
-        
+
         $txId = $row['id'];
         $itemStmt = $conn->prepare("SELECT ti.*, wc.name as category_name, wc.point_per_kg FROM transaction_items ti JOIN waste_categories wc ON ti.waste_category_id = wc.id WHERE ti.transaction_id = ?");
         $itemStmt->bind_param("s", $txId);
@@ -71,46 +71,44 @@ if ($method === 'PUT') {
 
     if ($action === 'claim' && $id && isset($data['petugas_id'])) {
         $petugasId = $data['petugas_id'];
-        
-        // 1. Cek apakah sudah diklaim orang lain
+
         $stmtCheck = $conn->prepare("
-            SELECT t.petugas_id, u.full_name as nama_petugas 
-            FROM transactions t 
-            LEFT JOIN users u ON t.petugas_id = u.id 
+            SELECT t.petugas_id, u.full_name as nama_petugas
+            FROM transactions t
+            LEFT JOIN users u ON t.petugas_id = u.id
             WHERE t.id = ?
         ");
         $stmtCheck->bind_param("s", $id);
         $stmtCheck->execute();
         $resCheck = $stmtCheck->get_result();
-        
+
         if ($resCheck->num_rows > 0) {
             $row = $resCheck->fetch_assoc();
             $existingPetugasId = $row['petugas_id'];
-            
+
             if ($existingPetugasId !== null && $existingPetugasId !== '' && $existingPetugasId !== $petugasId) {
-                // Sudah diambil orang lain
+
                 $namaPetugas = $row['nama_petugas'] ?? 'Lainnya';
                 echo json_encode([
-                    'success' => false, 
+                    'success' => false,
                     'message' => "Tugas sudah diambil oleh petugas $namaPetugas"
                 ]);
                 exit();
             }
         }
-        
-        // 2. Jika belum, claim tugas ini (set petugas_id dan status = 'menuju_lokasi')
+
         $stmt = $conn->prepare("UPDATE transactions SET petugas_id = ?, status = 'menuju_lokasi' WHERE id = ?");
         $stmt->bind_param("ss", $petugasId, $id);
         $stmt->execute();
-        
+
         if ($stmt->affected_rows > 0 || $existingPetugasId === $petugasId) {
              echo json_encode([
-                 'success' => true, 
+                 'success' => true,
                  'message' => 'Tugas berhasil diklaim'
              ]);
         } else {
              echo json_encode([
-                 'success' => false, 
+                 'success' => false,
                  'message' => 'Gagal mengklaim tugas'
              ]);
         }
