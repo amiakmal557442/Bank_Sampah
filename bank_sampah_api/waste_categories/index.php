@@ -1,28 +1,7 @@
 <?php
 require_once __DIR__ . '/../db.php';
-require_once __DIR__ . '/../jwt_helper.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
-
-if ($method !== 'OPTIONS') {
-    $token = JwtHelper::getBearerToken();
-    if (!$token) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Unauthorized: Token tidak ditemukan']);
-        exit();
-    }
-    $decoded_token = JwtHelper::validateToken($token);
-    if (!$decoded_token) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Unauthorized: Token tidak valid']);
-        exit();
-    }
-}
-
-if (in_array($method, ['POST', 'PUT', 'DELETE']) && $decoded_token['role'] !== 'admin') {
-    echo json_encode(['success' => false, 'message' => 'Akses ditolak: Hanya admin yang diizinkan']);
-    exit();
-}
 
 if ($method === 'GET') {
     $result = $conn->query("SELECT * FROM waste_categories");

@@ -101,7 +101,15 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
 
   List<Map<String, dynamic>> get _filteredAccounts {
     return _allAccounts.where((acc) {
-      final matchRole = _filterRole == null || acc['role'] == _filterRole;
+      final role = acc['role']?.toString();
+      bool matchRole = true;
+      if (_filterRole != null) {
+        if (_filterRole == 'staf' || _filterRole == 'staf_kantor') {
+          matchRole = (role == 'staf' || role == 'staf_kantor');
+        } else {
+          matchRole = (role == _filterRole);
+        }
+      }
       final q = _searchQuery.toLowerCase();
       final matchSearch =
           q.isEmpty ||
@@ -115,6 +123,7 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
     switch (role) {
       case 'admin':
         return 'Administrator';
+      case 'staf':
       case 'staf_kantor':
         return 'Staf Kantor';
       case 'petugas':
@@ -128,6 +137,7 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
     switch (role) {
       case 'admin':
         return primaryGreen;
+      case 'staf':
       case 'staf_kantor':
         return const Color(0xFF5F8A4A);
       case 'petugas':
@@ -140,6 +150,7 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
   String _platformLabel(String role) {
     switch (role) {
       case 'admin':
+      case 'staf':
       case 'staf_kantor':
         return 'Web';
       case 'petugas':
@@ -340,36 +351,59 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
                       if (!formKey.currentState!.validate()) return;
                       setD(() => isSubmitting = true);
 
-                      final id =
-                          'user-${DateTime.now().millisecondsSinceEpoch}';
+                      final phoneText = phoneCtrl.text.trim();
+                      final emailText = emailCtrl.text.trim().toLowerCase();
+                      final nameText = nameCtrl.text.trim();
+                      final roleToSave =
+                          selectedRole == 'staf_kantor' ? 'staf' : selectedRole;
+                      final id = (roleToSave == 'petugas')
+                          ? 'petugas-${DateTime.now().microsecondsSinceEpoch}'
+                          : 'user-${DateTime.now().millisecondsSinceEpoch}';
+
                       final userData = {
                         'id': id,
-                        'full_name': nameCtrl.text.trim(),
-                        'email': emailCtrl.text.trim().toLowerCase(),
-                        'phone_number': phoneCtrl.text.trim(),
+                        'full_name': nameText,
+                        'email': emailText.isEmpty ? null : emailText,
+                        'phone_number': phoneText.isEmpty ? null : phoneText,
                         'password': passCtrl.text,
-                        'role': selectedRole,
-                        'address': '',
-                        'default_setor_method': 'drop_in',
+                        'role': roleToSave,
+                        'address': roleToSave == 'petugas'
+                            ? 'Zona: Drop Point 01, Armada: Motor / Mobil'
+                            : '',
+                        'default_setor_method':
+                            roleToSave == 'petugas' ? 'pickup' : 'drop_in',
                         'point_balance': 0,
                         'is_active': 1,
                       };
 
                       bool ok = false;
+                      String? errorMsg;
                       try {
                         ok = await ApiService.instance.createUser(userData);
-                      } catch (_) {}
-                      if (!ok) {
-                        ok = await DatabaseHelper.instance.registerUser(
-                          userData,
-                        );
+                        if (!ok) {
+                          errorMsg = 'Gagal menyimpan akun ke server API';
+                        }
+                      } catch (e) {
+                        errorMsg = e
+                            .toString()
+                            .replaceAll('Exception:', '')
+                            .trim();
+                        ok = false;
                       }
+
+                      // Sinkronkan juga ke database lokal
+                      try {
+                        await DatabaseHelper.instance.registerUser(userData);
+                      } catch (_) {}
+
                       if (mounted) {
                         Navigator.pop(ctx);
                         _showSnackBar(
                           ok
-                              ? 'Akun "${nameCtrl.text.trim()}" berhasil dibuat'
-                              : 'Email atau No. HP sudah terdaftar',
+                              ? 'Akun "$nameText" berhasil dibuat'
+                              : (errorMsg != null && errorMsg.isNotEmpty
+                                  ? errorMsg
+                                  : 'Email atau No. HP sudah terdaftar'),
                           ok,
                         );
                         if (ok) _loadAccounts();
@@ -535,13 +569,28 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
                       if (!formKey.currentState!.validate()) return;
                       setD(() => isSubmitting = true);
 
-                      final ok = await DatabaseHelper.instance
-                          .updateUserProfile(acc['id'], {
-                            'full_name': nameCtrl.text.trim(),
-                            'email': emailCtrl.text.trim().toLowerCase(),
-                            'phone_number': phoneCtrl.text.trim(),
-                            'role': selectedRole,
-                          });
+                      final editRole =
+                          selectedRole == 'staf_kantor' ? 'staf' : selectedRole;
+                      final phoneText = phoneCtrl.text.trim();
+                      final emailText = emailCtrl.text.trim().toLowerCase();
+                      final updateData = {
+                        'full_name': nameCtrl.text.trim(),
+                        'email': emailText.isEmpty ? null : emailText,
+                        'phone_number': phoneText.isEmpty ? null : phoneText,
+                        'role': editRole,
+                      };
+
+                      bool apiOk = false;
+                      try {
+                        apiOk = await ApiService.instance.updateUser(
+                          acc['id'],
+                          updateData,
+                        );
+                      } catch (_) {}
+
+                      final localOk = await DatabaseHelper.instance
+                          .updateUserProfile(acc['id'], updateData);
+                      final ok = apiOk || localOk;
 
                       if (mounted) {
                         Navigator.pop(ctx);
@@ -673,10 +722,19 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
                       if (!formKey.currentState!.validate()) return;
                       setD(() => isSubmitting = true);
 
-                      final ok = await DatabaseHelper.instance
+                      bool apiOk = false;
+                      try {
+                        apiOk = await ApiService.instance.updateUser(
+                          acc['id'],
+                          {'password': passCtrl.text},
+                        );
+                      } catch (_) {}
+
+                      final localOk = await DatabaseHelper.instance
                           .updateUserProfile(acc['id'], {
                             'password': passCtrl.text,
                           });
+                      final ok = apiOk || localOk;
 
                       if (mounted) {
                         Navigator.pop(ctx);
@@ -758,10 +816,20 @@ class _KelolaAkunRoleScreenState extends State<KelolaAkunRoleScreen>
     );
 
     if (confirmed == true && mounted) {
-      final ok = await DatabaseHelper.instance.toggleUserStatus(
+      final newStatus = !isActive ? 1 : 0;
+      bool apiOk = false;
+      try {
+        apiOk = await ApiService.instance.updateUser(
+          acc['id'],
+          {'is_active': newStatus},
+        );
+      } catch (_) {}
+
+      final localOk = await DatabaseHelper.instance.toggleUserStatus(
         acc['id'],
         !isActive,
       );
+      final ok = apiOk || localOk;
       _showSnackBar(
         ok ? 'Status akun berhasil diubah' : 'Gagal mengubah status akun',
         ok,

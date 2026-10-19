@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'register_user_page.dart';
-import 'register_petugas_page.dart';
 import 'dashboard_user.dart';
 import 'dashboard_petugas.dart';
 import 'dashboard_admin.dart';
@@ -302,58 +301,29 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  Column(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text(
-                        'Belum punya akun?',
+                        'Belum punya akun? ',
                         style: TextStyle(color: Colors.black54),
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const RegisterScreen(),
-                                ),
-                              );
-                            },
-                            child: Text(
-                              'Daftar User',
-                              style: TextStyle(
-                                color: _oldGrassGreen,
-                                fontWeight: FontWeight.bold,
-                              ),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RegisterScreen(),
                             ),
+                          );
+                        },
+                        child: Text(
+                          'Daftar Sekarang',
+                          style: TextStyle(
+                            color: _oldGrassGreen,
+                            fontWeight: FontWeight.bold,
                           ),
-                          const Text(
-                            '  |  ',
-                            style: TextStyle(color: Colors.black38),
-                          ),
-
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const PetugasRegistrationPage(),
-                                ),
-                              );
-                            },
-                            child: Text(
-                              'Daftar Petugas',
-                              style: TextStyle(
-                                color: _oldGrassGreen,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
@@ -361,7 +331,7 @@ class _LoginPageState extends State<LoginPage> {
 
                   const Center(
                     child: Text(
-                      '© Muhammad Akmal Ahsan',
+                      '© Akmal',
                       style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
                     ),
                   ),

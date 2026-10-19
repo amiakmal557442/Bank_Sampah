@@ -26,7 +26,7 @@ if ($method === 'GET') {
 
     $whereSql = implode(" AND ", $whereClauses);
 
-    $stmt = $conn->prepare("SELECT t.*, u.full_name as nasabah_name, u.phone_number, u.address as nasabah_address, dp.name as drop_point_name, dp.address as drop_point_address, GROUP_CONCAT(DISTINCT wc.name SEPARATOR ', ') as jenis_sampah FROM transactions t JOIN users u ON t.nasabah_id = u.id LEFT JOIN drop_points dp ON t.drop_point_id = dp.id LEFT JOIN transaction_items ti ON t.id = ti.transaction_id LEFT JOIN waste_categories wc ON ti.waste_category_id = wc.id WHERE $whereSql GROUP BY t.id ORDER BY t.created_at DESC");
+    $stmt = $conn->prepare("SELECT t.*, COALESCE(u.full_name, t.full_name, 'Nasabah') as nasabah_name, u.phone_number, COALESCE(t.address, u.address, '') as nasabah_address, dp.name as drop_point_name, dp.address as drop_point_address, dp.latitude as drop_point_lat, dp.longitude as drop_point_lng, GROUP_CONCAT(DISTINCT wc.name SEPARATOR ', ') as jenis_sampah FROM transactions t LEFT JOIN users u ON t.nasabah_id = u.id LEFT JOIN drop_points dp ON t.drop_point_id = dp.id LEFT JOIN transaction_items ti ON t.id = ti.transaction_id LEFT JOIN waste_categories wc ON ti.waste_category_id = wc.id WHERE $whereSql GROUP BY t.id ORDER BY t.created_at DESC");
     $stmt->bind_param($types, ...$params);
 
     $stmt->execute();

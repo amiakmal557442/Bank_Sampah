@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'db_helper.dart';
+import 'api_service.dart';
 
 class KonfigurasiSistemScreen extends StatefulWidget {
   const KonfigurasiSistemScreen({super.key});
@@ -24,6 +25,10 @@ class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
   final TextEditingController _jamBukaController = TextEditingController();
   final TextEditingController _jamTutupController = TextEditingController();
 
+  List<Map<String, dynamic>> _categories = [];
+  final Map<int, TextEditingController> _pointControllers = {};
+  final Map<int, TextEditingController> _minWeightControllers = {};
+
   bool _autoAssignPetugas = true;
   bool _enableWaNotification = true;
   bool _enablePushNotification = true;
@@ -41,12 +46,21 @@ class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
     setState(() => _isLoading = true);
     try {
       final config = await DatabaseHelper.instance.getSystemConfig();
+
+      List<Map<String, dynamic>> cats = [];
+      try {
+        cats = await ApiService.instance.getWasteCategories();
+      } catch (_) {}
+      if (cats.isEmpty) {
+        cats = await DatabaseHelper.instance.getWasteCategories();
+      }
+
       if (mounted) {
         setState(() {
           _minWeightController.text = (config['min_weight'] ?? 1.0).toString();
           _maxRadiusController.text = (config['max_radius'] ?? 5.0).toString();
-          _minWithdrawController.text = (config['min_withdraw'] ?? 10000)
-              .toString();
+          _minWithdrawController.text =
+              (config['min_withdraw'] ?? 100).toString();
           _pointRateController.text = (config['point_rate'] ?? 1).toString();
 
           _jamBukaController.text = config['jam_buka']?.toString() ?? '08:00';
@@ -55,6 +69,22 @@ class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
           _autoAssignPetugas = (config['auto_assign'] ?? 1) == 1;
           _enableWaNotification = (config['wa_notif'] ?? 1) == 1;
           _enablePushNotification = (config['push_notif'] ?? 1) == 1;
+
+          _categories = cats;
+          _pointControllers.forEach((_, c) => c.dispose());
+          _minWeightControllers.forEach((_, c) => c.dispose());
+          _pointControllers.clear();
+          _minWeightControllers.clear();
+
+          for (var c in cats) {
+            final id = (c['id'] as num).toInt();
+            _pointControllers[id] = TextEditingController(
+              text: (c['point_per_kg'] ?? 0).toString(),
+            );
+            _minWeightControllers[id] = TextEditingController(
+              text: ((c['min_weight'] as num?)?.toDouble() ?? 1.0).toString(),
+            );
+          }
 
           _isLoading = false;
         });
@@ -70,7 +100,7 @@ class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
     double minWeight = double.tryParse(_minWeightController.text) ?? 1.0;
     double maxRadius = double.tryParse(_maxRadiusController.text) ?? 5.0;
     double minWithdraw =
-        double.tryParse(_minWithdrawController.text) ?? 10000.0;
+        double.tryParse(_minWithdrawController.text) ?? 100.0;
     double pointRate = double.tryParse(_pointRateController.text) ?? 1.0;
 
     final config = {
@@ -87,12 +117,35 @@ class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
 
     try {
       final success = await DatabaseHelper.instance.saveSystemConfig(config);
+
+      // Save each waste category with point_per_kg and min_weight
+      for (var cat in _categories) {
+        final id = (cat['id'] as num).toInt();
+        final point = int.tryParse(_pointControllers[id]?.text ?? '') ??
+            (cat['point_per_kg'] as num).toInt();
+        final minW = double.tryParse(_minWeightControllers[id]?.text ?? '') ??
+            ((cat['min_weight'] as num?)?.toDouble() ?? 1.0);
+
+        final updateData = {
+          'name': cat['name'],
+          'point_per_kg': point,
+          'min_weight': minW,
+          'icon_url': cat['icon_url'] ?? 'icon_default.png',
+          'is_active': cat['is_active'] ?? 1,
+        };
+
+        await DatabaseHelper.instance.updateWasteCategory(id, updateData);
+        try {
+          await ApiService.instance.updateWasteCategory(id, updateData);
+        } catch (_) {}
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               success
-                  ? 'Konfigurasi sistem berhasil disimpan!'
+                  ? 'Konfigurasi sistem & tarif kategori berhasil disimpan!'
                   : 'Gagal menyimpan konfigurasi.',
               style: const TextStyle(fontFamily: 'Segoe UI'),
             ),
@@ -124,6 +177,8 @@ class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
     _pointRateController.dispose();
     _jamBukaController.dispose();
     _jamTutupController.dispose();
+    _pointControllers.forEach((_, c) => c.dispose());
+    _minWeightControllers.forEach((_, c) => c.dispose());
     super.dispose();
   }
 
@@ -266,6 +321,128 @@ class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
                       ),
                       const SizedBox(height: 24),
                       _buildCardSection(
+                        title: 'Tarif Poin & Batas Minimal per Kategori Sampah',
+                        icon: Icons.scale_rounded,
+                        children: [
+                          Text(
+                            'Atur poin per kg dan batas minimal berat untuk setiap jenis sampah. Nilai ini otomatis sinkron ke menu Timbang Manual Petugas dan Aplikasi Nasabah.',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: textGrey,
+                              height: 1.4,
+                              fontFamily: 'Segoe UI',
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (_categories.isEmpty)
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: Text('Tidak ada data kategori sampah.'),
+                              ),
+                            )
+                          else
+                            ..._categories.map((cat) {
+                              final id = (cat['id'] as num).toInt();
+                              final name = cat['name']?.toString() ?? 'Sampah';
+                              final pCtrl = _pointControllers[id];
+                              final wCtrl = _minWeightControllers[id];
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: borderGrey),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: oldGrassGreen
+                                                .withValues(alpha: 0.1),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.recycling_rounded,
+                                            size: 18,
+                                            color: oldGrassGreen,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            name,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: baseBlack,
+                                              fontFamily: 'Segoe UI',
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.shade50,
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: Colors.green.shade200,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'Timbang Manual',
+                                            style: TextStyle(
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: oldGrassGreen,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: _buildInputField(
+                                            label: 'Poin / kg',
+                                            controller: pCtrl ??
+                                                TextEditingController(),
+                                            suffixText: 'poin',
+                                            helperText: 'Tarif per 1 kg',
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: _buildInputField(
+                                            label: 'Minimum Berat',
+                                            controller: wCtrl ??
+                                                TextEditingController(),
+                                            suffixText: 'kg',
+                                            helperText:
+                                                'Batas minimal timbang',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      _buildCardSection(
                         title: 'Nilai Konversi & Poin',
                         icon: Icons.currency_exchange,
                         children: [
@@ -373,13 +550,15 @@ class _KonfigurasiSistemScreenState extends State<KonfigurasiSistemScreen> {
             children: [
               Icon(icon, color: oldGrassGreen, size: 22),
               const SizedBox(width: 12),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: baseBlack,
-                  fontFamily: 'Segoe UI',
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: baseBlack,
+                    fontFamily: 'Segoe UI',
+                  ),
                 ),
               ),
             ],

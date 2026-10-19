@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download Aplikasi Bank Sampah - Android APK & Windows PC</title>
+  <meta name="description" content="Download aplikasi Bank Sampah resmi untuk Android (APK) dan PC (Windows EXE). Kelola daur ulang sampah, dapatkan poin cuan, dan monitor operasional secara realtime.">
+  <meta name="keywords" content="bank sampah, download apk bank sampah, download aplikasi bank sampah pc, aplikasi daur ulang sampah, bank sampah flutter">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body class="theme-dark">
+  <!-- Glow Highlights in Background -->
+  <div class="glow-orb orb-1" aria-hidden="true"></div>
+  <div class="glow-orb orb-2" aria-hidden="true"></div>
+  <div class="glow-orb orb-3" aria-hidden="true"></div>
+
+  <!-- Header / Navigation -->
+  <header class="site-header">
+    <div class="container nav-container">
+      <a href="#" class="brand-logo" id="brand-logo">
+        <div class="logo-icon-wrap">
+          <svg class="logo-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"></path>
+            <path d="M11 19h8.2a1.8 1.8 0 0 0 1.558-.89 1.78 1.78 0 0 0 0-1.774L16.81 9.5"></path>
+            <path d="M9.5 5.5l2.5-3.5 2.5 3.5"></path>
+            <path d="M12 2v10"></path>
+            <path d="M5 19l2.5 3.5 2.5-3.5"></path>
+            <path d="M14 19l2.5 3.5 2.5-3.5"></path>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">BANK SAMPAH</span>
+          <span class="brand-sub">ECO DIGITAL PLATFORM</span>
+        </div>
+      </a>
+
+      <nav class="nav-links" id="main-nav">
+        <a href="#download-section" class="nav-link">Download</a>
+        <a href="#features-section" class="nav-link">Fitur Aplikasi</a>
+        <a href="#guide-section" class="nav-link">Cara Install</a>
+        <a href="#specs-section" class="nav-link">Spesifikasi</a>
+        <a href="#faq-section" class="nav-link">FAQ</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="theme-toggle-btn" id="theme-toggle" aria-label="Toggle tema gelap dan terang" title="Ganti Tema">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+
+        <a href="#download-section" class="btn btn-sm btn-primary" id="btn-nav-download">
+          <span>Download App</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main>
+    <section class="hero-section">
+      <div class="container hero-container">
+        <div class="hero-content">
+          <div class="badge-pill" id="hero-badge">
+            <span class="pulse-dot"></span>
+            <span>Versi Terbaru v1.2.0 Tersedia</span>
+          </div>
+
+          <h1 class="hero-title">
+            Ubah Sampah Jadi <span class="gradient-text">Poin Cuan</span> & Berkah Lingkungan
+          </h1>
+
+          <p class="hero-subtitle">
+            Aplikasi Bank Sampah pintar yang menghubungkan <strong>Nasabah</strong>, <strong>Petugas Kurir</strong> penjemput sampah, dan <strong>Admin</strong> kantor dalam satu ekosistem terintegrasi.
+          </p>
+
+          <!-- Dynamic OS Detector Alert -->
+          <div class="os-detect-banner" id="os-detect-banner">
+            <div class="os-detect-icon" id="os-detect-icon">
+              <!-- Dynamically injected -->
+            </div>
+            <div class="os-detect-text">
+              <span class="os-detect-title" id="os-detect-title">Mendeteksi perangkat Anda...</span>
+              <span class="os-detect-desc" id="os-detect-desc">Memilih paket download optimal untuk Anda.</span>
+            </div>
+          </div>
+
+          <div class="hero-actions">
+            <a href="#download-section" class="btn btn-lg btn-primary" id="btn-hero-download">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Pilih Download (APK / EXE)</span>
+            </a>
+            <a href="#guide-section" class="btn btn-lg btn-outline" id="btn-hero-guide">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polygon points="10 8 16 12 10 16 10 8"></polygon>
+              </svg>
+              <span>Lihat Panduan Install</span>
+            </a>
+          </div>
+
+          <!-- Quick Stats Counter -->
+          <div class="quick-stats-row">
+            <div class="stat-pill">
+              <span class="stat-num" data-target="3">3</span>
+              <span class="stat-label">Hak Akses (Nasabah, Kurir, Admin)</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-pill">
+              <span class="stat-num" data-target="100">100%</span>
+              <span class="stat-label">Database Cloud Terintegrasi</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-pill">
+              <span class="stat-num" data-target="2">2</span>
+              <span class="stat-label">Platform (Android & Windows)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="hero-card-glow"></div>
+          <div class="hero-image-wrapper">
+            <img src="assets/hero-mockup.png" alt="Aplikasi Bank Sampah di Smartphone dan Komputer" class="hero-mockup-img" id="hero-mockup-img">
+            
+            <!-- Floating Decorative Glass Cards -->
+            <div class="glass-float float-card-1">
+              <div class="float-icon-box eco-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="float-title">Tukar Poin &amp; Sembako</div>
+                <div class="float-sub">Saldo Nasabah Realtime</div>
+              </div>
+            </div>
+
+            <div class="glass-float float-card-2">
+              <div class="float-icon-box eco-cyan">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+                  <line x1="8" y1="2" x2="8" y2="18"></line>
+                  <line x1="16" y1="6" x2="16" y2="22"></line>
+                </svg>
+              </div>
+              <div>
+                <div class="float-title">Operasional &amp; Live Tracking</div>
+                <div class="float-sub">Peta GPS Parepare</div>
+              </div>
+            </div>
+
+            <div class="glass-float float-card-3">
+              <div class="float-icon-box eco-gold">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="8.5" cy="7" r="4"></circle>
+                  <polyline points="17 11 19 13 23 9"></polyline>
+                </svg>
+              </div>
+              <div>
+                <div class="float-title">Manajemen Admin</div>
+                <div class="float-sub">Kontrol Penjemputan &amp; Drop Point</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DOWNLOAD SECTION (2 PRIMARY PLACES: APK & EXE) -->
+    <section class="download-section" id="download-section">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-badge">DOWNLOAD RESMI</span>
+          <h2 class="section-title">Pilih File Sesuai Perangkat Anda</h2>
+          <p class="section-subtitle">
+            Dapatkan aplikasi Bank Sampah untuk smartphone Android atau komputer desktop Windows PC. Aman, cepat, dan siap digunakan.
+          </p>
+        </div>
+
+        <div class="download-grid">
+          <!-- CARD 1: ANDROID APK -->
+          <div class="download-card card-android" id="card-android">
+            <div class="recommended-badge" id="badge-android-rec">Rekomendasi Perangkat Anda</div>
+            <div class="card-top">
+              <div class="platform-icon android-glow">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9996.4482.9996.9993.0001.5511-.4486.9997-.9996.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9997.4482.9997.9993 0 .5511-.4486.9997-.9997.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.412 13.8533 8.125 12 8.125s-3.5902.287-5.1368.8247L4.841 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/>
+                </svg>
+              </div>
+              <div class="platform-header-text">
+                <div class="platform-tag">UNTUK SMARTPHONE</div>
+                <h3 class="platform-name">Android Application (.APK)</h3>
+                <p class="platform-target">Direkomendasikan untuk <strong>Warga/Nasabah</strong> &amp; <strong>Petugas Kurir Lapangan</strong></p>
+              </div>
+            </div>
+
+            <div class="card-screen-preview">
+              <img src="assets/app-mobile-screen.png" alt="Preview Tampilan Nasabah Android" class="screen-preview-img preview-mobile-img">
+              <div class="preview-overlay">
+                <span class="preview-tag">📱 Antarmuka Aplikasi Nasabah</span>
+              </div>
+            </div>
+
+            <div class="specs-chips">
+              <span class="chip">Versi 1.2.0</span>
+              <span class="chip">Ukuran: 112 MB</span>
+              <span class="chip">Android 7.0+</span>
+              <span class="chip chip-accent">Gratis</span>
+            </div>
+
+            <div class="card-features">
+              <div class="feature-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>Menu Nasabah:</strong> Cek Saldo Poin, Setor Drop-in atau Panggil Kurir Jemput Sampah.</span>
+              </div>
+              <div class="feature-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>Menu Petugas:</strong> Navigasi peta GPS alamat nasabah &amp; input timbangan aktual langsung.</span>
+              </div>
+              <div class="feature-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>Klaim Hadiah:</strong> Tukar saldo poin sampah menjadi uang tunai atau e-wallet.</span>
+              </div>
+            </div>
+
+            <div class="card-cta">
+              <a href="downloads/bank-sampah.apk" download="Bank-Sampah-v1.2.0.apk" class="btn btn-block btn-primary btn-download" id="btn-download-apk" data-type="apk">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>Download APK Android</span>
+              </a>
+
+              <div class="card-secondary-actions">
+                <button class="btn btn-secondary btn-sm" id="btn-guide-apk" onclick="openInstallModal('apk')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                  <span>Cara Pasang APK</span>
+                </button>
+                <button class="btn btn-secondary btn-sm" id="btn-qr-apk" onclick="openQrModal()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="14" width="7" height="7"></rect>
+                    <rect x="3" y="14" width="7" height="7"></rect>
+                  </svg>
+                  <span>Scan QR HP</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="card-footer-note">
+              <span>🔒 Paket instalasi bersih terverifikasi. Bebas iklan &amp; malware.</span>
+            </div>
+          </div>
+
+          <!-- CARD 2: WINDOWS PC EXE -->
+          <div class="download-card card-windows" id="card-windows">
+            <div class="recommended-badge" id="badge-windows-rec">Rekomendasi Komputer Anda</div>
+            <div class="card-top">
+              <div class="platform-icon windows-glow">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.949-1.951"/>
+                </svg>
+              </div>
+              <div class="platform-header-text">
+                <div class="platform-tag">UNTUK PC / LAPTOP</div>
+                <h3 class="platform-name">Windows Desktop (.EXE)</h3>
+                <p class="platform-target">Direkomendasikan untuk <strong>Admin Pusat</strong>, <strong>Operator Kantor</strong> &amp; <strong>Gudang</strong></p>
+              </div>
+            </div>
+
+            <div class="card-screen-preview">
+              <img src="assets/app-desktop-screen.png" alt="Preview Tampilan Admin Windows" class="screen-preview-img preview-desktop-img">
+              <div class="preview-overlay">
+                <span class="preview-tag">💻 Antarmuka Dashboard Admin PC</span>
+              </div>
+            </div>
+
+            <div class="specs-chips">
+              <span class="chip">Versi 1.2.0</span>
+              <span class="chip">Ukuran: 14.3 MB (Zip)</span>
+              <span class="chip">Windows 10 / 11 (64-bit)</span>
+              <span class="chip chip-accent">Portable</span>
+            </div>
+
+            <div class="card-features">
+              <div class="feature-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>Manajemen Admin:</strong> Konfirmasi transaksi, kelola akun nasabah &amp; kontrol petugas kurir.</span>
+              </div>
+              <div class="feature-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>Master Data &amp; Harga:</strong> Atur tarif harga per kg sampah secara instan dan fleksibel.</span>
+              </div>
+              <div class="feature-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="check-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>Laporan &amp; Audit Log:</strong> Ekspor rekapan data ke format Excel, PDF, CSV serta pelacakan audit log.</span>
+              </div>
+            </div>
+
+            <div class="card-cta">
+              <a href="downloads/bank-sampah-windows.zip" download="Bank-Sampah-Windows-x64.zip" class="btn btn-block btn-windows btn-download" id="btn-download-exe" data-type="windows">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>Download Paket Windows (.ZIP)</span>
+              </a>
+
+              <div class="card-secondary-actions">
+                <button class="btn btn-secondary btn-sm" id="btn-guide-exe" onclick="openInstallModal('windows')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                  <span>Cara Buka di PC</span>
+                </button>
+                <a href="downloads/bank-sampah-windows.exe" download="BankSampah.exe" class="btn btn-secondary btn-sm" id="btn-download-exe-direct">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                  </svg>
+                  <span>Exe Saja</span>
+                </a>
+              </div>
+            </div>
+
+            <div class="card-footer-note">
+              <span>💡 Paket .ZIP berisi aplikasi lengkap beserta berkas pendukung (ekstrak lalu buka).</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ROLE FEATURES SECTION -->
+    <section class="features-section" id="features-section">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-badge">SOLUSI 3-IN-1</span>
+          <h2 class="section-title">Fitur Komprehensif Sesuai Kebutuhan</h2>
+          <p class="section-subtitle">Satu sistem yang menghubungkan seluruh pemangku kepentingan dalam pengelolaan sampah modern.</p>
+        </div>
+
+        <!-- Role Tabs -->
+        <div class="tabs-control" role="tablist">
+          <button class="tab-btn active" id="tab-btn-nasabah" role="tab" aria-selected="true" onclick="switchRoleTab('nasabah')">
+            <span class="tab-emoji">🏡</span>
+            <span>Untuk Nasabah (Warga)</span>
+          </button>
+          <button class="tab-btn" id="tab-btn-petugas" role="tab" aria-selected="false" onclick="switchRoleTab('petugas')">
+            <span class="tab-emoji">🛵</span>
+            <span>Untuk Petugas (Kurir)</span>
+          </button>
+          <button class="tab-btn" id="tab-btn-admin" role="tab" aria-selected="false" onclick="switchRoleTab('admin')">
+            <span class="tab-emoji">💻</span>
+            <span>Untuk Admin (Manajer Pusat)</span>
+          </button>
+        </div>
+
+        <!-- Tab Content: Nasabah -->
+        <div class="tab-content active" id="tab-content-nasabah" role="tabpanel">
+          <div class="role-grid">
+            <div class="role-card">
+              <div class="role-card-icon icon-emerald">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+              </div>
+              <h4 class="role-card-title">Dashboard Saldo &amp; Poin</h4>
+              <p class="role-card-desc">Pantau saldo poin dan total kilogram sampah yang berhasil Anda kumpulkan. Berikan kebanggaan dan transparansi hasil pilah sampah.</p>
+            </div>
+
+            <div class="role-card">
+              <div class="role-card-icon icon-teal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+              </div>
+              <h4 class="role-card-title">Drop-in Mandiri via Peta</h4>
+              <p class="role-card-desc">Cari lokasi Drop Point terdekat di Google Maps untuk menyetor sampah sendiri tanpa harus menunggu jadwal armada keliling.</p>
+            </div>
+
+            <div class="role-card">
+              <div class="role-card-icon icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+              </div>
+              <h4 class="role-card-title">Penjemputan Sampah ke Rumah</h4>
+              <p class="role-card-desc">Sampah menumpuk banyak atau berat? Cukup klik panggil kurir penjemput langsung ke alamat rumah Anda sesuai jadwal.</p>
+            </div>
+
+            <div class="role-card">
+              <div class="role-card-icon icon-amber">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"></path><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path></svg>
+              </div>
+              <h4 class="role-card-title">Tukar Poin Cuan &amp; Voucher</h4>
+              <p class="role-card-desc">Ubah poin yang didapat menjadi saldo tunai, uang digital, atau kupon diskon menarik. Sampah jadi berkah nyata!</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Content: Petugas -->
+        <div class="tab-content" id="tab-content-petugas" role="tabpanel">
+          <div class="role-grid">
+            <div class="role-card">
+              <div class="role-card-icon icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              </div>
+              <h4 class="role-card-title">Daftar Tugas Harian</h4>
+              <p class="role-card-desc">Daftar penjemputan sampah harian rapi di layar smartphone tanpa perlu membawa kertas catatan yang rentan hilang atau rusak.</p>
+            </div>
+
+            <div class="role-card">
+              <div class="role-card-icon icon-teal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              </div>
+              <h4 class="role-card-title">Status Perjalanan Realtime</h4>
+              <p class="role-card-desc">Update status dari "Menuju Lokasi", "Sedang Menimbang", hingga "Selesai" agar nasabah dan admin bisa memantau progres lapangan.</p>
+            </div>
+
+            <div class="role-card">
+              <div class="role-card-icon icon-emerald">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              </div>
+              <h4 class="role-card-title">Input Timbangan Aktual</h4>
+              <p class="role-card-desc">Ketik angka timbangan asli di depan nasabah secara transparan. Saldo poin dihitung otomatis dan akurat.</p>
+            </div>
+
+            <div class="role-card">
+              <div class="role-card-icon icon-purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              </div>
+              <h4 class="role-card-title">Validasi Bukti Setor</h4>
+              <p class="role-card-desc">Kirim bukti setoran sampah langsung ke server untuk diverifikasi cepat oleh Admin di kantor.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Content: Admin -->
+        <div class="tab-content" id="tab-content-admin" role="tabpanel">
+          <div class="role-grid">
+            <div class="role-card">
+              <div class="role-card-icon icon-purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              </div>
+              <h4 class="role-card-title">Kelola Akun &amp; Hak Akses</h4>
+              <p class="role-card-desc">Manajemen akun nasabah dan kurir. Fitur blokir akses atau verifikasi cepat jika ada petugas baru atau nasabah bermasalah.</p>
+            </div>
+
+            <div class="role-card">
+              <div class="role-card-icon icon-emerald">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+              </div>
+              <h4 class="role-card-title">Master Data Harga Sampah</h4>
+              <p class="role-card-desc">Sesuaikan tarif harga poin per kilogram (Plastik, Kertas, Logam, dll.) secara instan saat fluktuasi pasar terjadi.</p>
+            </div>
+
+            <div class="role-card">
+              <div class="role-card-icon icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              </div>
+              <h4 class="role-card-title">Ekspor Laporan (PDF/Excel)</h4>
+              <p class="role-card-desc">Buat laporan bulanan dan rekapitulasi data otomatis ke format PDF, Excel (.xlsx), atau CSV tanpa perlu perhitungan manual.</p>
+            </div>
+
+            <div class="role-card">
+              <div class="role-card-icon icon-amber">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              </div>
+              <h4 class="role-card-title">Audit Log CCTV Digital</h4>
+              <p class="role-card-desc">Catat setiap aktivitas sistem, perubahan harga, dan persetujuan transaksi secara terperinci untuk keamanan mutlak.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INSTALLATION GUIDE SECTION -->
+    <section class="guide-section" id="guide-section">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-badge">PANDUAN LENGKAP</span>
+          <h2 class="section-title">Cara Mudah Memasang Aplikasi</h2>
+          <p class="section-subtitle">Ikuti langkah mudah di bawah ini untuk memulai di perangkat pilihan Anda.</p>
+        </div>
+
+        <div class="guide-dual-grid">
+          <!-- Step Android -->
+          <div class="guide-column">
+            <div class="guide-column-header">
+              <div class="guide-icon-badge android-badge">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9996.4482.9996.9993.0001.5511-.4486.9997-.9996.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9997.4482.9997.9993 0 .5511-.4486.9997-.9997.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.412 13.8533 8.125 12 8.125s-3.5902.287-5.1368.8247L4.841 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/>
+                </svg>
+              </div>
+              <h3>Panduan Install Android (APK)</h3>
+            </div>
+
+            <ol class="steps-list">
+              <li class="step-item">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                  <strong>Download Berkas APK</strong>
+                  <p>Klik tombol <a href="#download-section">Download APK Android</a> atau scan QR code dari HP Anda.</p>
+                </div>
+              </li>
+              <li class="step-item">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                  <strong>Izinkan Instalasi dari Sumber Ini</strong>
+                  <p>Jika muncul notifikasi keamanan browser (Chrome/Samsung Internet), pilih <em>Pengaturan</em> lalu aktifkan <em>"Izinkan dari sumber ini"</em> (Install unknown apps).</p>
+                </div>
+              </li>
+              <li class="step-item">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                  <strong>Tekan Tombol Install</strong>
+                  <p>Pilih <em>"Tetap Install"</em> jika muncul peringatan Google Play Protect. File 100% aman dan bebas virus.</p>
+                </div>
+              </li>
+              <li class="step-item">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                  <strong>Buka dan Masuk ke Aplikasi</strong>
+                  <p>Aplikasi siap digunakan! Masuk sebagai Nasabah atau Petugas Lapangan Anda.</p>
+                </div>
+              </li>
+            </ol>
+          </div>
+
+          <!-- Step Windows -->
+          <div class="guide-column">
+            <div class="guide-column-header">
+              <div class="guide-icon-badge windows-badge">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.949-1.951"/>
+                </svg>
+              </div>
+              <h3>Panduan Buka di Windows (PC)</h3>
+            </div>
+
+            <ol class="steps-list">
+              <li class="step-item">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                  <strong>Download Paket Windows (.ZIP)</strong>
+                  <p>Unduh file zip aplikasi bank sampah melalui tombol download Windows di atas.</p>
+                </div>
+              </li>
+              <li class="step-item">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                  <strong>Ekstrak Berkas ZIP</strong>
+                  <p>Klik kanan file zip yang telah didownload, lalu pilih <em>"Extract All..."</em> (Ekstrak Semua) ke folder pilihan Anda.</p>
+                </div>
+              </li>
+              <li class="step-item">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                  <strong>Jalankan File Aplikasi</strong>
+                  <p>Buka folder hasil ekstrak dan klik ganda pada file <strong>flutter_application_1.exe</strong> atau <strong>bank-sampah-windows.exe</strong>.</p>
+                </div>
+              </li>
+              <li class="step-item">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                  <strong>Tips Praktis Shortcut Desktop</strong>
+                  <p>Klik kanan file exe &gt; <em>Send to &gt; Desktop (create shortcut)</em> untuk akses cepat langsung dari desktop kantor.</p>
+                </div>
+              </li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SYSTEM REQUIREMENTS TABLE -->
+    <section class="specs-section" id="specs-section">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-badge">SPESIFIKASI TEKNIS</span>
+          <h2 class="section-title">Kebutuhan Minimum Sistem</h2>
+          <p class="section-subtitle">Aplikasi dirancang ringan dan dapat berjalan lancar di hampir semua perangkat modern.</p>
+        </div>
+
+        <div class="specs-table-wrapper">
+          <table class="specs-table">
+            <thead>
+              <tr>
+                <th>Komponen</th>
+                <th>Versi Android (APK)</th>
+                <th>Versi Windows (PC / Laptop)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Sistem Operasi</strong></td>
+                <td>Android 7.0 (Nougat) atau lebih baru</td>
+                <td>Windows 10 / Windows 11 (64-bit)</td>
+              </tr>
+              <tr>
+                <td><strong>RAM Minimum</strong></td>
+                <td>2 GB (Disarankan 3 GB+)</td>
+                <td>4 GB (Disarankan 8 GB)</td>
+              </tr>
+              <tr>
+                <td><strong>Penyimpanan Kosong</strong></td>
+                <td>250 MB ruang penyimpanan</td>
+                <td>300 MB ruang penyimpanan</td>
+              </tr>
+              <tr>
+                <td><strong>Konektivitas</strong></td>
+                <td>Internet (WiFi / Kuota Seluler)</td>
+                <td>Koneksi Internet LAN / WiFi</td>
+              </tr>
+              <tr>
+                <td><strong>Fitur Tambahan</strong></td>
+                <td>GPS (Lokasi) &amp; Kamera (Foto bukti sampah)</td>
+                <td>Mouse, Keyboard, Resolusi layar min. 1280x720</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ SECTION -->
+    <section class="faq-section" id="faq-section">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-badge">BANTUAN &amp; FAQ</span>
+          <h2 class="section-title">Pertanyaan yang Sering Diajukan</h2>
+          <p class="section-subtitle">Jawaban cepat untuk pertanyaan umum seputar instalasi dan penggunaan aplikasi Bank Sampah.</p>
+        </div>
+
+        <div class="faq-accordion" id="faq-accordion">
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+              <span>Apakah aplikasi Bank Sampah ini gratis untuk diunduh?</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="faq-chevron"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="faq-answer">
+              <p>Ya, 100% gratis! Baik versi Android APK maupun versi Windows PC dapat diunduh tanpa dipungut biaya apapun. Pendaftaran akun nasabah juga tidak dikenakan biaya.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+              <span>Mengapa muncul peringatan 'File mungkin berbahaya' saat mengunduh APK?</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="faq-chevron"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="faq-answer">
+              <p>Ini adalah peringatan standar keamanan Android untuk semua file aplikasi (.apk) yang diunduh langsung dari web (di luar Google Play Store). File ini aman dan tidak mengandung malware. Anda cukup memilih <em>"Tetap Download"</em> lalu pasang seperti biasa.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+              <span>Apakah data antara Android dan PC tersinkronisasi otomatis?</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="faq-chevron"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="faq-answer">
+              <p>Ya! Kedua aplikasi terhubung ke database cloud terpusat yang sama. Saat petugas menginput berat timbangan di Android, data langsung muncul di layar Admin Windows secara realtime.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" onclick="toggleFaq(this)">
+              <span>Bagaimana jika muncul Windows Defender SmartScreen saat membuka EXE?</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="faq-chevron"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="faq-answer">
+              <p>Klik tombol <strong>"More Info"</strong> (Informasi Selengkapnya) lalu tekan <strong>"Run Anyway"</strong> (Tetap Jalankan). Peringatan ini muncul karena aplikasi belum ditandatangani sertifikat berbayar Microsoft.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-brand">
+        <div class="brand-logo">
+          <div class="logo-icon-wrap">
+            <svg class="logo-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"></path>
+              <path d="M11 19h8.2a1.8 1.8 0 0 0 1.558-.89 1.78 1.78 0 0 0 0-1.774L16.81 9.5"></path>
+              <path d="M9.5 5.5l2.5-3.5 2.5 3.5"></path>
+              <path d="M12 2v10"></path>
+            </svg>
+          </div>
+          <div class="brand-text">
+            <span class="brand-title">BANK SAMPAH</span>
+            <span class="brand-sub">ECO DIGITAL PLATFORM</span>
+          </div>
+        </div>
+        <p class="footer-desc">
+          Solusi terdepan digitalisasi bank sampah untuk mewujudkan lingkungan yang bersih, sehat, dan bernilai ekonomis bagi masyarakat.
+        </p>
+      </div>
+
+      <div class="footer-links-col">
+        <h4 class="footer-title">Tautan Download</h4>
+        <ul class="footer-list">
+          <li><a href="downloads/bank-sampah.apk" download="Bank-Sampah-v1.2.0.apk">Download Android (.APK)</a></li>
+          <li><a href="downloads/bank-sampah-windows.zip" download="Bank-Sampah-Windows-x64.zip">Download Windows (.ZIP)</a></li>
+          <li><a href="downloads/bank-sampah-windows.exe" download="BankSampah.exe">Download Standalone (.EXE)</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-links-col">
+        <h4 class="footer-title">Menu Cepat</h4>
+        <ul class="footer-list">
+          <li><a href="#features-section">Fitur Nasabah &amp; Kurir</a></li>
+          <li><a href="#features-section">Fitur Admin Kantor</a></li>
+          <li><a href="#guide-section">Panduan Instalasi</a></li>
+          <li><a href="#specs-section">Spesifikasi Minimum</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div class="container footer-bottom-container">
+        <p>&copy; 2026 Aplikasi Bank Sampah. Seluruh hak cipta dilindungi.</p>
+        <div class="footer-bottom-links">
+          <span>Kelola Sampah, Raih Berkah</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- MODAL: INSTALLATION GUIDE POPUP -->
+  <div class="modal-overlay" id="modal-install" onclick="closeModalOutside(event, 'modal-install')">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-install-title">Panduan Instalasi</h3>
+        <button class="modal-close" onclick="closeModal('modal-install')" aria-label="Tutup modal">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-install-body">
+        <!-- Content injected dynamically via JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="closeModal('modal-install')">Saya Mengerti</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: QR CODE POPUP -->
+  <div class="modal-overlay" id="modal-qr" onclick="closeModalOutside(event, 'modal-qr')">
+    <div class="modal-card text-center">
+      <div class="modal-header">
+        <h3>Scan QR Code untuk Download APK</h3>
+        <button class="modal-close" onclick="closeModal('modal-qr')" aria-label="Tutup modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-subtext">Arahkan kamera HP Anda ke kode QR berikut untuk langsung mengunduh file APK ke smartphone:</p>
+        <div class="qr-code-box" id="qr-code-container">
+          <!-- Dynamic SVG QR Code will be drawn here -->
+          <canvas id="qr-canvas" width="200" height="200"></canvas>
+        </div>
+        <div class="qr-link-copy">
+          <input type="text" id="apk-direct-link" readonly value="">
+          <button class="btn btn-sm btn-secondary" onclick="copyApkLink()" id="btn-copy-link">Salin Link</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-qr')">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>

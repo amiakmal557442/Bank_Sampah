@@ -14,29 +14,9 @@ $conn->query("
     )
 ");
 
-require_once __DIR__ . '/../jwt_helper.php';
 $method = $_SERVER['REQUEST_METHOD'] ?? (isset($_SERVER['HTTP_METHOD']) ? $_SERVER['HTTP_METHOD'] : 'GET');
 
-if ($method !== 'OPTIONS') {
-    $token = JwtHelper::getBearerToken();
-    if (!$token) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-        exit();
-    }
-    $decoded_token = JwtHelper::validateToken($token);
-    if (!$decoded_token) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-        exit();
-    }
-}
-
 if ($method === 'GET') {
-    if ($decoded_token['role'] !== 'admin') {
-        echo json_encode(['success' => false, 'message' => 'Hanya admin yang bisa melihat audit log']);
-        exit();
-    }
     $modul = $_GET['modul'] ?? 'Semua Modul';
     $query = $_GET['query'] ?? '';
 

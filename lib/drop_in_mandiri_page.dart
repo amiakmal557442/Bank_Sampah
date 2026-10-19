@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'transaction_service.dart';
 import 'session_service.dart';
 import 'db_helper.dart';
@@ -36,6 +37,7 @@ class WasteCategory {
   final String id;
   final String name;
   final int pointsPerKg;
+  final double minWeight;
   final IconData icon;
   bool isSelected;
 
@@ -43,6 +45,7 @@ class WasteCategory {
     required this.id,
     required this.name,
     required this.pointsPerKg,
+    this.minWeight = 1.0,
     required this.icon,
     this.isSelected = false,
   });
@@ -57,6 +60,7 @@ class DropInMandiriScreen extends StatefulWidget {
 
 class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
   int _currentStep = 0;
+  String _generatedBarcode = 'WS-8X4K-2Q1M';
 
   final Color _primaryGreen = const Color(0xFF268B07);
   final Color _lightGreenBg = const Color(0xFFE8F5E9);
@@ -73,6 +77,10 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
 
   List<WasteCategory> _wasteCategories = [];
   bool _isLoadingData = true;
+
+  double _minWeight = 1.0;
+  String _jamBuka = '08:00';
+  String _jamTutup = '17:00';
 
   final List<XFile> _uploadedPhotos = [];
   final ImagePicker _picker = ImagePicker();
@@ -132,14 +140,24 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
     if (_currentStep == 2) {
       try {
         final txId = 'TRX-${DateTime.now().millisecondsSinceEpoch}';
+        final String shortCode = DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase();
+        final String barcodeCode = 'WS-${shortCode.length > 8 ? '${shortCode.substring(shortCode.length - 8, shortCode.length - 4)}-${shortCode.substring(shortCode.length - 4)}' : shortCode}';
+        _generatedBarcode = barcodeCode;
+        final selectedDp = _dropPoints[_selectedDropPointIndex];
+
         final txData = <String, dynamic>{
           'id': txId,
           'nasabah_id': SessionService.userId,
           'full_name': SessionService.fullName,
           'address': SessionService.address,
-          'drop_point_id': _dropPoints[_selectedDropPointIndex].id,
+          'drop_point_id': selectedDp.id,
+          'drop_point_name': selectedDp.name,
+          'drop_point_address': selectedDp.address,
           'type': 'drop_in',
           'status': 'menunggu',
+          'barcode': barcodeCode,
+          'pickup_date':
+              '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}',
         };
 
         bool ok = false;
@@ -236,17 +254,29 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
   }
 
   Future<void> _loadData() async {
-    final dbDps = await DatabaseHelper.instance.getDropPoints();
+    List<Map<String, dynamic>> dbDps = [];
+    try {
+      dbDps = await ApiService.instance.getDropPoints();
+    } catch (_) {}
+    if (dbDps.isEmpty) {
+      dbDps = await DatabaseHelper.instance.getDropPoints();
+    }
     final dbCats = await DatabaseHelper.instance.getWasteCategories();
+    final config = await DatabaseHelper.instance.getSystemConfig();
+
     if (!mounted) return;
     setState(() {
+      _minWeight = (config['min_weight'] as num?)?.toDouble() ?? 1.0;
+      _jamBuka = config['jam_buka']?.toString() ?? '08:00';
+      _jamTutup = config['jam_tutup']?.toString() ?? '17:00';
+
       _dropPoints = dbDps
           .map(
             (m) => DropPoint(
               id: m['id']?.toString() ?? '',
               name: m['name'] as String,
               address: m['address'] as String,
-              hours: 'Buka ${m['operating_hours'] ?? '08:00-17:00'}',
+              hours: 'Buka ${m['operating_hours'] ?? '$_jamBuka-$_jamTutup'}',
               distance: '~-',
               categories: ['Semua Jenis'],
               latitude:
@@ -262,6 +292,7 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
               id: m['id'].toString(),
               name: m['name'] as String,
               pointsPerKg: (m['point_per_kg'] as int?) ?? 0,
+              minWeight: (m['min_weight'] as num?)?.toDouble() ?? 1.0,
               icon: Icons.recycling_outlined,
             ),
           )
@@ -475,8 +506,117 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 20),
-
+        const SizedBox(height: 16),
+        Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: _lightGreenBg.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _primaryGreen.withOpacity(0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.info_outline_rounded,
+                      color: _primaryGreen, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Informasi Operasional Drop-in',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: _primaryGreen,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '⏰ Jam Layanan: $_jamBuka - $_jamTutup WITA',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF334155),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '⚖️ Min. Setor: $_minWeight kg',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF334155),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        if (_wasteCategories.isNotEmpty) ...[
+          const Text(
+            'TARIF POIN & BATAS MINIMAL SAMPAH',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.8,
+              color: Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _wasteCategories.map((cat) {
+                return Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(cat.icon, size: 16, color: _primaryGreen),
+                      const SizedBox(width: 6),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            cat.name,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          Text(
+                            '${cat.pointsPerKg} poin/kg • Min ${cat.minWeight} kg',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         const Text(
           'DROP POINT TERDEKAT',
           style: TextStyle(
@@ -824,18 +964,32 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
             color: const Color(0xFFEFF9F0),
             borderRadius: BorderRadius.circular(16),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.info_outline, size: 20, color: _primaryGreen),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Jenis sampah dan poin akan ditentukan oleh petugas saat penimbangan di drop point.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF334155),
+              Row(
+                children: [
+                  Icon(Icons.scale_rounded, size: 20, color: _primaryGreen),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Batas minimal total setor: $_minWeight kg.',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
                   ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Jenis sampah dan poin akan ditentukan oleh petugas saat penimbangan di drop point sesuai tarif yang berlaku.',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF334155),
                 ),
               ),
             ],
@@ -957,14 +1111,32 @@ class _DropInMandiriScreenState extends State<DropInMandiriScreen> {
             color: const Color(0xFFEFF9F0),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Text(
-            'WS-8X4K-2Q1M',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-              color: _primaryGreen,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _generatedBarcode,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                  color: _primaryGreen,
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: _generatedBarcode));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Kode barcode berhasil disalin!'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+                child: Icon(Icons.copy_rounded, size: 16, color: _primaryGreen),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 24),

@@ -13,7 +13,8 @@ import 'alamat_penjemputan_page.dart';
 import 'bantuan_faq_page.dart';
 import 'kebijakan_privasi_page.dart';
 import 'chat_admin_page.dart';
-import 'package:http/http.dart' as http;
+import 'db_helper.dart';
+import 'widgets/barcode_painter.dart';
 
 void main() {
   runApp(const BankSampahApp());
@@ -319,6 +320,95 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 }
 
+void _handleTransactionTap(BuildContext context, TransactionModel tx) {
+  final isWithdrawal = tx.isWithdrawal ||
+      tx.icon == Icons.card_giftcard_outlined ||
+      tx.icon == Icons.account_balance_wallet_outlined;
+
+  if (isWithdrawal) {
+    showWithdrawalBarcodeModal(
+      context: context,
+      barcodeId: (tx.id != null && tx.id!.isNotEmpty) ? tx.id! : 'WD-PENARIKAN',
+      method: tx.withdrawalMethod ??
+          (tx.title.contains('(')
+              ? tx.title.substring(tx.title.indexOf('(') + 1, tx.title.lastIndexOf(')'))
+              : tx.title.split('(').first.trim()),
+      points: tx.totalPoin.abs() > 0
+          ? tx.totalPoin.abs()
+          : (int.tryParse(tx.points.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0),
+      amount: tx.withdrawalAmount ??
+          ((tx.totalPoin.abs() > 0
+                  ? tx.totalPoin.abs()
+                  : (int.tryParse(tx.points.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0)) *
+              1.0),
+      status: tx.status,
+    );
+    return;
+  }
+
+  // Setor sampah transaction (Drop-in or Jemput)
+  String barcodeId = tx.barcode ?? '';
+  if (barcodeId.isEmpty) {
+    final String id = tx.id ?? '';
+    final isDrop = (tx.type == 'drop_in' || tx.title.toLowerCase().contains('drop'));
+    final prefix = isDrop ? 'WS' : 'JS';
+    if (id.startsWith('TRX-')) {
+      final numPart = id.substring(4);
+      final hexPart = int.tryParse(numPart)?.toRadixString(36).toUpperCase() ?? numPart;
+      if (hexPart.length >= 8) {
+        barcodeId = '$prefix-${hexPart.substring(hexPart.length - 8, hexPart.length - 4)}-${hexPart.substring(hexPart.length - 4)}';
+      } else {
+        barcodeId = '$prefix-$hexPart';
+      }
+    } else {
+      barcodeId = id.isNotEmpty ? '$prefix-$id' : '$prefix-8X4K-2Q1M';
+    }
+  }
+
+  String jenisSampah = 'Campur';
+  if (tx.rawItems.isNotEmpty) {
+    jenisSampah = tx.rawItems
+        .map((e) {
+          String? n = (e['category_name'] ?? e['name'] ?? e['waste_name']) as String?;
+          if (n == null || n.isEmpty) {
+            final catId = e['waste_category_id']?.toString();
+            if (catId == '1') {
+              n = 'Plastik';
+            } else if (catId == '2') {
+              n = 'Kertas & Kardus';
+            } else if (catId == '3') {
+              n = 'Besi & Logam';
+            } else if (catId == '4') {
+              n = 'Elektronik Bekas';
+            } else {
+              n = 'Sampah';
+            }
+          }
+          return n;
+        })
+        .join(', ');
+  } else if (tx.title.contains('-')) {
+    final parts = tx.title.split('-');
+    if (parts.length > 1) {
+      jenisSampah = parts.last.trim();
+    }
+  }
+
+  showSetorBarcodeModal(
+    context: context,
+    barcodeId: barcodeId,
+    type: tx.type ?? (tx.title.toLowerCase().contains('drop') ? 'drop_in' : 'pickup'),
+    nasabahName: SessionService.fullName.isNotEmpty ? SessionService.fullName : 'Nasabah',
+    lokasi: (tx.address != null && tx.address!.isNotEmpty)
+        ? tx.address!
+        : (SessionService.address.isNotEmpty ? SessionService.address : 'Lokasi Terdaftar'),
+    waktu: tx.subtitle,
+    status: tx.status,
+    kategori: jenisSampah,
+    estimasiPoin: tx.totalPoin > 0 ? tx.totalPoin : 0,
+  );
+}
+
 class BerandaPage extends StatefulWidget {
   const BerandaPage({super.key});
 
@@ -327,6 +417,14 @@ class BerandaPage extends StatefulWidget {
 }
 
 class _BerandaPageState extends State<BerandaPage> {
+  double _pointRate = 1.0;
+  double _minWithdraw = 10000.0;
+  String _jamBuka = '08:00';
+  String _jamTutup = '17:00';
+  double _maxRadius = 5.0;
+  double _minWeight = 1.0;
+  List<Map<String, dynamic>> _wasteCategories = [];
+
   @override
   void initState() {
     super.initState();
@@ -336,7 +434,28 @@ class _BerandaPageState extends State<BerandaPage> {
   Future<void> _refreshPoints() async {
     await SessionService.refresh();
     await TransactionService.loadTransactions(SessionService.userId);
-    if (mounted) setState(() {});
+    try {
+      final config = await DatabaseHelper.instance.getSystemConfig();
+      List<Map<String, dynamic>> cats = [];
+      try {
+        cats = await ApiService.instance.getWasteCategories();
+      } catch (_) {}
+      if (cats.isEmpty) {
+        cats = await DatabaseHelper.instance.getWasteCategories();
+      }
+      if (mounted) {
+        setState(() {
+          _pointRate = (config['point_rate'] as num?)?.toDouble() ?? 1.0;
+          _minWithdraw =
+              (config['min_withdraw'] as num?)?.toDouble() ?? 10000.0;
+          _jamBuka = config['jam_buka']?.toString() ?? '08:00';
+          _jamTutup = config['jam_tutup']?.toString() ?? '17:00';
+          _maxRadius = (config['max_radius'] as num?)?.toDouble() ?? 5.0;
+          _minWeight = (config['min_weight'] as num?)?.toDouble() ?? 1.0;
+          _wasteCategories = cats;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -492,7 +611,7 @@ class _BerandaPageState extends State<BerandaPage> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '≈ Rp ${(SessionService.pointBalance * 10).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} · Min. tarik: 1.000 poin',
+                              '≈ Rp ${(SessionService.pointBalance * _pointRate).toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} · Min. tarik: ${_minWithdraw.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} poin',
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: Color(0xFF94A3B8),
@@ -511,7 +630,9 @@ class _BerandaPageState extends State<BerandaPage> {
                                               const TukarPoinScreen(),
                                         ),
                                       );
-                                      setState(() {});
+                                      await SessionService.refresh();
+                                      await TransactionService.loadTransactions(SessionService.userId);
+                                      if (mounted) setState(() {});
                                     },
                                     icon: const Icon(
                                       Icons.swap_horiz_rounded,
@@ -589,7 +710,7 @@ class _BerandaPageState extends State<BerandaPage> {
                 ),
               ),
 
-              const SizedBox(height: 140),
+              const SizedBox(height: 24),
 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -649,6 +770,88 @@ class _BerandaPageState extends State<BerandaPage> {
                   ],
                 ),
               ),
+
+              if (_wasteCategories.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'KATALOG TARIF & BATAS MINIMAL',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: _wasteCategories.map((cat) {
+                            final name = cat['name'] ?? '-';
+                            final point = cat['point_per_kg'] ?? 0;
+                            final minW =
+                                (cat['min_weight'] as num?)?.toDouble() ?? 1.0;
+                            return Container(
+                              margin: const EdgeInsets.only(right: 10),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border:
+                                    Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: primaryGreen.withOpacity(0.08),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(Icons.recycling_rounded,
+                                        size: 18, color: primaryGreen),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '$point poin/kg • Min $minW kg',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 28),
 
@@ -850,127 +1053,7 @@ class _BerandaPageState extends State<BerandaPage> {
     required TransactionModel tx,
   }) {
     return GestureDetector(
-      onTap: () {
-        showDialog(
-          context: context,
-          builder: (ctx) {
-            final isWithdrawal =
-                tx.icon == Icons.card_giftcard_outlined ||
-                tx.icon == Icons.account_balance_wallet_outlined;
-
-            if (isWithdrawal) {
-              String jenis = tx.title.split('(').first.trim();
-              String detail = '';
-              if (tx.title.contains('(')) {
-                detail = tx.title
-                    .substring(tx.title.indexOf('('))
-                    .replaceAll(RegExp(r'[()]'), '')
-                    .trim();
-              }
-              return AlertDialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                title: const Text(
-                  'Detail Transaksi',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _detailRow('Jenis', jenis),
-                    if (detail.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      _detailRow('Detail', detail),
-                    ],
-                    const SizedBox(height: 8),
-                    _detailRow('Poin digunakan', tx.points),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text(
-                      'Tutup',
-                      style: TextStyle(
-                        color: Color(0xFF268B07),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            String jenisSampah = 'N/A';
-            if (tx.rawItems.isNotEmpty) {
-              jenisSampah = tx.rawItems
-                  .map((e) {
-                    String? n =
-                        (e['category_name'] ?? e['name'] ?? e['waste_name'])
-                            as String?;
-                    if (n == null || n.isEmpty) {
-                      final catId = e['waste_category_id']?.toString();
-                      if (catId == '1')
-                        n = 'Plastik';
-                      else if (catId == '2')
-                        n = 'Kertas & Kardus';
-                      else if (catId == '3')
-                        n = 'Besi & Logam';
-                      else if (catId == '4')
-                        n = 'Elektronik Bekas';
-                      else
-                        n = 'Sampah';
-                    }
-                    return n;
-                  })
-                  .join(', ');
-            } else if (tx.title.contains('-')) {
-              final parts = tx.title.split('-');
-              if (parts.length > 1) {
-                jenisSampah = parts.last.trim();
-              }
-            }
-
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text(
-                'Detail Transaksi',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _detailRow('Jenis sampah', jenisSampah),
-                  const SizedBox(height: 8),
-                  _detailRow(
-                    'Jumlah berat sampah',
-                    '${tx.totalBerat.toStringAsFixed(1).replaceAll('.', ',')} kg',
-                  ),
-                  const SizedBox(height: 8),
-                  _detailRow('Jumlah poin', tx.points),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text(
-                    'Tutup',
-                    style: TextStyle(
-                      color: Color(0xFF268B07),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      onTap: () => _handleTransactionTap(context, tx),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
@@ -1229,127 +1312,7 @@ class _SemuaTransaksiPageState extends State<SemuaTransaksiPage> {
         : const Color(0xFF166534);
 
     return GestureDetector(
-      onTap: () {
-        showDialog(
-          context: context,
-          builder: (ctx) {
-            final isWithdrawal =
-                tx.icon == Icons.card_giftcard_outlined ||
-                tx.icon == Icons.account_balance_wallet_outlined;
-
-            if (isWithdrawal) {
-              String jenis = tx.title.split('(').first.trim();
-              String detail = '';
-              if (tx.title.contains('(')) {
-                detail = tx.title
-                    .substring(tx.title.indexOf('('))
-                    .replaceAll(RegExp(r'[()]'), '')
-                    .trim();
-              }
-              return AlertDialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                title: const Text(
-                  'Detail Transaksi',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _detailRow('Jenis', jenis),
-                    if (detail.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      _detailRow('Detail', detail),
-                    ],
-                    const SizedBox(height: 8),
-                    _detailRow('Poin digunakan', tx.points),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text(
-                      'Tutup',
-                      style: TextStyle(
-                        color: Color(0xFF268B07),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            String jenisSampah = 'N/A';
-            if (tx.rawItems.isNotEmpty) {
-              jenisSampah = tx.rawItems
-                  .map((e) {
-                    String? n =
-                        (e['category_name'] ?? e['name'] ?? e['waste_name'])
-                            as String?;
-                    if (n == null || n.isEmpty) {
-                      final catId = e['waste_category_id']?.toString();
-                      if (catId == '1')
-                        n = 'Plastik';
-                      else if (catId == '2')
-                        n = 'Kertas & Kardus';
-                      else if (catId == '3')
-                        n = 'Besi & Logam';
-                      else if (catId == '4')
-                        n = 'Elektronik Bekas';
-                      else
-                        n = 'Sampah';
-                    }
-                    return n;
-                  })
-                  .join(', ');
-            } else if (tx.title.contains('-')) {
-              final parts = tx.title.split('-');
-              if (parts.length > 1) {
-                jenisSampah = parts.last.trim();
-              }
-            }
-
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text(
-                'Detail Transaksi',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _detailRow('Jenis sampah', jenisSampah),
-                  const SizedBox(height: 8),
-                  _detailRow(
-                    'Jumlah berat sampah',
-                    '${tx.totalBerat.toStringAsFixed(1).replaceAll('.', ',')} kg',
-                  ),
-                  const SizedBox(height: 8),
-                  _detailRow('Jumlah poin', tx.points),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text(
-                    'Tutup',
-                    style: TextStyle(
-                      color: Color(0xFF268B07),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      onTap: () => _handleTransactionTap(context, tx),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
@@ -1919,127 +1882,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
   }) {
     final isFailed = tx.isFailed;
     return GestureDetector(
-      onTap: () {
-        showDialog(
-          context: context,
-          builder: (ctx) {
-            final isWithdrawal =
-                tx.icon == Icons.card_giftcard_outlined ||
-                tx.icon == Icons.account_balance_wallet_outlined;
-
-            if (isWithdrawal) {
-              String jenis = tx.title.split('(').first.trim();
-              String detail = '';
-              if (tx.title.contains('(')) {
-                detail = tx.title
-                    .substring(tx.title.indexOf('('))
-                    .replaceAll(RegExp(r'[()]'), '')
-                    .trim();
-              }
-              return AlertDialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                title: const Text(
-                  'Detail Transaksi',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _detailRow('Jenis', jenis),
-                    if (detail.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      _detailRow('Detail', detail),
-                    ],
-                    const SizedBox(height: 8),
-                    _detailRow('Poin digunakan', tx.points),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text(
-                      'Tutup',
-                      style: TextStyle(
-                        color: Color(0xFF268B07),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            String jenisSampah = 'N/A';
-            if (tx.rawItems.isNotEmpty) {
-              jenisSampah = tx.rawItems
-                  .map((e) {
-                    String? n =
-                        (e['category_name'] ?? e['name'] ?? e['waste_name'])
-                            as String?;
-                    if (n == null || n.isEmpty) {
-                      final catId = e['waste_category_id']?.toString();
-                      if (catId == '1')
-                        n = 'Plastik';
-                      else if (catId == '2')
-                        n = 'Kertas & Kardus';
-                      else if (catId == '3')
-                        n = 'Besi & Logam';
-                      else if (catId == '4')
-                        n = 'Elektronik Bekas';
-                      else
-                        n = 'Sampah';
-                    }
-                    return n;
-                  })
-                  .join(', ');
-            } else if (tx.title.contains('-')) {
-              final parts = tx.title.split('-');
-              if (parts.length > 1) {
-                jenisSampah = parts.last.trim();
-              }
-            }
-
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text(
-                'Detail Transaksi',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _detailRow('Jenis sampah', jenisSampah),
-                  const SizedBox(height: 8),
-                  _detailRow(
-                    'Jumlah berat sampah',
-                    '${tx.totalBerat.toStringAsFixed(1).replaceAll('.', ',')} kg',
-                  ),
-                  const SizedBox(height: 8),
-                  _detailRow('Jumlah poin', tx.points),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text(
-                    'Tutup',
-                    style: TextStyle(
-                      color: Color(0xFF268B07),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      onTap: () => _handleTransactionTap(context, tx),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(

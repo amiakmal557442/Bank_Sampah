@@ -57,8 +57,10 @@ CREATE TABLE `drop_points` (
 --
 
 INSERT INTO `drop_points` (`id`, `name`, `address`, `latitude`, `longitude`, `capacity_status`, `operating_hours`) VALUES
-('DP-001', 'Drop Point Pusat Parepare', 'Jl. Bau Massepe No. 10, Parepare', -4.0150, 119.6290, 'aman', '08:00 - 17:00'),
-('DP-002', 'Drop Point Soreang', 'Jl. Jendral Sudirman No. 5, Soreang', -3.9920, 119.6350, 'aman', '09:00 - 15:00');
+('DP-001', 'Drop Point Pasar Lakessi', 'Jl. Lasinrang No. 12, Pasar Lakessi, Parepare', -4.0045, 119.6240, 'aman', '07:00 - 17:00'),
+('DP-002', 'Drop Point Lumpue', 'Jl. H.A.M. Arsyad, Lumpue, Bacukiki Barat, Parepare', -4.0410, 119.6280, 'aman', '08:00 - 17:00'),
+('DP-003', 'Drop Point Pusat Parepare', 'Jl. Bau Massepe No. 10, Ujung, Parepare', -4.0150, 119.6290, 'aman', '08:00 - 17:00'),
+('DP-004', 'Drop Point Soreang', 'Jl. Jendral Sudirman No. 5, Soreang, Parepare', -3.9868, 119.6341, 'aman', '09:00 - 15:00');
 
 -- --------------------------------------------------------
 

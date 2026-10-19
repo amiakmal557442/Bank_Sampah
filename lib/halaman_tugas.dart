@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'api_service.dart';
 import 'widgets/image_viewer_dialog.dart';
 import 'db_helper.dart';
-import 'map_location_screen.dart';
 import 'session_service.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'chat_page.dart';
 
 class HalamanTugas extends StatefulWidget {
@@ -17,6 +17,7 @@ class HalamanTugas extends StatefulWidget {
 
 class _HalamanTugasState extends State<HalamanTugas> {
   List<Map<String, dynamic>> _daftarTugas = [];
+  List<Map<String, dynamic>> _masterDropPoints = [];
   bool _isLoading = true;
 
   final Color greenTheme = const Color(0xFF2E7D32);
@@ -27,19 +28,111 @@ class _HalamanTugasState extends State<HalamanTugas> {
     _loadTasks();
   }
 
+  String _resolveDropPointAddress(Map<String, dynamic> tugas) {
+    final direct = (tugas['drop_point_address'] ?? '').toString().trim();
+    if (direct.isNotEmpty && direct != '-') return direct;
+
+    final dpId = tugas['drop_point_id']?.toString().trim();
+    final dpName =
+        (tugas['drop_point_name'] ?? '').toString().trim().toLowerCase();
+
+    for (var dp in _masterDropPoints) {
+      if (dpId != null && dpId.isNotEmpty && dp['id']?.toString() == dpId) {
+        final a = dp['address']?.toString().trim();
+        if (a != null && a.isNotEmpty) return a;
+      }
+      final n = (dp['name'] ?? '').toString().trim().toLowerCase();
+      if (dpName.isNotEmpty &&
+          (n == dpName || n.contains(dpName) || dpName.contains(n))) {
+        final a = dp['address']?.toString().trim();
+        if (a != null && a.isNotEmpty) return a;
+      }
+    }
+
+    if (dpName.contains('lakessi')) {
+      return 'Jl. Lasinrang No. 12, Pasar Lakessi, Parepare';
+    }
+    if (dpName.contains('lumpue')) {
+      return 'Jl. H.A.M. Arsyad, Lumpue, Bacukiki Barat, Parepare';
+    }
+    if (dpName.contains('pusat') || dpName.contains('ujung')) {
+      return 'Jl. Bau Massepe No. 10, Ujung, Parepare';
+    }
+    if (dpName.contains('soreang')) {
+      return 'Jl. Jendral Sudirman No. 5, Soreang, Parepare';
+    }
+
+    return 'Jl. Lasinrang No. 12, Pasar Lakessi, Parepare';
+  }
+
+  String _resolvePickupAddress(Map<String, dynamic> tugas) {
+    final candidates = [
+      tugas['address'],
+      tugas['nasabah_address'],
+      tugas['pickup_address'],
+      tugas['alamat'],
+      tugas['user_address'],
+    ];
+    for (var c in candidates) {
+      final s = c?.toString().trim();
+      if (s != null &&
+          s.isNotEmpty &&
+          s != 'Unknown' &&
+          s != 'Alamat tidak tersedia' &&
+          s != '-') {
+        return s;
+      }
+    }
+    return 'Alamat penjemputan belum ditulis nasabah';
+  }
+
   Future<void> _loadTasks() async {
     setState(() => _isLoading = true);
 
+    try {
+      final dps = await ApiService.instance.getDropPoints();
+      if (dps.isNotEmpty) {
+        _masterDropPoints = dps;
+      } else {
+        _masterDropPoints = await DatabaseHelper.instance.getDropPoints();
+      }
+    } catch (_) {
+      try {
+        _masterDropPoints = await DatabaseHelper.instance.getDropPoints();
+      } catch (_) {}
+    }
+
     List<Map<String, dynamic>> tasks = [];
+    bool apiLoaded = false;
     try {
       tasks = await ApiService.instance.getPendingTasks(
         statuses: ['dikonfirmasi', 'menuju_lokasi', 'tiba'],
       );
-    } catch (_) {}
-
-    if (tasks.isEmpty) {
-      tasks = await DatabaseHelper.instance.getPendingPickupTasks();
+      apiLoaded = true;
+    } catch (_) {
+      apiLoaded = false;
     }
+
+    if (!apiLoaded) {
+      final local = await DatabaseHelper.instance.getPendingPickupTasks();
+      tasks = local
+          .where((t) =>
+              t['status'] == 'dikonfirmasi' ||
+              t['status'] == 'menuju_lokasi' ||
+              t['status'] == 'tiba')
+          .toList();
+    }
+
+    // Pastikan transaksi yang dibatalkan / ditolak admin tidak muncul sama sekali di tugas petugas
+    tasks = tasks.where((t) {
+      final s = (t['status'] ?? '').toString().toLowerCase().trim();
+      return s != 'dibatalkan' &&
+          s != 'ditolak' &&
+          s != 'rejected' &&
+          s != 'selesai' &&
+          s != 'menunggu' &&
+          (s == 'dikonfirmasi' || s == 'menuju_lokasi' || s == 'tiba');
+    }).toList();
 
     List<Map<String, dynamic>> titipan = [];
     try {
@@ -142,21 +235,30 @@ class _HalamanTugasState extends State<HalamanTugas> {
         .where((id) => id > 0)
         .toSet();
 
-    final categories = await DatabaseHelper.instance.getWasteCategories();
+    List<Map<String, dynamic>> categories = [];
+    try {
+      categories = await ApiService.instance.getWasteCategories();
+    } catch (_) {}
+    if (categories.isEmpty) {
+      categories = await DatabaseHelper.instance.getWasteCategories();
+    }
+
     final List<Map<String, dynamic>> wasteItems = categories.map((c) {
       final catId = (c['id'] as num).toInt();
       final catName = c['name'].toString();
       final bool isSelectedByUser =
           selectedCategoryIds.contains(catId) ||
           selectedJenis.toLowerCase().contains(catName.toLowerCase());
+      final double minWeight = (c['min_weight'] as num?)?.toDouble() ?? 1.0;
 
       return {
         'id': catId,
         'name': catName,
         'poin_per_kg': (c['point_per_kg'] as num).toInt(),
+        'min_weight': minWeight,
         'icon': Icons.recycling_outlined,
         'selected': isSelectedByUser,
-        'berat': 1.0,
+        'berat': minWeight,
       };
     }).toList();
 
@@ -236,6 +338,286 @@ class _HalamanTugasState extends State<HalamanTugas> {
                 },
               ),
             ),
+    );
+  }
+
+  void _showLocationMapDialog(Map<String, dynamic> tugas) {
+    double lat = -4.0150;
+    double lng = 119.6290;
+
+    final String tipeRaw =
+        (tugas['tipe_tugas'] ?? tugas['type'] ?? '').toString();
+    final bool isDropIn = tipeRaw == 'Drop-in' ||
+        tipeRaw == 'drop_in' ||
+        tipeRaw.toLowerCase().contains('drop');
+    final bool isPengantaran = tugas['is_pengantaran'] == true;
+
+    if (isDropIn) {
+      final dpLat = double.tryParse(tugas['drop_point_lat']?.toString() ?? '');
+      final dpLng = double.tryParse(tugas['drop_point_lng']?.toString() ?? '');
+      if (dpLat != null && dpLng != null && dpLat != 0.0) {
+        lat = dpLat;
+        lng = dpLng;
+      } else {
+        final dpName =
+            (tugas['drop_point_name'] ?? '').toString().toLowerCase();
+        if (dpName.contains('lakessi')) {
+          lat = -4.0045;
+          lng = 119.6240;
+        } else if (dpName.contains('lumpue')) {
+          lat = -4.0410;
+          lng = 119.6280;
+        } else if (dpName.contains('soreang')) {
+          lat = -3.9868;
+          lng = 119.6341;
+        } else {
+          lat = -4.0150;
+          lng = 119.6290;
+        }
+      }
+    } else {
+      final pLat = double.tryParse(tugas['pickup_lat']?.toString() ?? '');
+      final pLng = double.tryParse(tugas['pickup_lng']?.toString() ?? '');
+      if (pLat != null && pLng != null && pLat != 0.0) {
+        lat = pLat;
+        lng = pLng;
+      }
+    }
+
+    final targetLatLng = LatLng(lat, lng);
+    final targetName = isDropIn
+        ? (tugas['drop_point_name'] ?? 'Drop Point Parepare').toString()
+        : (tugas['nama_nasabah'] ??
+                tugas['nasabah_name'] ??
+                (isPengantaran ? 'Nasabah' : 'Nasabah Penjemputan'))
+            .toString();
+    final addressText = isDropIn
+        ? _resolveDropPointAddress(tugas)
+        : (isPengantaran
+            ? (tugas['nasabah_address'] ?? tugas['address'] ?? 'Kota Parepare')
+                .toString()
+            : _resolvePickupAddress(tugas));
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        clipBehavior: Clip.antiAlias,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 550, maxHeight: 620),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header Modal
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isDropIn
+                        ? [Colors.purple.shade700, Colors.deepPurple]
+                        : (isPengantaran
+                            ? [Colors.blue.shade700, Colors.blueAccent]
+                            : [greenTheme, const Color(0xFF1B5E20)]),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        isDropIn
+                            ? Icons.store_mall_directory_rounded
+                            : Icons.location_on_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isDropIn
+                                ? 'Peta Lokasi Drop Point'
+                                : (isPengantaran
+                                    ? 'Peta Lokasi Pengantaran'
+                                    : 'Peta Lokasi Penjemputan'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'PlusJakartaSans',
+                            ),
+                          ),
+                          Text(
+                            targetName,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              fontSize: 12.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Colors.white),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Detail Alamat
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                color: Colors.grey.shade100,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      isDropIn ? Icons.store_rounded : Icons.place_rounded,
+                      size: 18,
+                      color: Colors.grey.shade700,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        addressText,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade800,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Peta Interaktif FlutterMap
+              Flexible(
+                child: SizedBox(
+                  height: 340,
+                  child: FlutterMap(
+                    options: MapOptions(
+                      initialCenter: targetLatLng,
+                      initialZoom: 15.0,
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.example.bank_sampah',
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: targetLatLng,
+                            width: 60,
+                            height: 60,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: isDropIn
+                                        ? Colors.purple
+                                        : Colors.redAccent,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            Colors.black.withValues(alpha: 0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.location_on_rounded,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Tombol Bawah
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: isDropIn ? Colors.purple : greenTheme,
+                          side: BorderSide(
+                            color: isDropIn ? Colors.purple : greenTheme,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        icon: const Icon(Icons.navigation_rounded, size: 18),
+                        label: const Text(
+                          'Buka di Google Maps',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        onPressed: () async {
+                          final uri = Uri.parse(
+                            'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+                          );
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDropIn ? Colors.purple : greenTheme,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Tutup'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -335,14 +717,14 @@ class _HalamanTugasState extends State<HalamanTugas> {
                   ),
                   child: Text(
                     statusStr == 'dikonfirmasi' || statusStr == 'siap_diantar'
-                        ? (isPengantaran ? 'SIAP DIANTAR' : 'MENUNGGU')
+                        ? (isPengantaran ? 'SIAP DIANTAR' : 'TERVERIFIKASI')
                         : statusStr.toUpperCase().replaceAll('_', ' '),
                     style: TextStyle(
                       color: sudahMenuju
                           ? Colors.blue.shade800
                           : (isPengantaran
                                 ? Colors.blue.shade800
-                                : Colors.orange.shade800),
+                                : const Color(0xFF2E7D32)),
                       fontWeight: FontWeight.bold,
                       fontSize: 10,
                     ),
@@ -373,37 +755,130 @@ class _HalamanTugasState extends State<HalamanTugas> {
             ),
             const SizedBox(height: 10),
 
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  isPengantaran
-                      ? Icons.location_on
-                      : (isDropIn
-                            ? Icons.store_mall_directory
-                            : Icons.location_on),
-                  color: isPengantaran
-                      ? Colors.blueAccent
-                      : (isDropIn ? Colors.purple : Colors.redAccent),
-                  size: 20,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    () {
-                      final addr =
-                          tugas['address'] ??
-                          tugas['alamat'] ??
-                          tugas['nasabah_address'] ??
-                          '';
-                      return addr.toString().trim().isEmpty
-                          ? 'Alamat belum diatur'
-                          : addr.toString();
-                    }(),
-                    style: TextStyle(color: Colors.grey.shade700, height: 1.4),
+            InkWell(
+              onTap: () => _showLocationMapDialog(tugas),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: (isDropIn
+                          ? Colors.purple
+                          : (isPengantaran ? Colors.blue : greenTheme))
+                      .withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: (isDropIn
+                            ? Colors.purple
+                            : (isPengantaran ? Colors.blue : greenTheme))
+                        .withValues(alpha: 0.35),
+                    width: 1,
                   ),
                 ),
-              ],
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: (isDropIn
+                                ? Colors.purple
+                                : (isPengantaran ? Colors.blue : greenTheme))
+                            .withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isDropIn
+                            ? Icons.store_mall_directory_rounded
+                            : Icons.location_on_rounded,
+                        color: isDropIn
+                            ? Colors.purple
+                            : (isPengantaran
+                                ? Colors.blueAccent
+                                : Colors.redAccent),
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Lacak Lokasi',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: (isDropIn
+                                      ? Colors.purple.shade700
+                                      : (isPengantaran
+                                          ? Colors.blue.shade700
+                                          : greenTheme)),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: (isDropIn
+                                          ? Colors.purple
+                                          : (isPengantaran
+                                              ? Colors.blue
+                                              : greenTheme))
+                                      .withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'Buka Peta',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: (isDropIn
+                                        ? Colors.purple.shade700
+                                        : (isPengantaran
+                                            ? Colors.blue.shade700
+                                            : greenTheme)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            isDropIn
+                                ? _resolveDropPointAddress(tugas)
+                                : (isPengantaran
+                                    ? (tugas['nasabah_address'] ??
+                                        'Alamat tujuan pengantaran')
+                                    : _resolvePickupAddress(tugas)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 11.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.map_outlined,
+                      color: (isDropIn
+                          ? Colors.purple
+                          : (isPengantaran ? Colors.blue : greenTheme)),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: Colors.grey.shade400,
+                      size: 18,
+                    ),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 10),
 
@@ -464,14 +939,143 @@ class _HalamanTugasState extends State<HalamanTugas> {
               ),
             ],
 
-            if (isDropIn && tugas['drop_point_name'] != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                'Lokasi Drop Point: ${tugas['drop_point_name']}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
+            const SizedBox(height: 12),
+            if (isDropIn) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.purple.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.purple.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.storefront_rounded,
+                          size: 18,
+                          color: Colors.purple.shade700,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Lokasi Drop Point (Master Data):',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purple.shade900,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      tugas['drop_point_name']?.toString() ??
+                          'Drop Point Pasar Lakessi',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _resolveDropPointAddress(tugas),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade800,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (isPengantaran) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.local_shipping_rounded,
+                          size: 18,
+                          color: Colors.blue.shade700,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Alamat Pengantaran Sembako:',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade900,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      (tugas['nasabah_address'] ??
+                              tugas['address'] ??
+                              'Alamat belum diatur')
+                          .toString(),
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: greenTheme.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: greenTheme.withValues(alpha: 0.25)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_rounded,
+                          size: 18,
+                          color: greenTheme,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Alamat Penjemputan (Tulis Nasabah):',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: greenTheme,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _resolvePickupAddress(tugas),
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -908,7 +1512,8 @@ class _TimbangSheetState extends State<_TimbangSheet> {
 
   Widget _buildWasteRow(Map<String, dynamic> item, Color green) {
     final bool selected = item['selected'] == true;
-    final double berat = (item['berat'] as num?)?.toDouble() ?? 0.5;
+    final double minWeight = (item['min_weight'] as num?)?.toDouble() ?? 1.0;
+    final double berat = (item['berat'] as num?)?.toDouble() ?? minWeight;
     final int poinPerKg = (item['poin_per_kg'] as num?)?.toInt() ?? 0;
 
     return Container(
@@ -929,7 +1534,13 @@ class _TimbangSheetState extends State<_TimbangSheet> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(4),
             ),
-            onChanged: (v) => setState(() => item['selected'] = v ?? false),
+            onChanged: (v) => setState(() {
+              item['selected'] = v ?? false;
+              if (item['selected'] == true &&
+                  ((item['berat'] as num?)?.toDouble() ?? 0.0) < minWeight) {
+                item['berat'] = minWeight;
+              }
+            }),
           ),
           Icon(
             item['icon'] as IconData? ?? Icons.recycling,
@@ -950,7 +1561,7 @@ class _TimbangSheetState extends State<_TimbangSheet> {
                   ),
                 ),
                 Text(
-                  '$poinPerKg poin/kg',
+                  '$poinPerKg poin/kg  •  Min $minWeight kg',
                   style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                 ),
               ],
@@ -967,10 +1578,13 @@ class _TimbangSheetState extends State<_TimbangSheet> {
               ),
               onPressed: () {
                 setState(() {
-                  if (berat > 0.5) {
+                  if (berat > minWeight) {
                     item['berat'] = double.parse(
                       (berat - 0.5).toStringAsFixed(1),
                     );
+                    if ((item['berat'] as double) < minWeight) {
+                      item['berat'] = minWeight;
+                    }
                   }
                 });
               },

@@ -5,6 +5,8 @@ import 'db_helper.dart';
 import 'api_service.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'widgets/barcode_painter.dart';
+import 'transaction_service.dart';
 
 const Color primaryGreen = Color(0xFF268B07);
 const Color pageBackground = Color(0xFFF5F6F8);
@@ -60,18 +62,22 @@ final List<WithdrawalDestination> destinations = [
 ];
 
 class ConversionHistoryItem {
+  final String id;
   final String destination;
   final int points;
   final double amount;
   final String date;
   final String status;
+  final String rawStatus;
 
   ConversionHistoryItem({
+    this.id = '',
     required this.destination,
     required this.points,
     required this.amount,
     required this.date,
     required this.status,
+    this.rawStatus = '',
   });
 }
 
@@ -184,21 +190,26 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
       List<ConversionHistoryItem> history = [];
       for (var w in userWds) {
         String st = 'Diproses';
-        if (w['status'] == 'approved' || w['status'] == 'selesai')
+        if (w['status'] == 'approved' || w['status'] == 'selesai') {
           st = 'Selesai';
-        if (w['status'] == 'rejected') st = 'Gagal';
+        }
+        if (w['status'] == 'rejected') {
+          st = 'Gagal';
+        }
         String details = w['account_details'] ?? '';
         if (w['status'] == 'pending') details += '\n(Poin belum terpotong)';
         String method = w['method'] ?? 'Unknown';
 
         history.add(
           ConversionHistoryItem(
+            id: w['id']?.toString() ?? '',
             destination: '$method\n$details'.trim(),
             points: (w['points_deducted'] ?? 0).toInt(),
             amount: ((w['points_deducted'] ?? 0) * pointToRupiahRate)
                 .toDouble(),
             date: w['created_at']?.toString().substring(0, 16) ?? '',
             status: st,
+            rawStatus: w['status']?.toString() ?? '',
           ),
         );
       }
@@ -217,9 +228,12 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
       List<ConversionHistoryItem> history = [];
       for (var w in userWds) {
         String st = 'Diproses';
-        if (w['status'] == 'approved' || w['status'] == 'selesai')
+        if (w['status'] == 'approved' || w['status'] == 'selesai') {
           st = 'Selesai';
-        if (w['status'] == 'rejected') st = 'Gagal';
+        }
+        if (w['status'] == 'rejected') {
+          st = 'Gagal';
+        }
 
         String details = w['account_details'] ?? '';
         if (w['status'] == 'pending') details += '\n(Poin belum terpotong)';
@@ -227,12 +241,14 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
 
         history.add(
           ConversionHistoryItem(
+            id: w['id']?.toString() ?? '',
             destination: '$method\n$details'.trim(),
             points: (w['points_deducted'] ?? 0).toInt(),
             amount: ((w['points_deducted'] ?? 0) * pointToRupiahRate)
                 .toDouble(),
             date: w['created_at']?.toString().substring(0, 16) ?? '',
             status: st,
+            rawStatus: w['status']?.toString() ?? '',
           ),
         );
       }
@@ -790,9 +806,18 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
                               ? const Color(0xFFE8F8E8)
                               : const Color(0xFFF1EFE8);
 
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.all(12),
+                          return GestureDetector(
+                            onTap: () {
+                              _showWithdrawalBarcodeModal(
+                                barcodeId: item.id.isNotEmpty ? item.id : 'WD-PENARIKAN',
+                                method: item.destination.split('\n').first,
+                                points: item.points,
+                                amount: item.amount,
+                              );
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
@@ -875,12 +900,50 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
                                         ),
                                       ),
                                     ),
+                                    if (item.status == 'Diproses' || item.rawStatus == 'pending') ...[
+                                      const SizedBox(height: 5),
+                                      GestureDetector(
+                                        onTap: () {
+                                          _showWithdrawalBarcodeModal(
+                                            barcodeId: item.id.isNotEmpty ? item.id : 'WD-PENARIKAN',
+                                            method: item.destination.split('\n').first,
+                                            points: item.points,
+                                            amount: item.amount,
+                                          );
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: primaryGreen.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: primaryGreen.withValues(alpha: 0.3), width: 0.8),
+                                          ),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.qr_code_rounded, size: 11, color: primaryGreen),
+                                              SizedBox(width: 3),
+                                              Text(
+                                                'Barcode',
+                                                style: TextStyle(
+                                                  fontFamily: 'PlusJakartaSans',
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: primaryGreen,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ],
                             ),
-                          );
-                        }).toList(),
+                          ),
+                        );
+                      }).toList(),
                 ),
         ),
       ],
@@ -1053,6 +1116,7 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
               Expanded(
                 child: GestureDetector(
                   onTap: () async {
+                    final wdCode = 'WD-${DateTime.now().millisecondsSinceEpoch.toString().substring(4)}';
                     final error = await ApiService.instance.requestWithdrawal(
                       SessionService.userId,
                       inputPoints,
@@ -1060,23 +1124,33 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
                       'Detail menyusul',
                     );
 
+                    await DatabaseHelper.instance.requestWithdrawal(
+                      nasabahId: SessionService.userId,
+                      pointsDeducted: inputPoints,
+                      method: selectedDestination?.name ?? 'Unknown',
+                      accountDetails: 'Detail menyusul',
+                    );
+
                     if (error == null) {
                       await SessionService.refresh();
+                      await TransactionService.loadTransactions(SessionService.userId);
 
                       if (mounted) {
                         setState(() {});
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Permintaan penukaran poin diajukan. Sedang diproses admin dan poin belum terpotong.',
-                              style: TextStyle(fontFamily: 'PlusJakartaSans'),
-                            ),
-                            backgroundColor: primaryGreen,
-                            duration: Duration(seconds: 4),
-                          ),
+                        await _loadHistory();
+
+                        String finalBarcodeId = wdCode;
+                        if (_historyList.isNotEmpty && _historyList.first.id.isNotEmpty) {
+                          finalBarcodeId = _historyList.first.id;
+                        }
+
+                        _showWithdrawalBarcodeModal(
+                          barcodeId: finalBarcodeId,
+                          method: selectedDestination?.name ?? 'Penarikan Saldo',
+                          points: inputPoints,
+                          amount: _estimatedRupiah,
                         );
-                        _loadHistory();
                       }
                     } else {
                       if (mounted) {
@@ -1139,6 +1213,183 @@ class _TukarPoinScreenState extends State<TukarPoinScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showWithdrawalBarcodeModal({
+    required String barcodeId,
+    required String method,
+    required int points,
+    required double amount,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: borderColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: primaryGreen.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.qr_code_2_rounded,
+                      color: primaryGreen,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Barcode Penarikan Saldo',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: darkText,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Tunjukkan barcode ini kepada kasir/admin saat pencairan uang tunai atau konfirmasi transfer DANA.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: 12,
+                  color: subtleText,
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              BarcodeCard(
+                code: barcodeId,
+                subtitle: 'ID Transaksi Penarikan',
+                height: 75,
+              ),
+              const SizedBox(height: 16),
+
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: pageBackground,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: borderColor, width: 0.5),
+                ),
+                child: Column(
+                  children: [
+                    _summaryRow('Metode Penarikan', method),
+                    const SizedBox(height: 8),
+                    _summaryRow('Poin Digunakan', '$points poin'),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Nominal Diterima',
+                          style: TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: subtleText,
+                          ),
+                        ),
+                        Text(
+                          'Rp ${amount.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: primaryGreen,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFB38600).withValues(alpha: 0.3)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.hourglass_top_rounded, size: 16, color: Color(0xFFB38600)),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Status: Menunggu verifikasi & scan barcode oleh kasir/admin',
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFB38600),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryGreen,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await TransactionService.loadTransactions(SessionService.userId);
+                    if (mounted) setState(() {});
+                  },
+                  child: const Text(
+                    'Tutup & Simpan',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

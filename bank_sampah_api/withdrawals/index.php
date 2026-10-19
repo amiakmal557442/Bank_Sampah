@@ -1,37 +1,11 @@
 <?php
 require_once __DIR__ . '/../db.php';
-require_once __DIR__ . '/../jwt_helper.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-if ($method !== 'OPTIONS') {
-    $token = JwtHelper::getBearerToken();
-    if (!$token) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Unauthorized: Token tidak ditemukan']);
-        exit();
-    }
-    $decoded_token = JwtHelper::validateToken($token);
-    if (!$decoded_token) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Unauthorized: Token tidak valid']);
-        exit();
-    }
-}
-
 if ($method === 'GET') {
-    $role = $decoded_token['role'];
-    if ($role === 'nasabah') {
-        $sql = "SELECT w.*, u.full_name as nasabah_name, u.address as nasabah_address, u.phone_number FROM withdrawals w LEFT JOIN users u ON w.nasabah_id = u.id WHERE w.nasabah_id = ? ORDER BY w.created_at DESC";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("s", $decoded_token['id']);
-        $stmt->execute();
-        $result = $stmt->get_result();
-    } else {
-        $sql = "SELECT w.*, u.full_name as nasabah_name, u.address as nasabah_address, u.phone_number FROM withdrawals w LEFT JOIN users u ON w.nasabah_id = u.id ORDER BY w.created_at DESC";
-        $result = $conn->query($sql);
-    }
-
+    $sql = "SELECT w.*, u.full_name as nasabah_name, u.address as nasabah_address, u.phone_number FROM withdrawals w JOIN users u ON w.nasabah_id = u.id ORDER BY w.created_at DESC";
+    $result = $conn->query($sql);
     $data = [];
     while ($row = $result->fetch_assoc()) {
         $row['points_deducted'] = (int)$row['points_deducted'];
@@ -44,9 +18,7 @@ if ($method === 'GET') {
 if ($method === 'POST') {
     $data = json_decode(file_get_contents('php://input'), true);
     $id = 'WD-' . time() . '-' . rand(100, 999);
-
-    $nasabahId = $decoded_token['role'] === 'nasabah' ? $decoded_token['id'] : ($data['nasabah_id'] ?? '');
-
+    $nasabahId = $data['nasabah_id'] ?? '';
     $points = (int)($data['points_deducted'] ?? 0);
     $methodName = $data['method'] ?? 'Transfer Bank';
     $details = $data['account_details'] ?? '';
@@ -87,19 +59,6 @@ if ($method === 'PUT') {
         exit();
     }
 
-    $role = $decoded_token['role'] ?? '';
-    if ($status === 'selesai') {
-        if (!in_array($role, ['admin', 'petugas'])) {
-            echo json_encode(['success' => false, 'message' => 'Hanya petugas atau admin yang dapat menyelesaikan pengantaran']);
-            exit();
-        }
-    } else {
-        if ($role !== 'admin') {
-            echo json_encode(['success' => false, 'message' => 'Hanya admin yang dapat menyetujui atau menolak penarikan']);
-            exit();
-        }
-    }
-
     $conn->begin_transaction();
     try {
 
@@ -109,10 +68,7 @@ if ($method === 'PUT') {
         $result = $stmt->get_result();
         $wd = $result->fetch_assoc();
 
-        $currentStatus = $wd ? ($wd['status'] ?? '') : '';
-        $isPending = in_array($currentStatus, ['pending', '', 'menunggu']);
-
-        if ($wd && $isPending) {
+        if ($wd && $wd['status'] === 'pending') {
 
             if ($status === 'rejected') {
                 $reason = $data['reason'] ?? 'Barang habis';
@@ -143,7 +99,7 @@ if ($method === 'PUT') {
 
             $conn->commit();
             echo json_encode(['success' => true, 'message' => 'Status berhasil diubah']);
-        } else if ($wd && ($currentStatus === 'approved' || $isPending) && $status === 'selesai') {
+        } else if ($wd && $wd['status'] === 'approved' && $status === 'selesai') {
             $stmt2 = $conn->prepare("UPDATE withdrawals SET status = ? WHERE id = ?");
             $stmt2->bind_param("ss", $status, $id);
             $stmt2->execute();

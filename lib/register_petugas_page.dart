@@ -27,11 +27,11 @@ class _PetugasRegistrationPageState extends State<PetugasRegistrationPage> {
   final Color _oldGrassGreen = const Color(0xFF268B07);
 
   final List<String> _zonaList = [
-    'Drop Point 01 - Pusat Parepare',
-    'Drop Point 02 - Soreang',
-    'Drop Point 03 - Lumpue',
-    'Drop Point 04 - Bacukiki',
-    'Drop Point 05 - Ujung',
+    'Drop Point 01 - Pasar Lakessi',
+    'Drop Point 02 - Lumpue',
+    'Drop Point 03 - Pusat Parepare',
+    'Drop Point 04 - Soreang',
+    'Drop Point 05 - Bacukiki',
   ];
 
   final List<String> _kendaraanList = [

@@ -61,23 +61,42 @@ class DatabaseHelper {
     'auto_assign': 1,
     'jam_buka': '08:00',
     'jam_tutup': '17:00',
+    'wa_notif': 1,
     'push_notif': 1,
   };
 
   static final List<Map<String, dynamic>> _webDropPoints = [
     {
       'id': 'DP-001',
+      'name': 'Drop Point Pasar Lakessi',
+      'address': 'Jl. Lasinrang No. 12, Pasar Lakessi, Parepare',
+      'latitude': -4.0045,
+      'longitude': 119.6240,
+      'capacity_status': 'aman',
+      'operating_hours': '07:00 - 17:00',
+    },
+    {
+      'id': 'DP-002',
+      'name': 'Drop Point Lumpue',
+      'address': 'Jl. H.A.M. Arsyad, Lumpue, Bacukiki Barat, Parepare',
+      'latitude': -4.0410,
+      'longitude': 119.6280,
+      'capacity_status': 'aman',
+      'operating_hours': '08:00 - 17:00',
+    },
+    {
+      'id': 'DP-003',
       'name': 'Drop Point Pusat Parepare',
-      'address': 'Jl. Bau Massepe No. 10, Parepare',
+      'address': 'Jl. Bau Massepe No. 10, Ujung, Parepare',
       'latitude': -4.0150,
       'longitude': 119.6290,
       'capacity_status': 'aman',
       'operating_hours': '08:00 - 17:00',
     },
     {
-      'id': 'DP-002',
+      'id': 'DP-004',
       'name': 'Drop Point Soreang',
-      'address': 'Jl. Jendral Sudirman No. 5, Soreang',
+      'address': 'Jl. Jendral Sudirman No. 5, Soreang, Parepare',
       'latitude': -3.9868,
       'longitude': 119.6341,
       'capacity_status': 'aman',
@@ -90,6 +109,7 @@ class DatabaseHelper {
       'id': 1,
       'name': 'Plastik',
       'point_per_kg': 2000,
+      'min_weight': 1.0,
       'icon_url': 'icon_plastik.png',
       'is_active': 1,
     },
@@ -97,6 +117,7 @@ class DatabaseHelper {
       'id': 2,
       'name': 'Kertas & Kardus',
       'point_per_kg': 1500,
+      'min_weight': 1.0,
       'icon_url': 'icon_kertas.png',
       'is_active': 1,
     },
@@ -104,6 +125,7 @@ class DatabaseHelper {
       'id': 3,
       'name': 'Besi & Logam',
       'point_per_kg': 3500,
+      'min_weight': 1.0,
       'icon_url': 'icon_besi.png',
       'is_active': 1,
     },
@@ -111,6 +133,7 @@ class DatabaseHelper {
       'id': 4,
       'name': 'Elektronik Bekas',
       'point_per_kg': 5000,
+      'min_weight': 1.0,
       'icon_url': 'icon_elektronik.png',
       'is_active': 1,
     },
@@ -151,6 +174,17 @@ class DatabaseHelper {
         await _saveWebSystemConfig();
       }
 
+      final wasteCatsJson = prefs.getString('web_waste_categories');
+      if (wasteCatsJson != null) {
+        try {
+          final List<dynamic> decoded = jsonDecode(wasteCatsJson);
+          _webWasteCategories.clear();
+          _webWasteCategories.addAll(decoded.cast<Map<String, dynamic>>());
+        } catch (e) {}
+      } else {
+        await _saveWebWasteCategories();
+      }
+
       final logsJson = prefs.getString('web_audit_logs');
       if (logsJson != null) {
         try {
@@ -188,6 +222,15 @@ class DatabaseHelper {
     if (!kIsWeb) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('web_system_config', jsonEncode(_webSystemConfig));
+  }
+
+  Future<void> _saveWebWasteCategories() async {
+    if (!kIsWeb) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'web_waste_categories',
+      jsonEncode(_webWasteCategories),
+    );
   }
 
   Future<void> _saveWebAuditLogs() async {
@@ -1315,10 +1358,23 @@ class DatabaseHelper {
   }
 
   Future<List<Map<String, dynamic>>> getWasteCategories() async {
-    if (kIsWeb) return List.from(_webWasteCategories);
+    if (kIsWeb) {
+      return List<Map<String, dynamic>>.from(
+        _webWasteCategories.map((c) {
+          final copy = Map<String, dynamic>.from(c);
+          copy['min_weight'] ??= 1.0;
+          return copy;
+        }),
+      );
+    }
     final db = await instance.database;
     if (db == null) return [];
-    return await db.query('waste_categories');
+    final res = await db.query('waste_categories');
+    return res.map((r) {
+      final copy = Map<String, dynamic>.from(r);
+      copy['min_weight'] ??= 1.0;
+      return copy;
+    }).toList();
   }
 
   Future<bool> addWasteCategory(Map<String, dynamic> wc) async {
@@ -1327,6 +1383,7 @@ class DatabaseHelper {
         wc['id'] = _webWasteCategories.length + 1;
       }
       _webWasteCategories.add(wc);
+      await _saveWebWasteCategories();
       return true;
     }
     final db = await instance.database;
@@ -1343,7 +1400,8 @@ class DatabaseHelper {
     if (kIsWeb) {
       final idx = _webWasteCategories.indexWhere((e) => e['id'] == id);
       if (idx != -1) {
-        _webWasteCategories[idx] = wc;
+        _webWasteCategories[idx].addAll(wc);
+        await _saveWebWasteCategories();
         return true;
       }
       return false;
@@ -1389,8 +1447,27 @@ class DatabaseHelper {
     if (db == null) return false;
 
     try {
+      final validCols = [
+        'id',
+        'nasabah_id',
+        'petugas_id',
+        'drop_point_id',
+        'type',
+        'status',
+        'pickup_date',
+        'pickup_time_slot',
+        'pickup_lat',
+        'pickup_lng',
+        'total_est_points',
+        'total_actual_points',
+        'photo_evidence',
+        'created_at',
+      ];
+      final filteredTxData = Map<String, dynamic>.from(txData)
+        ..removeWhere((key, value) => !validCols.contains(key));
+
       await db.transaction((txn) async {
-        await txn.insert('transactions', txData);
+        await txn.insert('transactions', filteredTxData);
         for (var item in items) {
           await txn.insert('transaction_items', item);
         }
@@ -1407,15 +1484,21 @@ class DatabaseHelper {
       return _webTransactions.map((tx) {
         final user = _webUsers.firstWhere(
           (u) => u['id'] == tx['nasabah_id'],
-
           orElse: () => {
             'full_name': tx['full_name'] ?? 'Unknown',
             'address': tx['address'] ?? '',
           },
         );
+        final dropPoint = _webDropPoints.firstWhere(
+          (dp) => dp['id'] == tx['drop_point_id'],
+          orElse: () => {},
+        );
         return {
           ...tx,
           'nasabah_name': user['full_name'] ?? tx['full_name'] ?? 'Unknown',
+          'nasabah_address': tx['address'] ?? tx['pickup_address'] ?? user['address'] ?? '',
+          'drop_point_name': tx['drop_point_name'] ?? dropPoint['name'],
+          'drop_point_address': tx['drop_point_address'] ?? dropPoint['address'],
           'items': _webTransactionItems
               .where((i) => i['transaction_id'] == tx['id'])
               .toList(),
@@ -1427,9 +1510,12 @@ class DatabaseHelper {
     if (db == null) return [];
 
     final List<Map<String, dynamic>> txs = await db.rawQuery('''
-      SELECT t.*, u.full_name as nasabah_name
+      SELECT t.*, u.full_name as nasabah_name,
+             COALESCE(t.pickup_address, t.address, u.address, '') as nasabah_address,
+             dp.name as drop_point_name, dp.address as drop_point_address
       FROM transactions t
       LEFT JOIN users u ON t.nasabah_id = u.id
+      LEFT JOIN drop_points dp ON t.drop_point_id = dp.id
       ORDER BY t.created_at DESC
     ''');
 
@@ -1652,7 +1738,13 @@ class DatabaseHelper {
           }
         }
 
-        String alamat = user['address'] ?? 'Alamat tidak tersedia';
+        String alamat = (tx['address'] != null &&
+                tx['address'].toString().trim().isNotEmpty)
+            ? tx['address'].toString().trim()
+            : ((tx['alamat'] != null &&
+                    tx['alamat'].toString().trim().isNotEmpty)
+                ? tx['alamat'].toString().trim()
+                : (user['address'] ?? 'Alamat tidak tersedia'));
         if (tx['type'] == 'drop_in') {
           final dropPoint = _webDropPoints.firstWhere(
             (dp) => dp['id'] == tx['drop_point_id'],

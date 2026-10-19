@@ -3,6 +3,7 @@ import 'db_helper.dart';
 import 'api_service.dart';
 
 class TransactionModel {
+  final String? id;
   final IconData icon;
   final String title;
   final String subtitle;
@@ -12,8 +13,15 @@ class TransactionModel {
   final List<dynamic> rawItems;
   final double totalBerat;
   final int totalPoin;
+  final bool isWithdrawal;
+  final String? withdrawalMethod;
+  final double? withdrawalAmount;
+  final String? type;
+  final String? address;
+  final String? barcode;
 
   TransactionModel({
+    this.id,
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -23,6 +31,12 @@ class TransactionModel {
     this.rawItems = const [],
     this.totalBerat = 0.0,
     this.totalPoin = 0,
+    this.isWithdrawal = false,
+    this.withdrawalMethod,
+    this.withdrawalAmount,
+    this.type,
+    this.address,
+    this.barcode,
   });
 }
 
@@ -127,11 +141,11 @@ class TransactionService {
     List<Map<String, dynamic>> userWds = [];
     try {
       final wds = await ApiService.instance.fetchWithdrawals();
-      userWds = wds.where((w) => w['nasabah_id'] == nasabahId).toList();
+      userWds = wds.where((w) => w['nasabah_id']?.toString() == nasabahId.toString()).toList();
     } catch (_) {}
     if (userWds.isEmpty) {
       final localWds = await DatabaseHelper.instance.getWithdrawals();
-      userWds = localWds.where((w) => w['nasabah_id'] == nasabahId).toList();
+      userWds = localWds.where((w) => w['nasabah_id']?.toString() == nasabahId.toString()).toList();
     }
 
     List<Map<String, dynamic>> combinedRaw = [...txs, ...userWds];
@@ -157,19 +171,31 @@ class TransactionService {
         if (status == 'rejected') st = 'Gagal';
 
         String title = isTukarBarang ? 'Tukar Sembako' : 'Penarikan Poin';
-        if (details.isNotEmpty) title += ' ($details)';
+        if (details.isNotEmpty && details != 'Detail menyusul') {
+          title += ' ($details)';
+        } else if (method.isNotEmpty && method != 'tukar_barang' && method != 'Tarik Saldo') {
+          title += ' ($method)';
+        } else if (details.isNotEmpty) {
+          title += ' ($details)';
+        }
 
         String rawDate = tx['created_at'] ?? '';
         final dateStr = formatDate(rawDate);
 
-        final points = (tx['points_deducted'] ?? 0) as int;
+        final points = (tx['points_deducted'] is num)
+            ? (tx['points_deducted'] as num).toInt()
+            : (int.tryParse(tx['points_deducted']?.toString() ?? '0') ?? 0);
         String pointsText = points > 0 ? '-$points poin' : '0 poin';
-        if (status == 'pending') {
-          pointsText = '0 poin (Proses)';
+        if (status == 'pending' || status == 'menunggu' || st == 'Proses') {
+          pointsText = points > 0 ? '-$points poin (Proses)' : '0 poin (Proses)';
         }
+
+        final txId = tx['id']?.toString() ?? 'WD-${tx['created_at'] ?? DateTime.now().millisecondsSinceEpoch}';
+        final double amount = (points * 1.0);
 
         newTxs.add(
           TransactionModel(
+            id: txId,
             icon: isTukarBarang
                 ? Icons.card_giftcard_outlined
                 : Icons.account_balance_wallet_outlined,
@@ -180,6 +206,9 @@ class TransactionService {
             rawItems: [],
             totalBerat: 0.0,
             totalPoin: -points,
+            isWithdrawal: true,
+            withdrawalMethod: isTukarBarang ? 'Sembako' : method,
+            withdrawalAmount: amount,
           ),
         );
       } else {
@@ -226,8 +255,15 @@ class TransactionService {
             ? '+$points poin'
             : (status == 'menunggu' ? 'Menunggu' : '0 poin');
 
+        final String finalAddr = (tx['type'] == 'drop_in')
+            ? ((tx['drop_point_name'] != null && tx['drop_point_name'].toString().isNotEmpty)
+                ? '${tx['drop_point_name']}${tx['drop_point_address'] != null ? ' - ${tx['drop_point_address']}' : ''}'
+                : (tx['address'] ?? 'Drop Point'))
+            : (tx['pickup_address'] ?? tx['nasabah_address'] ?? tx['address'] ?? tx['alamat'] ?? '-');
+
         newTxs.add(
           TransactionModel(
+            id: tx['id']?.toString(),
             icon: tx['type'] == 'drop_in'
                 ? Icons.recycling_rounded
                 : Icons.local_shipping_rounded,
@@ -235,11 +271,15 @@ class TransactionService {
             subtitle: dateStr,
             points: pointsText,
             status: status == 'menunggu'
-                ? 'Proses'
+                ? 'Menunggu Verifikasi'
                 : status == 'selesai'
                 ? 'Selesai'
                 : status == 'menuju_lokasi'
                 ? 'Sedang menjemput'
+                : status == 'dikonfirmasi'
+                ? 'Dikonfirmasi'
+                : status == 'dibatalkan'
+                ? 'Dibatalkan'
                 : status,
             rawItems: items ?? [],
             totalBerat:
@@ -253,6 +293,9 @@ class TransactionService {
                 ) ??
                 0.0,
             totalPoin: points,
+            type: tx['type']?.toString(),
+            address: finalAddr,
+            barcode: tx['barcode']?.toString(),
           ),
         );
       }

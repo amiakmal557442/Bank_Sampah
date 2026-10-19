@@ -14,7 +14,12 @@ class SessionService {
   static String get email => currentUser?['email'] ?? '';
   static String get phoneNumber => currentUser?['phone_number'] ?? '';
   static String get role => currentUser?['role'] ?? 'nasabah';
-  static int get pointBalance => currentUser?['point_balance'] ?? 0;
+  static int get pointBalance {
+    final val = currentUser?['point_balance'];
+    if (val is num) return val.toInt();
+    if (val is String) return int.tryParse(val) ?? 0;
+    return 0;
+  }
   static String get address => currentUser?['address'] ?? '';
   static String get profilePicture => currentUser?['profile_picture'] ?? '';
 

@@ -53,6 +53,7 @@ class ManualWasteItem {
   final int id;
   final String name;
   final int pointsPerKg;
+  final double minWeight;
   final IconData icon;
   bool isSelected;
   double weightKg;
@@ -61,10 +62,11 @@ class ManualWasteItem {
     required this.id,
     required this.name,
     required this.pointsPerKg,
+    this.minWeight = 1.0,
     required this.icon,
     this.isSelected = false,
-    this.weightKg = 1.0,
-  });
+    double? weightKg,
+  }) : weightKg = weightKg ?? (1.0 > 0 ? 1.0 : 1.0);
 
   int get totalPoints => (pointsPerKg * weightKg).round();
 }
@@ -102,6 +104,12 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
 
   List<WorkerDropPoint> _dropPoints = [];
 
+  String _jamBuka = '08:00';
+  String _jamTutup = '17:00';
+  bool _autoAssign = true;
+  double _maxRadius = 5.0;
+  double _minWeight = 1.0;
+
   @override
   void initState() {
     super.initState();
@@ -111,6 +119,13 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   Future<void> _loadData() async {
     setState(() => isLoading = true);
     try {
+      final config = await DatabaseHelper.instance.getSystemConfig();
+      _jamBuka = config['jam_buka']?.toString() ?? '08:00';
+      _jamTutup = config['jam_tutup']?.toString() ?? '17:00';
+      _autoAssign = (config['auto_assign'] ?? 1) == 1;
+      _maxRadius = (config['max_radius'] as num?)?.toDouble() ?? 5.0;
+      _minWeight = (config['min_weight'] as num?)?.toDouble() ?? 1.0;
+
       final petugasId = SessionService.currentUser?['id'] as String?;
 
       List<Map<String, dynamic>> dps = [];
@@ -134,35 +149,55 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           .toList();
 
       List<Map<String, dynamic>> allTasks = [];
+      bool apiLoaded = false;
       try {
         allTasks = await ApiService.instance.getPendingTasks(
           petugasId: petugasId,
           statuses: ['dikonfirmasi', 'menuju_lokasi', 'tiba'],
         );
-      } catch (_) {}
+        apiLoaded = true;
+      } catch (_) {
+        apiLoaded = false;
+      }
 
-      if (allTasks.isEmpty) {
+      if (!apiLoaded) {
         final localTasks = await DatabaseHelper.instance
             .getPendingPickupTasks();
 
-        allTasks = localTasks.map((t) {
-          final weightStr = (t['estimasi_berat'] ?? '0 kg')
-              .toString()
-              .replaceAll(' kg', '');
-          return <String, dynamic>{
-            'id': t['id_transaksi'],
-            'nasabah_name': t['nama_nasabah'] ?? '-',
-            'nasabah_id': t['nasabah_id']?.toString(),
-            'nasabah_address': t['alamat'] ?? '-',
-            'pickup_time_slot': null,
-            'pickup_date': null,
-            'jenis_sampah': t['jenis_sampah'],
-            'total_est_weight': double.tryParse(weightStr) ?? 0.0,
-            'status': t['status'] ?? 'dikonfirmasi',
-            'type': t['type'] ?? 'pickup',
-          };
-        }).toList();
+        allTasks = localTasks
+            .where((t) =>
+                t['status'] == 'dikonfirmasi' ||
+                t['status'] == 'menuju_lokasi' ||
+                t['status'] == 'tiba')
+            .map((t) {
+              final weightStr = (t['estimasi_berat'] ?? '0 kg')
+                  .toString()
+                  .replaceAll(' kg', '');
+              return <String, dynamic>{
+                'id': t['id_transaksi'],
+                'nasabah_name': t['nama_nasabah'] ?? '-',
+                'nasabah_id': t['nasabah_id']?.toString(),
+                'nasabah_address': t['alamat'] ?? '-',
+                'pickup_time_slot': null,
+                'pickup_date': null,
+                'jenis_sampah': t['jenis_sampah'],
+                'total_est_weight': double.tryParse(weightStr) ?? 0.0,
+                'status': t['status'] ?? 'dikonfirmasi',
+                'type': t['type'] ?? 'pickup',
+              };
+            }).toList();
       }
+
+      // Pastikan transaksi yang dibatalkan / ditolak admin tidak muncul di tugas petugas
+      allTasks = allTasks.where((t) {
+        final s = (t['status'] ?? '').toString().toLowerCase().trim();
+        return s != 'dibatalkan' &&
+            s != 'ditolak' &&
+            s != 'rejected' &&
+            s != 'selesai' &&
+            s != 'menunggu' &&
+            (s == 'dikonfirmasi' || s == 'menuju_lokasi' || s == 'tiba');
+      }).toList();
 
       _queue = allTasks.map((t) {
         String rawDate = t['pickup_date'] ?? '';
@@ -205,7 +240,13 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
         return PickupTask(
           wasteId: t['id']?.toString() ?? '-',
           customerName: t['nasabah_name'] ?? 'Nasabah',
-          address: t['nasabah_address'] ?? '',
+          address: (t['nasabah_address'] != null &&
+                  t['nasabah_address'].toString().trim().isNotEmpty)
+              ? t['nasabah_address'].toString().trim()
+              : ((t['address'] != null &&
+                      t['address'].toString().trim().isNotEmpty)
+                  ? t['address'].toString().trim()
+                  : (t['alamat']?.toString().trim() ?? '')),
           time: formattedTime,
           wasteTypes:
               (t['jenis_sampah'] as String?)?.split(', ') ?? ['Lainnya'],
@@ -597,7 +638,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: isOnline ? oldGrassGreen : Colors.grey[700],
         gradient: isOnline
@@ -608,33 +649,63 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
               )
             : null,
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: isOnline ? limeGreen : Colors.grey[300],
-              shape: BoxShape.circle,
-              boxShadow: isOnline
-                  ? [
-                      BoxShadow(
-                        color: limeGreen.withValues(alpha: 0.6),
-                        blurRadius: 6,
-                      ),
-                    ]
-                  : null,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: isOnline ? limeGreen : Colors.grey[300],
+                  shape: BoxShape.circle,
+                  boxShadow: isOnline
+                      ? [
+                          BoxShadow(
+                            color: limeGreen.withValues(alpha: 0.6),
+                            blurRadius: 6,
+                          ),
+                        ]
+                      : null,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  isOnline
+                      ? 'Anda sedang aktif bertugas hari ini'
+                      : 'Status istirahat — tugas tidak akan diterima',
+                  style: const TextStyle(
+                    color: baseWhite,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: baseWhite.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _autoAssign ? 'Auto-Assign: ON' : 'Auto-Assign: OFF',
+                  style: const TextStyle(
+                    color: baseWhite,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
+          const SizedBox(height: 6),
           Text(
-            isOnline
-                ? 'Anda sedang aktif bertugas hari ini'
-                : 'Status istirahat — tugas tidak akan diterima',
-            style: const TextStyle(
-              color: baseWhite,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
+            'Jam Operasional: $_jamBuka - $_jamTutup WITA  •  Radius Jemput: Maks ${_maxRadius.toInt()} km  •  Min Setor: $_minWeight kg',
+            style: TextStyle(
+              color: baseWhite.withOpacity(0.85),
+              fontSize: 11,
             ),
           ),
         ],
@@ -795,22 +866,39 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
           ),
           const SizedBox(height: 6),
 
-          Row(
-            children: [
-              Icon(
-                Icons.location_on_rounded,
-                size: 14,
-                color: Colors.grey[600],
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  task.address,
-                  style: TextStyle(fontSize: 13, color: Colors.grey[700]),
-                  overflow: TextOverflow.ellipsis,
+          InkWell(
+            onTap: () {
+              setState(() => _bottomNavIndex = 1);
+            },
+            borderRadius: BorderRadius.circular(6),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.location_on_rounded,
+                  size: 15,
+                  color: oldGrassGreen,
                 ),
-              ),
-            ],
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    task.address.isNotEmpty
+                        ? task.address
+                        : 'Lacak Lokasi (Buka di tab Tugas)',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: oldGrassGreen,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const Icon(
+                  Icons.map_outlined,
+                  size: 15,
+                  color: oldGrassGreen,
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 6),
 
@@ -1325,17 +1413,28 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       return;
     }
 
-    final categories = await DatabaseHelper.instance.getWasteCategories();
+    List<Map<String, dynamic>> categories = [];
+    try {
+      categories = await ApiService.instance.getWasteCategories();
+    } catch (_) {}
+    if (categories.isEmpty) {
+      categories = await DatabaseHelper.instance.getWasteCategories();
+    }
+
     final items = categories
         .map(
-          (c) => ManualWasteItem(
-            id: c['id'] as int? ?? 0,
-            name: c['name'],
-            pointsPerKg: (c['point_per_kg'] as num).toInt(),
-            icon: Icons.recycling_outlined,
-            isSelected: false,
-            weightKg: 1.0,
-          ),
+          (c) {
+            final minW = (c['min_weight'] as num?)?.toDouble() ?? 1.0;
+            return ManualWasteItem(
+              id: c['id'] as int? ?? 0,
+              name: c['name'],
+              pointsPerKg: (c['point_per_kg'] as num).toInt(),
+              minWeight: minW,
+              icon: Icons.recycling_outlined,
+              isSelected: false,
+              weightKg: minW,
+            );
+          },
         )
         .toList();
 
@@ -1915,7 +2014,12 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(4),
             ),
-            onChanged: (v) => setState(() => item.isSelected = v ?? false),
+            onChanged: (v) => setState(() {
+              item.isSelected = v ?? false;
+              if (item.isSelected && item.weightKg < item.minWeight) {
+                item.weightKg = item.minWeight;
+              }
+            }),
           ),
           Icon(
             item.icon,
@@ -1936,7 +2040,7 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
                   ),
                 ),
                 Text(
-                  '${item.pointsPerKg} poin/kg',
+                  '${item.pointsPerKg} poin/kg  •  Min ${item.minWeight} kg',
                   style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                 ),
               ],
@@ -1953,10 +2057,13 @@ class _TimbangManualSheetState extends State<_TimbangManualSheet> {
               ),
               onPressed: () {
                 setState(() {
-                  if (item.weightKg > 0.5) {
+                  if (item.weightKg > item.minWeight) {
                     item.weightKg = double.parse(
                       (item.weightKg - 0.5).toStringAsFixed(1),
                     );
+                    if (item.weightKg < item.minWeight) {
+                      item.weightKg = item.minWeight;
+                    }
                   }
                 });
               },

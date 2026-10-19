@@ -1,33 +1,13 @@
 <?php
 require_once __DIR__ . '/../db.php';
-require_once __DIR__ . '/../jwt_helper.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
-
-if ($method !== 'OPTIONS') {
-    $token = JwtHelper::getBearerToken();
-    if (!$token) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Unauthorized: Token tidak ditemukan']);
-        exit();
-    }
-    $decoded_token = JwtHelper::validateToken($token);
-    if (!$decoded_token) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Unauthorized: Token tidak valid']);
-        exit();
-    }
-}
 
 if ($method === 'GET') {
     $id = $_GET['id'] ?? null;
     $status = $_GET['status'] ?? null;
-    $petugasId = $_GET['petugas_id'] ?? null;
     $nasabahId = $_GET['nasabah_id'] ?? null;
-
-    if ($decoded_token['role'] === 'nasabah') {
-        $nasabahId = $decoded_token['id'];
-    }
+    $petugasId = $_GET['petugas_id'] ?? null;
 
     if ($id) {
         $stmt = $conn->prepare("SELECT t.*, u.full_name as nasabah_name FROM transactions t JOIN users u ON t.nasabah_id = u.id WHERE t.id = ?");
@@ -71,10 +51,11 @@ if ($method === 'GET') {
         $params[] = $petugasId;
     }
 
-    $sql = "SELECT t.*, u.full_name as nasabah_name, p.full_name as petugas_name
+    $sql = "SELECT t.*, COALESCE(u.full_name, t.full_name, 'Nasabah') as nasabah_name, p.full_name as petugas_name, COALESCE(t.address, u.address, '') as nasabah_address, dp.name as drop_point_name, dp.address as drop_point_address
             FROM transactions t
             LEFT JOIN users u ON t.nasabah_id = u.id
-            LEFT JOIN users p ON t.petugas_id = p.id";
+            LEFT JOIN users p ON t.petugas_id = p.id
+            LEFT JOIN drop_points dp ON t.drop_point_id = dp.id";
 
     if (!empty($where)) {
         $sql .= " WHERE " . implode(" AND ", $where);
@@ -120,35 +101,58 @@ if ($method === 'GET') {
 }
 
 if ($method === 'POST') {
-    $data = json_decode(file_get_contents('php://input'), true);
-    $id = $data['id'] ?? ('TRX-' . rand(1000, 9999));
+    try {
+        $data = json_decode(file_get_contents('php://input'), true);
+        $id = !empty($data['id']) ? $data['id'] : ('TRX-' . rand(1000, 9999));
+        $nasabahId = $data['nasabah_id'] ?? '';
+        $petugasId = !empty($data['petugas_id']) ? $data['petugas_id'] : null;
+        $dropPointId = !empty($data['drop_point_id']) ? $data['drop_point_id'] : null;
+        $type = $data['type'] ?? 'pickup';
+        $status = !empty($data['status']) ? $data['status'] : 'menunggu';
 
-    $nasabahId = $decoded_token['role'] === 'nasabah' ? $decoded_token['id'] : ($data['nasabah_id'] ?? '');
-
-    $petugasId = $data['petugas_id'] ?? null;
-    $dropPointId = $data['drop_point_id'] ?? null;
-    $type = $data['type'] ?? 'pickup';
-    $status = $data['status'] ?? 'menunggu';
-    $pickupDate = $data['pickup_date'] ?? date('Y-m-d');
-    $estPoints = (int)($data['total_est_points'] ?? 0);
-
-    $stmt = $conn->prepare("INSERT INTO transactions (id, nasabah_id, petugas_id, drop_point_id, type, status, pickup_date, total_est_points) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssssssi", $id, $nasabahId, $petugasId, $dropPointId, $type, $status, $pickupDate, $estPoints);
-
-    if ($stmt->execute()) {
-        if (!empty($data['items']) && is_array($data['items'])) {
-            foreach ($data['items'] as $item) {
-                $itemId = 'TI-' . rand(100, 999);
-                $catId = (int)($item['waste_category_id'] ?? 1);
-                $estWeight = (float)($item['estimated_weight'] ?? 0);
-                $itemStmt = $conn->prepare("INSERT INTO transaction_items (id, transaction_id, waste_category_id, estimated_weight) VALUES (?, ?, ?, ?)");
-                $itemStmt->bind_param("ssid", $itemId, $id, $catId, $estWeight);
-                $itemStmt->execute();
+        $rawDate = $data['pickup_date'] ?? date('Y-m-d');
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $rawDate)) {
+            $pickupDate = $rawDate;
+        } else {
+            $parsed = strtotime($rawDate);
+            if ($parsed !== false && $parsed > 0) {
+                $pickupDate = date('Y-m-d', $parsed);
+            } else {
+                $pickupDate = date('Y-m-d');
             }
         }
-        echo json_encode(['success' => true, 'message' => 'Transaksi berhasil dibuat', 'id' => $id]);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Gagal membuat transaksi: ' . $conn->error]);
+
+        $timeSlot = $data['pickup_time_slot'] ?? null;
+        $photoEvidence = $data['photo_evidence'] ?? null;
+        $fullName = $data['full_name'] ?? null;
+        $address = $data['address'] ?? null;
+        $estPoints = (int)($data['total_est_points'] ?? 0);
+
+        $stmt = $conn->prepare("INSERT INTO transactions (id, nasabah_id, petugas_id, drop_point_id, type, status, pickup_date, pickup_time_slot, photo_evidence, full_name, address, total_est_points) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssssssssssi", $id, $nasabahId, $petugasId, $dropPointId, $type, $status, $pickupDate, $timeSlot, $photoEvidence, $fullName, $address, $estPoints);
+
+        if ($stmt->execute()) {
+            if (!empty($data['items']) && is_array($data['items'])) {
+                foreach ($data['items'] as $item) {
+                    $itemId = 'TI-' . rand(100, 999);
+                    $catId = (int)($item['waste_category_id'] ?? 1);
+                    $estWeight = (float)($item['estimated_weight'] ?? 0);
+                    $itemStmt = $conn->prepare("INSERT INTO transaction_items (id, transaction_id, waste_category_id, estimated_weight) VALUES (?, ?, ?, ?)");
+                    $itemStmt->bind_param("ssid", $itemId, $id, $catId, $estWeight);
+                    $itemStmt->execute();
+                }
+            }
+            if (!empty($address) && !empty($nasabahId)) {
+                $userAddrStmt = $conn->prepare("UPDATE users SET address = ? WHERE id = ?");
+                $userAddrStmt->bind_param("ss", $address, $nasabahId);
+                $userAddrStmt->execute();
+            }
+            echo json_encode(['success' => true, 'message' => 'Transaksi berhasil dibuat', 'id' => $id]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Gagal membuat transaksi: ' . $conn->error]);
+        }
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
     }
     exit();
 }

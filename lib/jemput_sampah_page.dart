@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'transaction_service.dart';
 import 'db_helper.dart';
 import 'session_service.dart';
@@ -10,6 +11,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'chat_page.dart';
+import 'widgets/barcode_painter.dart';
 
 class PickupScheduleScreen extends StatefulWidget {
   const PickupScheduleScreen({super.key});
@@ -33,6 +35,22 @@ class _PickupScheduleScreenState extends State<PickupScheduleScreen> {
     'SAB',
   ];
 
+  static const List<String> _monthNames = [
+    '',
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
+  ];
+
   List<Map<String, String>> get _dates {
     final today = DateTime.now();
     return List.generate(4, (i) {
@@ -40,10 +58,16 @@ class _PickupScheduleScreenState extends State<PickupScheduleScreen> {
       String label = '';
       if (i == 0) label = 'Hari ini';
       if (i == 1) label = 'Besok';
+      final isoDate =
+          '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+      final formattedDisplay =
+          '${_dayNames[day.weekday % 7]}, ${day.day} ${_monthNames[day.month]} ${day.year}';
       return {
         'day': _dayNames[day.weekday % 7],
         'date': day.day.toString(),
         'label': label,
+        'iso_date': isoDate,
+        'formatted': formattedDisplay,
       };
     });
   }
@@ -60,10 +84,41 @@ class _PickupScheduleScreenState extends State<PickupScheduleScreen> {
   final MapController _mapController = MapController();
   LatLng? _currentPosition;
 
+  double _minWeight = 1.0;
+  double _maxRadius = 5.0;
+  String _jamBuka = '08:00';
+  String _jamTutup = '17:00';
+  bool _waNotif = true;
+  List<Map<String, dynamic>> _wasteCategories = [];
+
   @override
   void initState() {
     super.initState();
+    _loadConfigAndCategories();
     _getCurrentLocation();
+  }
+
+  Future<void> _loadConfigAndCategories() async {
+    try {
+      final config = await DatabaseHelper.instance.getSystemConfig();
+      List<Map<String, dynamic>> cats = [];
+      try {
+        cats = await ApiService.instance.getWasteCategories();
+      } catch (_) {}
+      if (cats.isEmpty) {
+        cats = await DatabaseHelper.instance.getWasteCategories();
+      }
+      if (mounted) {
+        setState(() {
+          _minWeight = (config['min_weight'] as num?)?.toDouble() ?? 1.0;
+          _maxRadius = (config['max_radius'] as num?)?.toDouble() ?? 5.0;
+          _jamBuka = config['jam_buka']?.toString() ?? '08:00';
+          _jamTutup = config['jam_tutup']?.toString() ?? '17:00';
+          _waNotif = (config['wa_notif'] ?? 1) == 1;
+          _wasteCategories = cats;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _getCurrentLocation() async {
@@ -128,6 +183,133 @@ class _PickupScheduleScreenState extends State<PickupScheduleScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: primaryGreen.withOpacity(0.3)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.info_outline_rounded,
+                        color: primaryGreen, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Ketentuan Operasional Penjemputan',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: primaryGreen,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildConfigPill(
+                        Icons.access_time_rounded,
+                        'Jam Buka',
+                        '$_jamBuka - $_jamTutup',
+                        primaryGreen,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildConfigPill(
+                        Icons.scale_rounded,
+                        'Min. Berat',
+                        '$_minWeight kg',
+                        primaryGreen,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildConfigPill(
+                        Icons.radar_rounded,
+                        'Maks. Radius',
+                        '${_maxRadius.toInt()} km',
+                        primaryGreen,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (_wasteCategories.isNotEmpty) ...[
+            const Text(
+              'TARIF POIN & BATAS MINIMAL SAMPAH',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _wasteCategories.map((cat) {
+                  final name = cat['name'] ?? '-';
+                  final point = cat['point_per_kg'] ?? 0;
+                  final minW = (cat['min_weight'] as num?)?.toDouble() ?? 1.0;
+                  return Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.recycling_rounded,
+                            size: 16, color: primaryGreen),
+                        const SizedBox(width: 6),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              '$point poin/kg • Min $minW kg',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 18),
+          ],
           const Text(
             'PILIH TANGGAL',
             style: TextStyle(
@@ -344,8 +526,12 @@ class _PickupScheduleScreenState extends State<PickupScheduleScreen> {
                     builder: (context) => PickupConfirmationScreen(
                       selectedDay: _dates[selectedDateIndex]['day']!,
                       selectedDate: _dates[selectedDateIndex]['date']!,
+                      selectedIsoDate: _dates[selectedDateIndex]['iso_date']!,
+                      selectedFormattedDate: _dates[selectedDateIndex]['formatted']!,
                       selectedTime: _times[selectedTimeIndex],
                       note: _noteController.text,
+                      minWeight: _minWeight,
+                      waNotif: _waNotif,
                     ),
                   ),
                 );
@@ -357,6 +543,54 @@ class _PickupScheduleScreenState extends State<PickupScheduleScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildConfigPill(
+    IconData icon,
+    String title,
+    String val,
+    Color primaryGreen,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        color: primaryGreen.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: primaryGreen.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: primaryGreen),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            val,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
@@ -433,15 +667,23 @@ class _PickupScheduleScreenState extends State<PickupScheduleScreen> {
 class PickupConfirmationScreen extends StatefulWidget {
   final String selectedDay;
   final String selectedDate;
+  final String selectedIsoDate;
+  final String selectedFormattedDate;
   final String selectedTime;
   final String note;
+  final double minWeight;
+  final bool waNotif;
 
   const PickupConfirmationScreen({
     super.key,
     required this.selectedDay,
     required this.selectedDate,
+    required this.selectedIsoDate,
+    required this.selectedFormattedDate,
     required this.selectedTime,
     required this.note,
+    this.minWeight = 1.0,
+    this.waNotif = true,
   });
 
   @override
@@ -551,7 +793,7 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${widget.selectedDay}, ${widget.selectedDate} Juli 2026',
+                            widget.selectedFormattedDate,
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -561,10 +803,13 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                             widget.selectedTime + ' WIB',
                             style: const TextStyle(color: Colors.grey),
                           ),
-                          const SizedBox(height: 10),
-                          const Text(
-                            'Jl. Kartini No. 8, Beji, Depok',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                          Text(
+                            SessionService.address.trim().isNotEmpty
+                                ? SessionService.address.trim()
+                                : (widget.note.trim().isNotEmpty
+                                    ? widget.note.trim()
+                                    : 'Alamat utama nasabah'),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           const Text(
                             'Lokasi: Rumah',
@@ -605,20 +850,52 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: primaryGreen.withOpacity(0.2)),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info_outline, size: 20, color: primaryGreen),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Jenis sampah dan poin final akan ditentukan setelah petugas melakukan penimbangan di lokasi.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black87,
+                Row(
+                  children: [
+                    Icon(Icons.scale_rounded, size: 20, color: primaryGreen),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Batas minimal total penjemputan: ${widget.minWeight} kg.',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Jenis sampah dan poin final akan ditentukan setelah petugas melakukan penimbangan di lokasi.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.black54,
                   ),
                 ),
+                if (widget.waNotif) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(Icons.chat_bubble_outline_rounded,
+                          size: 16, color: primaryGreen),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Update status penjemputan akan dikirimkan otomatis via WhatsApp.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -771,22 +1048,55 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
 
                       final txId =
                           'TRX-${DateTime.now().millisecondsSinceEpoch}';
+                      final String cleanNote = widget.note.trim();
+                      final String userAddr = SessionService.address.trim();
+                      String finalAddress = '';
+                      if (userAddr.isNotEmpty && cleanNote.isNotEmpty) {
+                        finalAddress = '$userAddr (Patokan: $cleanNote)';
+                      } else if (cleanNote.isNotEmpty) {
+                        finalAddress = cleanNote;
+                      } else {
+                        finalAddress = userAddr;
+                      }
+
+                      final String shortCode = DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase();
+                      final String barcodeCode = 'JS-${shortCode.length > 8 ? shortCode.substring(shortCode.length - 8, shortCode.length - 4) + '-' + shortCode.substring(shortCode.length - 4) : shortCode}';
+
                       final txData = <String, dynamic>{
                         'id': txId,
                         'nasabah_id': SessionService.userId,
                         'full_name': SessionService.fullName,
-                        'address':
-                            SessionService.address +
-                            (widget.note.isNotEmpty
-                                ? ' (Patokan: ${widget.note})'
-                                : ''),
+                        'address': finalAddress,
+                        'nasabah_address': finalAddress,
+                        'alamat': finalAddress,
+                        'pickup_address': finalAddress,
                         'type': 'pickup',
                         'status': 'menunggu',
-                        'pickup_date':
-                            '${widget.selectedDay}, ${widget.selectedDate} Juli 2026',
+                        'pickup_date': widget.selectedIsoDate,
                         'pickup_time_slot': widget.selectedTime,
                         'photo_evidence': _photoFile?.name ?? '',
+                        'barcode': barcodeCode,
                       };
+
+                      if (finalAddress.isNotEmpty &&
+                          SessionService.userId.isNotEmpty) {
+                        try {
+                          await ApiService.instance.updateUser(
+                            SessionService.userId,
+                            {'address': finalAddress},
+                          );
+                          if (SessionService.currentUser != null) {
+                            SessionService.currentUser!['address'] =
+                                finalAddress;
+                          }
+                        } catch (_) {}
+                        try {
+                          await DatabaseHelper.instance.updateUserProfile(
+                            SessionService.userId,
+                            {'address': finalAddress},
+                          );
+                        } catch (_) {}
+                      }
 
                       bool ok = false;
                       try {
@@ -828,6 +1138,8 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
                             selectedDay: widget.selectedDay,
                             selectedDate: widget.selectedDate,
                             selectedTime: widget.selectedTime,
+                            barcodeCode: barcodeCode,
+                            address: finalAddress,
                           ),
                         ),
                         (route) => route.isFirst,
@@ -897,39 +1209,31 @@ class _PickupConfirmationScreenState extends State<PickupConfirmationScreen> {
       ),
     );
   }
-
-  Widget _buildWasteRow(String name, String detail) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(name, style: const TextStyle(fontSize: 15)),
-          Text(
-            detail,
-            style: const TextStyle(fontSize: 14, color: Colors.black54),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class PickupSuccessScreen extends StatelessWidget {
   final String selectedDay;
   final String selectedDate;
   final String selectedTime;
+  final String? barcodeCode;
+  final String? address;
 
   const PickupSuccessScreen({
     super.key,
     required this.selectedDay,
     required this.selectedDate,
     required this.selectedTime,
+    this.barcodeCode,
+    this.address,
   });
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryGreen = const Color(0xFF268B07);
+    const Color primaryGreen = Color(0xFF268B07);
+    final String finalCode = (barcodeCode != null && barcodeCode!.isNotEmpty)
+        ? barcodeCode!
+        : 'JS-8X4K-2Q1M';
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -943,70 +1247,87 @@ class PickupSuccessScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              width: 70,
-              height: 70,
-              decoration: BoxDecoration(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
                 color: primaryGreen,
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: primaryGreen.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
               ),
-              child: const Icon(
-                Icons.check_rounded,
-                color: Colors.white,
-                size: 42,
+              child: const Icon(Icons.check, size: 36, color: Colors.white),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Setor berhasil dibuat!',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0F172A),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 6),
             const Text(
-              'Permintaan jemput dibuat!',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Tunjukkan kode ini ke petugas saat tiba\ndi lokasi untuk verifikasi',
+              'Tunjukkan atau tempelkan barcode ini di kemasan\nsampah kamu saat penjemputan oleh petugas',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
+
+            // Barcode container matching Drop-In Mandiri
             Container(
-              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                border: Border.all(color: primaryGreen, width: 1.5),
-                borderRadius: BorderRadius.circular(16),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: primaryGreen, width: 2),
               ),
-              child: Column(
+              child: Container(
+                height: 100,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.black12,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: CustomPaint(painter: BarcodePainter(code: finalCode)),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF9F0),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.qr_code_2, size: 110, color: Colors.black87),
-                  const SizedBox(height: 14),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 10,
+                  Text(
+                    finalCode,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                      color: primaryGreen,
                     ),
-                    decoration: BoxDecoration(
-                      color: primaryGreen.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'WJ-5T2N-9K7L',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: primaryGreen,
-                        letterSpacing: 2,
-                      ),
-                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: finalCode));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Kode barcode berhasil disalin!'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    child: const Icon(Icons.copy_rounded, size: 16, color: primaryGreen),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1035,51 +1356,71 @@ class PickupSuccessScreen extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
+
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(14),
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'STATUS SAAT INI',
+                  const Text(
+                    'DETAIL PENJEMPUTAN',
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade500,
                       fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.8,
+                      color: Color(0xFF64748B),
                     ),
                   ),
                   const SizedBox(height: 10),
                   Row(
-                    children: [
-                      Icon(Icons.schedule, size: 16, color: primaryGreen),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text(
-                          'Menunggu konfirmasi & penugasan petugas',
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 2,
-                        ),
-                      ),
+                    children: const [
+                      Icon(Icons.calendar_today_rounded, size: 15, color: primaryGreen),
+                      SizedBox(width: 8),
                     ],
                   ),
+                  Text(
+                    '$selectedDay, $selectedDate • $selectedTime',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  if (address != null && address!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.location_on_outlined, size: 16, color: primaryGreen),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            address!,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: Color(0xFF334155),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Row(
-                    children: [
-                      Icon(
-                        Icons.notifications_active_outlined,
-                        size: 16,
-                        color: primaryGreen,
-                      ),
-                      const SizedBox(width: 8),
-                      const Expanded(
+                    children: const [
+                      Icon(Icons.schedule, size: 16, color: primaryGreen),
+                      SizedBox(width: 8),
+                      Expanded(
                         child: Text(
-                          'Kamu akan dapat notifikasi saat petugas ditugaskan',
+                          'Menunggu konfirmasi & penugasan petugas kurir',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                         ),
                       ),
                     ],

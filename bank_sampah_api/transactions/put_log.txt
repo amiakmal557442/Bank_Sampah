@@ -151,3 +151,385 @@ Array
     [status] => dikonfirmasi
 )
 
+Array
+(
+    [status] => dikonfirmasi
+)
+
+Array
+(
+    [status] => selesai
+    [total_actual_points] => 2000
+    [items] => Array
+        (
+            [0] => Array
+                (
+                    [id] => ITI-1786405842516290-1
+                    [transaction_id] => TRX-1786405764435
+                    [waste_category_id] => 1
+                    [name] => Plastik
+                    [estimated_weight] => 0
+                    [actual_weight] => 1
+                    [final_points] => 2000
+                )
+
+        )
+
+)
+
+Array
+(
+    [status] => dikonfirmasi
+)
+
+Array
+(
+    [status] => selesai
+    [total_actual_points] => 7000
+    [items] => Array
+        (
+            [0] => Array
+                (
+                    [id] => ITI-1786605048202345-1
+                    [transaction_id] => TRX-1786604686274
+                    [waste_category_id] => 1
+                    [name] => Plastik
+                    [estimated_weight] => 0
+                    [actual_weight] => 2
+                    [final_points] => 4000
+                )
+
+            [1] => Array
+                (
+                    [id] => ITI-1786605048202345-2
+                    [transaction_id] => TRX-1786604686274
+                    [waste_category_id] => 2
+                    [name] => Kertas & Kardus
+                    [estimated_weight] => 0
+                    [actual_weight] => 2
+                    [final_points] => 3000
+                )
+
+        )
+
+)
+
+Array
+(
+    [status] => dibatalkan
+)
+
+Array
+(
+    [status] => dikonfirmasi
+)
+
+Array
+(
+    [status] => selesai
+    [total_actual_points] => 2000
+    [items] => Array
+        (
+            [0] => Array
+                (
+                    [id] => ITI-1786616765007000
+                    [transaction_id] => TRX-1786604975096
+                    [waste_category_id] => 1
+                    [name] => Plastik
+                    [estimated_weight] => 0
+                    [actual_weight] => 1
+                    [final_points] => 2000
+                )
+
+        )
+
+)
+
+Array
+(
+    [status] => dikonfirmasi
+)
+
+Array
+(
+    [status] => selesai
+    [total_actual_points] => 148500
+    [items] => Array
+        (
+            [0] => Array
+                (
+                    [id] => ITI-1786618693393000-1
+                    [transaction_id] => TRX-1786618523564
+                    [waste_category_id] => 3
+                    [name] => Besi & Logam
+                    [estimated_weight] => 0
+                    [actual_weight] => 41
+                    [final_points] => 143500
+                )
+
+            [1] => Array
+                (
+                    [id] => ITI-1786618693393000-2
+                    [transaction_id] => TRX-1786618523564
+                    [waste_category_id] => 4
+                    [name] => Elektronik Bekas
+                    [estimated_weight] => 0
+                    [actual_weight] => 1
+                    [final_points] => 5000
+                )
+
+        )
+
+)
+
+Array
+(
+    [status] => dikonfirmasi
+)
+
+Array
+(
+    [status] => selesai
+    [total_actual_points] => 131000
+    [items] => Array
+        (
+            [0] => Array
+                (
+                    [id] => ITI-1786619467429000
+                    [transaction_id] => TRX-1786619400716
+                    [waste_category_id] => 1
+                    [name] => Plastik
+                    [estimated_weight] => 0
+                    [actual_weight] => 40.5
+                    [final_points] => 81000
+                )
+
+            [1] => Array
+                (
+                    [id] => ITI-1786619467430000
+                    [transaction_id] => TRX-1786619400716
+                    [waste_category_id] => 4
+                    [name] => Elektronik Bekas
+                    [estimated_weight] => 0
+                    [actual_weight] => 10
+                    [final_points] => 50000
+                )
+
+        )
+
+)
+
+Array
+(
+    [status] => dikonfirmasi
+)
+
+Array
+(
+    [status] => selesai
+    [total_actual_points] => 2000
+    [items] => Array
+        (
+            [0] => Array
+                (
+                    [id] => ITI-1786695802019000-1
+                    [transaction_id] => TRX-1786694687872
+                    [waste_category_id] => 1
+                    [name] => Plastik
+                    [estimated_weight] => 0
+                    [actual_weight] => 1
+                    [final_points] => 2000
+                )
+
+        )
+
+)
+
+Array
+(
+    [status] => dikonfirmasi
+)
+
+Array
+(
+    [status] => dikonfirmasi
+)
+
+Array
+(
+    [status] => selesai
+    [total_actual_points] => 2000
+    [items] => Array
+        (
+            [0] => Array
+                (
+                    [id] => ITI-1786701905992000
+                    [transaction_id] => TRX-1786696296938
+                    [waste_category_id] => 1
+                    [name] => Plastik
+                    [estimated_weight] => 0
+                    [actual_weight] => 1
+                    [final_points] => 2000
+                )
+
+        )
+
+)
+
+Array
+(
+    [status] => selesai
+    [total_actual_points] => 2000
+    [items] => Array
+        (
+            [0] => Array
+                (
+                    [id] => ITI-1786702213737000
+                    [transaction_id] => TRX-1786696254082
+                    [waste_category_id] => 1
+                    [name] => Plastik
+                    [estimated_weight] => 0
+                    [actual_weight] => 1
+                    [final_points] => 2000
+                )
+
+        )
+
+)
+
+Array
+(
+    [status] => dikonfirmasi
+)
+
+Array
+(
+    [status] => dikonfirmasi
+)
+
+Array
+(
+    [status] => selesai
+    [total_actual_points] => 7000
+    [items] => Array
+        (
+            [0] => Array
+                (
+                    [id] => ITI-1786703137027000
+                    [transaction_id] => TRX-1786702888705
+                    [waste_category_id] => 1
+                    [name] => Plastik
+                    [estimated_weight] => 0
+                    [actual_weight] => 3.5
+                    [final_points] => 7000
+                )
+
+        )
+
+)
+
+Array
+(
+    [status] => selesai
+    [total_actual_points] => 4250
+    [items] => Array
+        (
+            [0] => Array
+                (
+                    [id] => ITI-1786703792186000
+                    [transaction_id] => TRX-1786703087846
+                    [waste_category_id] => 1
+                    [name] => Plastik
+                    [estimated_weight] => 0
+                    [actual_weight] => 1
+                    [final_points] => 2000
+                )
+
+            [1] => Array
+                (
+                    [id] => ITI-1786703792186000
+                    [transaction_id] => TRX-1786703087846
+                    [waste_category_id] => 2
+                    [name] => Kertas & Kardus
+                    [estimated_weight] => 0
+                    [actual_weight] => 1.5
+                    [final_points] => 2250
+                )
+
+        )
+
+)
+
+Array
+(
+    [status] => dikonfirmasi
+)
+
+Array
+(
+    [status] => selesai
+    [total_actual_points] => 2000
+    [items] => Array
+        (
+            [0] => Array
+                (
+                    [id] => ITI-1786955095928000-1
+                    [transaction_id] => TRX-1786703855915
+                    [waste_category_id] => 1
+                    [name] => Plastik
+                    [estimated_weight] => 0
+                    [actual_weight] => 1
+                    [final_points] => 2000
+                )
+
+        )
+
+)
+
+Array
+(
+    [status] => dikonfirmasi
+)
+
+Array
+(
+    [status] => selesai
+    [total_actual_points] => 10750
+    [items] => Array
+        (
+            [0] => Array
+                (
+                    [id] => ITI-1791773010005000
+                    [transaction_id] => TRX-1789636376536
+                    [waste_category_id] => 2
+                    [name] => Kertas & Kardus
+                    [estimated_weight] => 0
+                    [actual_weight] => 2.5
+                    [final_points] => 3750
+                )
+
+            [1] => Array
+                (
+                    [id] => ITI-1791773010005000
+                    [transaction_id] => TRX-1789636376536
+                    [waste_category_id] => 3
+                    [name] => Besi & Logam
+                    [estimated_weight] => 0
+                    [actual_weight] => 2
+                    [final_points] => 7000
+                )
+
+        )
+
+)
+
+Array
+(
+    [status] => dikonfirmasi
+)
+
+Array
+(
+    [status] => dikonfirmasi
+)
+

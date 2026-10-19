@@ -1,12 +1,11 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'db_helper.dart';
 
 class ApiService {
   static const String baseUrl =
-      'https://contempt-scrubber-cautious.ngrok-free.dev/bank_sampah_api';
+      'https://e-sampahparepare.my.id/bank_sampah_api';
 
   static final ApiService instance = ApiService._();
   ApiService._();
